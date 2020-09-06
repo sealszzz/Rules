@@ -1,0 +1,184 @@
+# Akamai
+host-suffix, aka.ms, direct
+host-suffix, akadns.net, direct
+host-keyword, akamai, direct
+# Apple
+ip-cidr, 17.0.0.0/8, direct
+# BitTorrent
+host-keyword, announce, direct
+host-keyword, torrent, direct
+host-keyword, tracker, direct
+# Email
+host-suffix, hotmail.com, direct
+host-suffix, mail.me.com, direct
+# Microsoft
+host-suffix, bing.com, direct
+host-suffix, microsoft.com, direct
+host-suffix, office.com, direct
+host-suffix, office.net, direct
+host-suffix, officeapps.live.com, direct
+host-suffix, visualstudio.com, direct
+host-suffix, windows.com, direct
+# Other
+host-suffix, alipay.com, direct
+host-suffix, globalcash.hk, direct
+host-suffix, jd.com, direct
+host-suffix, nasa.gov, direct
+host-suffix, ntp.org, direct
+host-suffix, qq.com, direct
+host-suffix, cm.steampowered.com, proxy
+host-suffix, steamcommunity.com, proxy
+host-suffix, taobao.com, direct
+host-suffix, tmall.com, direct
+ip-cidr, 182.254.116.0/24, direct
+ip-cidr, 239.0.0.0/8, direct
+# Google
+host-keyword, blogspot, Google
+host-keyword, gmail, Google
+host-keyword, google, Google
+host-suffix, abc.xyz, Google
+host-suffix, ampproject.org, Google
+host-suffix, android.com, Google
+host-suffix, androidify.com, Google
+host-suffix, appspot.com, Google
+host-suffix, blogger.com, Google
+host-suffix, chrome.com, Google
+host-suffix, chromeexperiments.com, Google
+host-suffix, chromestatus.com, Google
+host-suffix, chromium.org, Google
+host-suffix, getoutline.org, Google
+host-suffix, g.co, Google
+host-suffix, goo.gl, Google
+# YouTube
+host-keyword, youtube, Google
+host-suffix, googleapis.com, Google
+host-suffix, googlevideo.com, Google
+host-suffix, gstatic.com, Google
+host-suffix, gv.com, Google
+host-suffix, gvt0.com, Google
+host-suffix, gvt1.com, Google
+host-suffix, gvt2.com, Google
+host-suffix, gvt3.com, Google
+host-suffix, youtu.be, Google
+host-suffix, yt.be, Google
+host-suffix, ytimg.com, Google
+# Netflix
+host-keyword, netflix, Netflix
+host-keyword, nflx, Netflix
+host-suffix, fast.com, Netflix
+ip-cidr, 23.246.0.0/18, Netflix
+ip-cidr, 37.77.184.0/21, Netflix
+ip-cidr, 45.57.0.0/17, Netflix
+ip-cidr, 64.120.128.0/17, Netflix
+ip-cidr, 66.197.128.0/17, Netflix
+ip-cidr, 108.175.32.0/20, Netflix
+ip-cidr, 192.173.64.0/18, Netflix
+ip-cidr, 198.38.96.0/19, Netflix
+ip-cidr, 198.45.48.0/20, Netflix
+# Spotify
+user-agent, Spotify*, Spotify
+host-keyword, spotify.com, Spotify
+host-keyword, -spotify-com, Spotify
+host-suffix, pscdn.co, Spotify
+host-suffix, scdn.co, Spotify
+host-suffix, spotify.com, Spotify
+host-suffix, spoti.fi, Spotify
+# Twitch
+host-suffix, jtvnw.net, Twitch
+host-suffix, ttvnw.net, Twitch
+host-suffix, twitch.tv, Twitch
+host-suffix, twitchcdn.net, Twitch
+# PayPal
+user-agent, PayPal*, PayPal
+host-keyword, paypal, PayPal
+# TikTok
+user-agent, TikTok*, TikTok
+host-keyword, tiktok, TikTok
+host-suffix, byteoversea.com, TikTok
+host-suffix, muscdn.com, TikTok
+host-suffix, muscdn.ly, TikTok
+host-suffix, musical.ly, TikTok
+host-suffix, pstatp.com, TikTok
+host-suffix, ipstatp.com, TikTok
+# Cloudflare
+host-suffix, cloudflare.com, Cloudflare
+ip-cidr, 173.245.48.0/20, Cloudflare
+ip-cidr, 103.21.244.0/22, Cloudflare
+ip-cidr, 103.22.200.0/22, Cloudflare
+ip-cidr, 103.31.4.0/22, Cloudflare
+ip-cidr, 141.101.64.0/18, Cloudflare
+ip-cidr, 108.162.192.0/18, Cloudflare
+ip-cidr, 190.93.240.0/20, Cloudflare
+ip-cidr, 188.114.96.0/20, Cloudflare
+ip-cidr, 197.234.240.0/22, Cloudflare
+ip-cidr, 198.41.128.0/17, Cloudflare
+ip-cidr, 162.158.0.0/15, Cloudflare
+ip-cidr, 104.16.0.0/12, Cloudflare
+ip-cidr, 172.64.0.0/13, Cloudflare
+ip-cidr, 131.0.72.0/22, Cloudflare
+# Speedtest
+user-agent, SpeedTest*, Speedtest
+host-keyword, speedtest, Speedtest
+host-suffix, ooklaserver.net, Speedtest
+# Facebook
+host-keyword, facebook, proxy
+host-keyword, instagram, proxy
+host-keyword, whatsapp, proxy
+host-suffix, fb.com, proxy
+host-suffix, fb.me, proxy
+host-suffix, fbaddins.com, proxy
+host-suffix, fbcdn.net, proxy
+host-suffix, fbsbx.com, proxy
+host-suffix, fbworkmail.com, proxy
+host-suffix, m.me, proxy
+host-suffix, messenger.com, proxy
+host-suffix, oculus.com, proxy
+host-suffix, oculuscdn.com, proxy
+host-suffix, rocksdb.org, proxy
+# Line
+host-suffix, line.me, proxy
+host-suffix, line.naver.jp, proxy
+host-suffix, line-apps.com, proxy
+host-suffix, line-cdn.net, proxy
+host-suffix, line-scdn.net, proxy
+host-suffix, scdn.co, proxy
+ip-cidr, 103.2.30.0/23, proxy
+ip-cidr, 125.209.208.0/20, proxy
+ip-cidr, 147.92.128.0/17, proxy
+ip-cidr, 203.104.144.0/21, proxy
+# Telegram
+host-keyword, telegram, proxy
+host-suffix, t.me, proxy
+host-suffix, tdesktop.com, proxy
+host-suffix, telegra.ph, proxy
+host-suffix, telegram.me, proxy
+host-suffix, telegram.org, proxy
+ip-cidr, 91.108.4.0/22, proxy
+ip-cidr, 91.108.8.0/22, proxy
+ip-cidr, 91.108.12.0/22, proxy
+ip-cidr, 91.108.16.0/22, proxy
+ip-cidr, 91.108.20.0/22, proxy
+ip-cidr, 91.108.36.0/22, proxy
+ip-cidr, 91.108.56.0/22, proxy
+ip-cidr, 149.154.160.0/20, proxy
+ip6-cidr, 2001:b28:f23d::/48, proxy
+ip6-cidr, 2001:b28:f23f::/48, proxy
+ip6-cidr, 2001:b28:f23d:f001::a/128, proxy
+ip6-cidr, 2001:b28:f23d:f001::e/128, proxy
+ip6-cidr, 2001:b28:f23d:f003::a/128, proxy
+ip6-cidr, 2001:b28:f23d:f003::e/128, proxy
+ip6-cidr, 2001:b28:f23f:f005::a/128, proxy
+ip6-cidr, 2001:67c:4e8::/48, proxy
+ip6-cidr, 2001:67c:4e8:fa60::/64, proxy
+ip6-cidr, 2001:67c:4e8:f002::a/128, proxy
+ip6-cidr, 2001:67c:4e8:f002::e/128, proxy
+ip6-cidr, 2001:67c:4e8:f004::a/128, proxy
+# Twitter
+host-keyword, twitter, proxy
+host-suffix, pscp.tv, proxy
+host-suffix, periscope.tv, proxy
+host-suffix, t.co, proxy
+host-suffix, twimg.co, proxy
+host-suffix, twimg.com, proxy
+host-suffix, twitpic.com, proxy
+host-suffix, vine.co, proxy
