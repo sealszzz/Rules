@@ -1,0 +1,45 @@
+payload:
+# Akamai
+  - DOMAIN-SUFFIX,fb.me
+  - DOMAIN-SUFFIX,aka.ms
+  - DOMAIN-SUFFIX,akadns.net
+  - DOMAIN-KEYWORD,akamai
+# Apple
+  - IP-CIDR,17.0.0.0/8
+# BitTorrent
+  - DOMAIN-KEYWORD,announce
+  - DOMAIN-KEYWORD,torrent
+  - DOMAIN-KEYWORD,tracker
+# Email
+  - DOMAIN-SUFFIX,hotmail.com
+  - DOMAIN-SUFFIX,mail.me.com
+# Microsoft
+  - DOMAIN-SUFFIX,bing.com
+  - DOMAIN-SUFFIX,microsoft.com
+  - DOMAIN-SUFFIX,office.com
+  - DOMAIN-SUFFIX,office.net
+  - DOMAIN-SUFFIX,officeapps.live.com
+  - DOMAIN-SUFFIX,visualstudio.com
+  - DOMAIN-SUFFIX,windows.com
+# Other
+  - DOMAIN-SUFFIX,alipay.com
+  - DOMAIN-SUFFIX,globalcash.hk
+  - DOMAIN-SUFFIX,jd.com
+  - DOMAIN-SUFFIX,kylc.com
+  - DOMAIN-SUFFIX,nasa.gov
+  - DOMAIN-SUFFIX,ntp.org
+  - DOMAIN-SUFFIX,qq.com
+  - DOMAIN-SUFFIX,taobao.com
+  - DOMAIN-SUFFIX,tmall.com
+# LAN
+  - DOMAIN-SUFFIX,local
+  - IP-CIDR,10.0.0.0/8
+  - IP-CIDR,100.64.0.0/10
+  - IP-CIDR,127.0.0.0/8
+  - IP-CIDR,172.16.0.0/12
+  - IP-CIDR,192.168.0.0/16
+  - IP-CIDR,198.18.0.0/16
+  - IP-CIDR,224.0.0.0/24
+  - IP-CIDR,239.0.0.0/8
+# Final
+  - GEOIP,CN
