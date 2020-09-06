@@ -31,7 +31,7 @@ payload:
   - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,taobao.com
   - DOMAIN-SUFFIX,tmall.com
-  # Tencent
+# Tencent
   - IP-CIDR,119.28.28.28/32
   - IP-CIDR,182.254.116.0/24
 # LAN
