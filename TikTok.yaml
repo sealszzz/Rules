@@ -1,0 +1,8 @@
+payload:
+# TikTok
+  - DOMAIN-KEYWORD,tiktok
+  - DOMAIN-SUFFIX,byteoversea.com
+  - DOMAIN-SUFFIX,muscdn.com
+  - DOMAIN-SUFFIX,muscdn.ly
+  - DOMAIN-SUFFIX,musical.ly
+  - DOMAIN-SUFFIX,pstatp.com
