@@ -20,6 +20,7 @@ host-suffix, officeapps.live.com, direct
 host-suffix, visualstudio.com, direct
 host-suffix, windows.com, direct
 host-suffix, 1drv.com, direct
+host-suffix, 1drv.ms, direct
 # Other
 host-suffix, alipay.com, direct
 host-suffix, globalcash.hk, direct
