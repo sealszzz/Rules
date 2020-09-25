@@ -1,0 +1,33 @@
+# Akamai
+DOMAIN-SUFFIX,aka.ms
+DOMAIN-SUFFIX,akadns.net
+DOMAIN-KEYWORD,akamai
+# Apple
+IP-CIDR,17.0.0.0/8,no-resolve
+# BitTorrent
+DOMAIN-KEYWORD,announce
+DOMAIN-KEYWORD,torrent
+DOMAIN-KEYWORD,tracker
+# Email
+DOMAIN-SUFFIX,hotmail.com
+DOMAIN-SUFFIX,mail.me.com
+# Microsoft
+DOMAIN-SUFFIX,bing.com
+DOMAIN-SUFFIX,microsoft.com
+DOMAIN-SUFFIX,office.com
+DOMAIN-SUFFIX,office.net
+DOMAIN-SUFFIX,officeapps.live.com
+DOMAIN-SUFFIX,visualstudio.com
+DOMAIN-SUFFIX,windows.com
+DOMAIN-SUFFIX,1drv.com
+DOMAIN-SUFFIX,1drv.ms
+# Other
+DOMAIN-KEYWORD,time
+DOMAIN-KEYWORD,ntp
+DOMAIN-SUFFIX,alipay.com
+DOMAIN-SUFFIX,globalcash.hk
+DOMAIN-SUFFIX,jd.com
+DOMAIN-SUFFIX,qq.com
+DOMAIN-SUFFIX,taobao.com
+DOMAIN-SUFFIX,tmall.com
+IP-CIDR,239.0.0.0/8,no-resolve
