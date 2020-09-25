@@ -27,6 +27,8 @@ payload:
   - DOMAIN-KEYWORD,time
   - DOMAIN-KEYWORD,ntp
   - DOMAIN-SUFFIX,alipay.com
+  - DOMAIN-SUFFIX,aliyun.com
+  - DOMAIN-SUFFIX,aliyuncs.com
   - DOMAIN-SUFFIX,globalcash.hk
   - DOMAIN-SUFFIX,jd.com
   - DOMAIN-SUFFIX,kylc.com
