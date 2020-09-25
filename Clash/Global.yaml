@@ -1,4 +1,6 @@
 payload:
+# Proxy
+  - DOMAIN-SUFFIX,wikipedia.org
 # Github
   - DOMAIN-KEYWORD,github
 # Steam
