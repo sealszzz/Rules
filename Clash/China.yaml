@@ -5,7 +5,7 @@ payload:
   - DOMAIN-SUFFIX,akadns.net
   - DOMAIN-KEYWORD,akamai
 # Apple
-  - IP-CIDR,17.0.0.0/8
+  - IP-CIDR,17.0.0.0/8,no-resolve
 # BitTorrent
   - DOMAIN-KEYWORD,announce
   - DOMAIN-KEYWORD,torrent
@@ -21,26 +21,25 @@ payload:
   - DOMAIN-SUFFIX,officeapps.live.com
   - DOMAIN-SUFFIX,visualstudio.com
   - DOMAIN-SUFFIX,windows.com
+  - DOMAIN-SUFFIX,1drv.com
+  - DOMAIN-SUFFIX,1drv.ms
 # Other
+  - DOMAIN-KEYWORD,time
+  - DOMAIN-KEYWORD,ntp
   - DOMAIN-SUFFIX,alipay.com
   - DOMAIN-SUFFIX,globalcash.hk
   - DOMAIN-SUFFIX,jd.com
   - DOMAIN-SUFFIX,kylc.com
-  - DOMAIN-SUFFIX,nasa.gov
-  - DOMAIN-SUFFIX,ntp.org
   - DOMAIN-SUFFIX,qq.com
   - DOMAIN-SUFFIX,taobao.com
   - DOMAIN-SUFFIX,tmall.com
-# Tencent
-  - IP-CIDR,119.28.28.28/32
-  - IP-CIDR,182.254.116.0/24
 # LAN
   - DOMAIN-SUFFIX,local
-  - IP-CIDR,10.0.0.0/8
-  - IP-CIDR,100.64.0.0/10
-  - IP-CIDR,127.0.0.0/8
-  - IP-CIDR,172.16.0.0/12
-  - IP-CIDR,192.168.0.0/16
-  - IP-CIDR,198.18.0.0/16
-  - IP-CIDR,224.0.0.0/24
-  - IP-CIDR,239.0.0.0/8
+  - IP-CIDR,10.0.0.0/8,no-resolve
+  - IP-CIDR,100.64.0.0/10,no-resolve
+  - IP-CIDR,127.0.0.0/8,no-resolve
+  - IP-CIDR,172.16.0.0/12,no-resolve
+  - IP-CIDR,192.168.0.0/16,no-resolve
+  - IP-CIDR,198.18.0.0/16,no-resolve
+  - IP-CIDR,224.0.0.0/24,no-resolve
+  - IP-CIDR,239.0.0.0/8,no-resolve
