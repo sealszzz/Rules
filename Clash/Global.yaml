@@ -1,6 +1,7 @@
 payload:
 # Proxy
   - DOMAIN-SUFFIX,wikipedia.org
+  - DOMAIN-SUFFIX,noxinfluencer.com
   - DOMAIN-KEYWORD,.tw
   - DOMAIN-KEYWORD,tw.
 # Github
