@@ -67,3 +67,5 @@ DOMAIN-SUFFIX,twitpic.com
 DOMAIN-SUFFIX,vine.co
 # Other
 DOMAIN-SUFFIX,wikipedia.org
+DOMAIN-KEYWORD,.tw
+DOMAIN-KEYWORD,tw.
