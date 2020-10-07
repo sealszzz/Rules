@@ -24,12 +24,4 @@ DOMAIN-SUFFIX,1drv.ms
 # Other
 DOMAIN-KEYWORD,time
 DOMAIN-KEYWORD,ntp
-DOMAIN-SUFFIX,alipay.com
-DOMAIN-SUFFIX,aliyun.com
-DOMAIN-SUFFIX,aliyuncs.com
-DOMAIN-SUFFIX,globalcash.hk
-DOMAIN-SUFFIX,jd.com
-DOMAIN-SUFFIX,qq.com
-DOMAIN-SUFFIX,taobao.com
-DOMAIN-SUFFIX,tmall.com
 IP-CIDR,239.0.0.0/8,no-resolve
