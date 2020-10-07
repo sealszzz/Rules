@@ -26,15 +26,6 @@ payload:
 # Other
   - DOMAIN-KEYWORD,time
   - DOMAIN-KEYWORD,ntp
-  - DOMAIN-SUFFIX,alipay.com
-  - DOMAIN-SUFFIX,aliyun.com
-  - DOMAIN-SUFFIX,aliyuncs.com
-  - DOMAIN-SUFFIX,globalcash.hk
-  - DOMAIN-SUFFIX,jd.com
-  - DOMAIN-SUFFIX,kylc.com
-  - DOMAIN-SUFFIX,qq.com
-  - DOMAIN-SUFFIX,taobao.com
-  - DOMAIN-SUFFIX,tmall.com
 # LAN
   - DOMAIN-SUFFIX,local
   - IP-CIDR,10.0.0.0/8,no-resolve
