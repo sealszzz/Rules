@@ -1,7 +1,3 @@
-# Akamai
-DOMAIN-SUFFIX,aka.ms
-DOMAIN-SUFFIX,akadns.net
-DOMAIN-KEYWORD,akamai
 # Apple
 IP-CIDR,17.0.0.0/8,no-resolve
 # BitTorrent
@@ -22,6 +18,4 @@ DOMAIN-SUFFIX,windows.com
 DOMAIN-SUFFIX,1drv.com
 DOMAIN-SUFFIX,1drv.ms
 # Other
-DOMAIN-KEYWORD,time
-DOMAIN-KEYWORD,ntp
 IP-CIDR,239.0.0.0/8,no-resolve
