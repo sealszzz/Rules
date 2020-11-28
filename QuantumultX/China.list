@@ -10,11 +10,7 @@ host-suffix, mail.me.com, direct
 host-suffix, outlook.com, direct
 host-suffix, outlookmobile.com, direct
 # Microsoft
-host-suffix, bing.com, direct
 host-suffix, microsoft.com, direct
-host-suffix, office.com, direct
-host-suffix, office.net, direct
-host-suffix, office365.com, direct
 host-suffix, live.com, direct
 host-suffix, live.net, direct
 host-suffix, visualstudio.com, direct
