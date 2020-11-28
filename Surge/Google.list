@@ -1,8 +1,4 @@
 # Google
-DOMAIN-KEYWORD,blogspot
-DOMAIN-KEYWORD,gmail
-DOMAIN-KEYWORD,google
-DOMAIN-KEYWORD,youtube
 DOMAIN-SUFFIX,2mdn.net
 DOMAIN-SUFFIX,abc.xyz
 DOMAIN-SUFFIX,admob.com
@@ -77,3 +73,7 @@ DOMAIN-SUFFIX,xn--ngstr-lra8j.com
 DOMAIN-SUFFIX,youtu.be
 DOMAIN-SUFFIX,yt.be
 DOMAIN-SUFFIX,ytimg.com
+DOMAIN-KEYWORD,blogspot
+DOMAIN-KEYWORD,gmail
+DOMAIN-KEYWORD,google
+DOMAIN-KEYWORD,youtube
