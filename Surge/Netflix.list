@@ -2,6 +2,7 @@
 USER-AGENT,Argo*
 DOMAIN-SUFFIX,elb.amazonaws.com
 DOMAIN-SUFFIX,aws.amazon.com
+DOMAIN-SUFFIX,awsstatic.com
 DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,netflix.com
 DOMAIN-SUFFIX,netflix.net
