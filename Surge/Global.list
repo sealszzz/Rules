@@ -1,37 +1,46 @@
 # Facebook
-DOMAIN-KEYWORD,facebook
-DOMAIN-KEYWORD,instagram
-DOMAIN-KEYWORD,whatsapp
+DOMAIN-SUFFIX,cdninstagram.com
+DOMAIN-SUFFIX,facebook.com
+DOMAIN-SUFFIX,facebook.net
+DOMAIN-SUFFIX,facebookmail.com
 DOMAIN-SUFFIX,fb.com
 DOMAIN-SUFFIX,fb.me
 DOMAIN-SUFFIX,fbaddins.com
+DOMAIN-SUFFIX,fbcdn.com
 DOMAIN-SUFFIX,fbcdn.net
 DOMAIN-SUFFIX,fbsbx.com
 DOMAIN-SUFFIX,fbworkmail.com
+DOMAIN-SUFFIX,instagram.com
 DOMAIN-SUFFIX,m.me
 DOMAIN-SUFFIX,messenger.com
 DOMAIN-SUFFIX,oculus.com
 DOMAIN-SUFFIX,oculuscdn.com
 DOMAIN-SUFFIX,rocksdb.org
+DOMAIN-SUFFIX,whatsapp.com
+DOMAIN-SUFFIX,whatsapp.net
+DOMAIN-KEYWORD,facebook
+DOMAIN-KEYWORD,instagram
+DOMAIN-KEYWORD,whatsapp
 # Line
 DOMAIN-SUFFIX,line.me
-DOMAIN-SUFFIX,line.naver.jp
 DOMAIN-SUFFIX,line-apps.com
-DOMAIN-SUFFIX,line-cdn.net
 DOMAIN-SUFFIX,line-scdn.net
+DOMAIN-SUFFIX,naver.jp
 IP-CIDR,103.2.30.0/23,no-resolve
 IP-CIDR,125.209.208.0/20,no-resolve
 IP-CIDR,147.92.128.0/17,no-resolve
 IP-CIDR,203.104.144.0/21,no-resolve
 # Github
-DOMAIN-KEYWORD,github
+DOMAIN-SUFFIX,github.com
+DOMAIN-SUFFIX,github.io
+DOMAIN-SUFFIX,githubusercontent.com
 # Telegram
-DOMAIN-KEYWORD,telegram
 DOMAIN-SUFFIX,t.me
 DOMAIN-SUFFIX,tdesktop.com
 DOMAIN-SUFFIX,telegra.ph
 DOMAIN-SUFFIX,telegram.me
 DOMAIN-SUFFIX,telegram.org
+DOMAIN-SUFFIX,telesco.pe
 IP-CIDR,91.108.4.0/22,no-resolve
 IP-CIDR,91.108.8.0/22,no-resolve
 IP-CIDR,91.108.12.0/22,no-resolve
@@ -44,7 +53,6 @@ IP-CIDR6,2001:b28:f23d::/48,no-resolve
 IP-CIDR6,2001:b28:f23f::/48,no-resolve
 IP-CIDR6,2001:67c:4e8::/48,no-resolve
 # Twitter
-DOMAIN-KEYWORD,twitter
 DOMAIN-SUFFIX,pscp.tv
 DOMAIN-SUFFIX,periscope.tv
 DOMAIN-SUFFIX,t.co
