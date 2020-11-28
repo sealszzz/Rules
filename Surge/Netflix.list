@@ -1,6 +1,6 @@
 # Netflix
 USER-AGENT,Argo*
-DOMAIN-SUFFIX,amazonaws.com
+DOMAIN-SUFFIX,elb.amazonaws.com
 DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,netflix.com
 DOMAIN-SUFFIX,netflix.net
