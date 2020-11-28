@@ -7,13 +7,14 @@ DOMAIN-KEYWORD,tracker
 # Email
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,mail.me.com
+DOMAIN-SUFFIX,outlook.com
 # Microsoft
 DOMAIN-SUFFIX,bing.com
 DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,office.com
 DOMAIN-SUFFIX,office.net
-DOMAIN-SUFFIX,officeapps.live.com
-DOMAIN-SUFFIX,outlook.com
+DOMAIN-SUFFIX,live.com
+DOMAIN-SUFFIX,live.net
 DOMAIN-SUFFIX,visualstudio.com
 DOMAIN-SUFFIX,windows.com
 DOMAIN-SUFFIX,1drv.com
