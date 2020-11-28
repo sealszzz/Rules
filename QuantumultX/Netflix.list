@@ -1,6 +1,8 @@
 # Netflix
 user-agent, Argo*, proxy
 host-suffix, elb.amazonaws.com, proxy
+host-suffix, aws.amazon.com, proxy
+host-suffix, awsstatic.com, proxy
 host-suffix, fast.com, proxy
 host-suffix, netflix.com, proxy
 host-suffix, netflix.net, proxy
