@@ -1,5 +1,4 @@
 # TikTok
-user-agent, TikTok*, proxy
 host-suffix, byteoversea.com, proxy
 host-suffix, ibytedtos.com, proxy
 host-suffix, ipstatp.com, proxy
