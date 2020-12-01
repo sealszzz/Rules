@@ -69,7 +69,7 @@ payload:
   - DOMAIN-SUFFIX,4dq.com
   - DOMAIN-SUFFIX,4everproxy.com
   - DOMAIN-SUFFIX,4irc.com
-  - DOMAIN-SUFFIX,4mydomain.com
+  - DOMAIN-SUFFIX,4my  - DOMAIN.com
   - DOMAIN-SUFFIX,4pu.com
   - DOMAIN-SUFFIX,4rbtv.com
   - DOMAIN-SUFFIX,4shared.com
@@ -1130,10 +1130,10 @@ payload:
   - DOMAIN-SUFFIX,dolc.de
   - DOMAIN-SUFFIX,dolf.org.hk
   - DOMAIN-SUFFIX,dollf.com
-  - DOMAIN-SUFFIX,domain.club.tw
-  - DOMAIN-SUFFIX,domainhelp.search.com
-  - DOMAIN-SUFFIX,domains.google
-  - DOMAIN-SUFFIX,domaintoday.com.au
+  - DOMAIN-SUFFIX,  - DOMAIN.club.tw
+  - DOMAIN-SUFFIX,  - DOMAINhelp.search.com
+  - DOMAIN-SUFFIX,  - DOMAINs.google
+  - DOMAIN-SUFFIX,  - DOMAINtoday.com.au
   - DOMAIN-SUFFIX,dongtaiwang.com
   - DOMAIN-SUFFIX,dongtaiwang.net
   - DOMAIN-SUFFIX,dongyangjing.com
@@ -1527,6 +1527,7 @@ payload:
   - DOMAIN-SUFFIX,fourthinternational.org
   - DOMAIN-SUFFIX,foxdie.us
   - DOMAIN-SUFFIX,foxgay.com
+  - DOMAIN-SUFFIX,foxnewsplayer-a.akamaihd.net
   - DOMAIN-SUFFIX,foxsub.com
   - DOMAIN-SUFFIX,foxtang.com
   - DOMAIN-SUFFIX,fpmt.org
@@ -1843,7 +1844,7 @@ payload:
   - DOMAIN-SUFFIX,googlechrome.github.io
   - DOMAIN-SUFFIX,googlecode.com
   - DOMAIN-SUFFIX,googlecommerce.com
-  - DOMAIN-SUFFIX,googledomains.com
+  - DOMAIN-SUFFIX,google  - DOMAINs.com
   - DOMAIN-SUFFIX,googledrive.com
   - DOMAIN-SUFFIX,googleearth.com
   - DOMAIN-SUFFIX,googlefiber.net
@@ -1878,7 +1879,7 @@ payload:
   - DOMAIN-SUFFIX,gov.taipei
   - DOMAIN-SUFFIX,gov.tw
   - DOMAIN-SUFFIX,g-queen.com
-  - DOMAIN-SUFFIX,gr8domain.biz
+  - DOMAIN-SUFFIX,gr8  - DOMAIN.biz
   - DOMAIN-SUFFIX,gr8name.biz
   - DOMAIN-SUFFIX,grammaly.com
   - DOMAIN-SUFFIX,grandtrial.org
@@ -2607,7 +2608,7 @@ payload:
   - DOMAIN-SUFFIX,load.to
   - DOMAIN-SUFFIX,lobsangwangyal.com
   - DOMAIN-SUFFIX,localbitcoins.com
-  - DOMAIN-SUFFIX,localdomain.ws
+  - DOMAIN-SUFFIX,local  - DOMAIN.ws
   - DOMAIN-SUFFIX,localpresshk.com
   - DOMAIN-SUFFIX,lockestek.com
   - DOMAIN-SUFFIX,logbot.net
