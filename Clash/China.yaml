@@ -1,9 +1,4 @@
 payload:
-# Akamai
-  - DOMAIN-SUFFIX,fb.me
-  - DOMAIN-SUFFIX,aka.ms
-  - DOMAIN-SUFFIX,akadns.net
-  - DOMAIN-KEYWORD,akamai
 # Apple
   - IP-CIDR,17.0.0.0/8,no-resolve
 # BitTorrent
@@ -13,16 +8,17 @@ payload:
 # Email
   - DOMAIN-SUFFIX,hotmail.com
   - DOMAIN-SUFFIX,mail.me.com
+  - DOMAIN-SUFFIX,outlook.com
+  - DOMAIN-SUFFIX,outlookmobile.com
 # Microsoft
-  - DOMAIN-SUFFIX,bing.com
   - DOMAIN-SUFFIX,microsoft.com
-  - DOMAIN-SUFFIX,office.com
-  - DOMAIN-SUFFIX,office.net
-  - DOMAIN-SUFFIX,officeapps.live.com
+  - DOMAIN-SUFFIX,live.com
+  - DOMAIN-SUFFIX,live.net
   - DOMAIN-SUFFIX,visualstudio.com
   - DOMAIN-SUFFIX,windows.com
+  - DOMAIN-SUFFIX,windows.net
+  - DOMAIN-SUFFIX,windowsupdate.com
   - DOMAIN-SUFFIX,1drv.com
   - DOMAIN-SUFFIX,1drv.ms
 # Other
-  - DOMAIN-KEYWORD,time
-  - DOMAIN-KEYWORD,ntp
+  - IP-CIDR,239.0.0.0/8,no-resolve
