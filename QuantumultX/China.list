@@ -8,16 +8,18 @@ host-keyword, tracker, direct
 host-suffix, hotmail.com, direct
 host-suffix, mail.me.com, direct
 host-suffix, outlook.com, direct
-host-suffix, outlookmobile.com, direct
 # Microsoft
-host-suffix, microsoft.com, direct
+host-suffix, 1drv.com, direct
+host-suffix, 1drv.ms, direct
 host-suffix, live.com, direct
 host-suffix, live.net, direct
+host-suffix, microsoft.com, direct
+host-suffix, microsoft.net, direct
+host-suffix, office.com, direct
+host-suffix, office.net, direct
 host-suffix, visualstudio.com, direct
 host-suffix, windows.com, direct
 host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
-host-suffix, 1drv.com, direct
-host-suffix, 1drv.ms, direct
 # Other
 ip-cidr, 239.0.0.0/8, direct
