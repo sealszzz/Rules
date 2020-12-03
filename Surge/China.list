@@ -7,6 +7,8 @@ DOMAIN-KEYWORD,tracker
 # Email
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,mail.me.com
+DOMAIN-SUFFIX,office.com
+DOMAIN-SUFFIX,office.net
 DOMAIN-SUFFIX,outlook.com
 DOMAIN-SUFFIX,outlookmobile.com
 # Microsoft
