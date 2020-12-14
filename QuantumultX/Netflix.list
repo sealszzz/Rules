@@ -1,5 +1,4 @@
 # Netflix
-host-suffix, bugsnag.com, proxy
 host-suffix, elb.eu-west-1.amazonaws.com, proxy
 host-suffix, eu-west-1.elb.amazonaws.com, proxy
 host-suffix, elb.us-west-2.amazonaws.com, proxy
