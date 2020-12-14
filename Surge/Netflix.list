@@ -1,6 +1,5 @@
 # Netflix
 USER-AGENT,Argo*
-DOMAIN-SUFFIX,bugsnag.com
 DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com
 DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com
 DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
