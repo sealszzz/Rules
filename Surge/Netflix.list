@@ -2,6 +2,10 @@
 USER-AGENT,Argo*
 DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com
 DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com
+DOMAIN-SUFFIX,elb.eu-west-2.amazonaws.com
+DOMAIN-SUFFIX,eu-west-2.elb.amazonaws.com
+DOMAIN-SUFFIX,elb.us-east-1.amazonaws.com
+DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com
 DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
 DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com
 DOMAIN-SUFFIX,fast.com
