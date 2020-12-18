@@ -31,6 +31,7 @@ host-suffix, godoc.org, proxy
 host-suffix, golang.org, proxy
 host-suffix, g.co, proxy
 host-suffix, goo.gl, proxy
+host-suffix, google.cn, proxy
 host-suffix, google.com, proxy
 host-suffix, googleapis.cn, proxy
 host-suffix, googleapis.com, proxy
