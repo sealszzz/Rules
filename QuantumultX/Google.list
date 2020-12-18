@@ -32,6 +32,7 @@ host-suffix, golang.org, proxy
 host-suffix, g.co, proxy
 host-suffix, goo.gl, proxy
 host-suffix, google.com, proxy
+host-suffix, googleapis.cn, proxy
 host-suffix, googleapis.com, proxy
 host-suffix, google-analytics.com, proxy
 host-suffix, googleadservices.com, proxy
