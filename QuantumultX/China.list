@@ -23,3 +23,4 @@ host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
 # Other
 ip-cidr, 239.0.0.0/8, direct
+host-suffix, nvidia.com, direct
