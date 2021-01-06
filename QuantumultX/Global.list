@@ -63,3 +63,4 @@ host-suffix, vine.co, proxy
 # Other
 host-suffix, wikipedia.org, proxy
 host-suffix, noxinfluencer.com, proxy
+host-suffix, amazonaws.com, proxy
