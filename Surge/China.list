@@ -24,3 +24,4 @@ DOMAIN-SUFFIX,windowsupdate.com
 # Other
 IP-CIDR,239.0.0.0/8,no-resolve
 DOMAIN-SUFFIX,nvidia.com
+DOMAIN-KEYWORD,steam
