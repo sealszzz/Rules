@@ -3,6 +3,10 @@ host-suffix, elb.eu-west-1.amazonaws.com, proxy
 host-suffix, eu-west-1.elb.amazonaws.com, proxy
 host-suffix, elb.us-west-2.amazonaws.com, proxy
 host-suffix, us-west-2.elb.amazonaws.com, proxy
+host-suffix, elb.us-east-1.amazonaws.com, proxy
+host-suffix, us-east-1.elb.amazonaws.com, proxy
+host-suffix, elb.us-west-2.amazonaws.com, proxy
+host-suffix, us-west-2.elb.amazonaws.com, proxy
 host-suffix, fast.com, proxy
 host-suffix, netflix.com, proxy
 host-suffix, netflix.net, proxy
