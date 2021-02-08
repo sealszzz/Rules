@@ -64,3 +64,5 @@ DOMAIN-SUFFIX,vine.co
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
+DOMAIN-KEYWORD,clubhouse
+USER-AGENT,Clubhouse*
