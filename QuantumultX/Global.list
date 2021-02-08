@@ -64,3 +64,5 @@ host-suffix, vine.co, proxy
 host-suffix, wikipedia.org, proxy
 host-suffix, noxinfluencer.com, proxy
 host-suffix, amazonaws.com, proxy
+host-keyword, clubhouse, proxy 
+user-agent, Clubhouse*, proxy
