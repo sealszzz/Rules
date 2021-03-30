@@ -64,6 +64,7 @@ DOMAIN-SUFFIX,twitpic.com
 DOMAIN-SUFFIX,vine.co
 # Other
 DOMAIN,skyapi.live.net
+DOMAIN,onedrive.live.com
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
