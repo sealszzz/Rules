@@ -51,7 +51,5 @@ DOMAIN-SUFFIX,visualstudio.com
 DOMAIN-SUFFIX,windows.com
 DOMAIN-SUFFIX,windows.net
 DOMAIN-SUFFIX,windowsupdate.com
-DOMAIN-SUFFIX,akamaihd.net
-DOMAIN-SUFFIX,akamaized.net
 # Other
 DOMAIN-SUFFIX,nvidia.com
