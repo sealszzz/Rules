@@ -5,34 +5,33 @@ host-keyword, announce, direct
 host-keyword, torrent, direct
 host-keyword, tracker, direct
 # Email
+host, outlook.live.com, direct
 host-suffix, hotmail.com, direct
-host-suffix, mail.me.com, direct
 host-suffix, outlook.com, direct
 # Microsoft
-host-suffix, 1drv.com, direct
-host-suffix, 1drv.ms, direct
-host-suffix, akamaihd.net, direct
-host-suffix, akamaized.net, direct
+host, login.live.com, direct
+host-suffix, officeapps.live.com, direct
 host-suffix, appcenter.ms, direct
-host-suffix, aspnetcdn.com, direct
-host-suffix, demdex.net, direct
-host-suffix, live.com, direct
-host-suffix, live.net, direct
+host-suffix, azure.net, direct
+host-suffix, azureedge.net, direct
+host-suffix, onestore.ms, direct
+host-suffix, gfx.ms, direct
+host-suffix, sfx.ms, direct
+host-suffix, svc.ms, direct
+host-suffix, s-microsoft.com, direct
 host-suffix, livefilestore.com, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
 host-suffix, microsoftonline.com, direct
 host-suffix, msauth.net, direct
 host-suffix, msecnd.net, direct
-host-suffix, msftauth.net, direct
 host-suffix, msocdn.com, direct
-host-suffix, gfx.ms, direct
-host-suffix, sfx.ms, direct
-host-suffix, svc.ms, direct
+host-suffix, msftauth.net, direct
 host-suffix, office.com, direct
 host-suffix, office.net, direct
 host-suffix, office365.com, direct
 host-suffix, office365.net, direct
+host-suffix, omtrdc.net, direct
 host-suffix, sharepointonline.com, direct
 host-suffix, visualstudio.com, direct
 host-suffix, windows.com, direct
@@ -40,4 +39,3 @@ host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
 # Other
 host-suffix, nvidia.com, direct
-host-keyword, steam, direct
