@@ -26,6 +26,7 @@ host-suffix, officehome.msocdn.com, direct
 host-suffix, office.com, direct
 host-suffix, office.net, direct
 host-suffix, onedrive.com, direct
+host-suffix, sharepointonline.com, direct
 host-suffix, visualstudio.com, direct
 host-suffix, windows.com, direct
 host-suffix, windows.net, direct
