@@ -23,9 +23,6 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
-DOMAIN-SUFFIX,1drv.com
-DOMAIN-SUFFIX,1drv.ms
-DOMAIN-SUFFIX,office.com
 DOMAIN-SUFFIX,livefilestore.com
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,onestore.ms
