@@ -31,7 +31,9 @@ DOMAIN-SUFFIX,live.com
 DOMAIN-SUFFIX,live.net
 DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,microsoft.net
+DOMAIN-SUFFIX,microsoftonline.com
 DOMAIN,mem.gfx.ms
+DOMAIN,aadcdn.msauth.net
 DOMAIN-SUFFIX,*microsoft-com.akamaized.net
 DOMAIN-SUFFIX,*ms-com.akamaized.net
 DOMAIN-SUFFIX,officehome.msocdn.com
