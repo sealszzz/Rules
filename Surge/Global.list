@@ -63,10 +63,10 @@ DOMAIN-SUFFIX,twimg.com
 DOMAIN-SUFFIX,twitpic.com
 DOMAIN-SUFFIX,vine.co
 # OneDrive
-DOMAIN,oneclient.sfx.ms
-DOMAIN-SUFFIX,onedrive.com
-DOMAIN-SUFFIX,onedrive.live.com
-DOMAIN-SUFFIX,storage.live.com
+#DOMAIN,oneclient.sfx.ms
+#DOMAIN-SUFFIX,onedrive.com
+#DOMAIN-SUFFIX,onedrive.live.com
+#DOMAIN-SUFFIX,storage.live.com
 # Other
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
