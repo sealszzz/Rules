@@ -64,8 +64,8 @@ host-suffix, twitpic.com, proxy
 host-suffix, vine.co, proxy
 # Other
 host-suffix, onedrive.com, proxy
-host, onedrive.live.com, proxy
-host, skyapi.live.net, proxy
+host-suffix, onedrive.live.com, proxy
+host-suffix, skyapi.live.net, proxy
 host-suffix, wikipedia.org, proxy
 host-suffix, noxinfluencer.com, proxy
 host-suffix, amazonaws.com, proxy
