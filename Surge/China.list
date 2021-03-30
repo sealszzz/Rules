@@ -23,13 +23,13 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
-DOMAIN-SUFFIX,livefilestore.com
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,gfx.ms
 DOMAIN-SUFFIX,sfx.ms
 DOMAIN-SUFFIX,svc.ms
 DOMAIN-SUFFIX,s-microsoft.com
+DOMAIN-SUFFIX,livefilestore.com
 DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,microsoft.net
 DOMAIN-SUFFIX,microsoftonline.com
