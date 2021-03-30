@@ -62,10 +62,14 @@ host-suffix, twimg.co, proxy
 host-suffix, twimg.com, proxy
 host-suffix, twitpic.com, proxy
 host-suffix, vine.co, proxy
-# Other
+# OneDrive
+host, oneclient.sfx.ms, proxy
+host-suffix, 1drv.com, proxy
+host-suffix, 1drv.ms, proxy
 host-suffix, onedrive.com, proxy
 host-suffix, onedrive.live.com, proxy
 host-suffix, skyapi.live.net, proxy
+# Other
 host-suffix, wikipedia.org, proxy
 host-suffix, noxinfluencer.com, proxy
 host-suffix, amazonaws.com, proxy
