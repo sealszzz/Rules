@@ -21,7 +21,6 @@ IP-CIDR,17.0.0.0/8,no-resolve
 # Email
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
-DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
 DOMAIN-SUFFIX,appcenter.ms
