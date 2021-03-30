@@ -15,8 +15,10 @@ host-suffix, appcenter.ms, direct
 host-suffix, live.com, direct
 host-suffix, live.net, direct
 host, mem.gfx.ms, direct
+host, aadcdn.msauth.net, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
+host-suffix, microsoftonline.com, direct
 host-suffix, *microsoft-com.akamaized.net, direct
 host-suffix, *ms-com.akamaized.net, direct
 host-suffix, officehome.msocdn.com, direct
