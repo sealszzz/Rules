@@ -34,6 +34,8 @@ ip-cidr, 203.104.144.0/21, proxy
 host-suffix, github.com, proxy
 host-suffix, github.io, proxy
 host-suffix, githubusercontent.com, proxy
+host-suffix, githubassets.com, proxy
+host-keyword, github, proxy 
 # Telegram
 host-suffix, t.me, proxy
 host-suffix, tdesktop.com, proxy
