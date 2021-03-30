@@ -64,6 +64,8 @@ DOMAIN-SUFFIX,twitpic.com
 DOMAIN-SUFFIX,vine.co
 # OneDrive
 DOMAIN,oneclient.sfx.ms
+DOMAIN-SUFFIX,1drv.com
+DOMAIN-SUFFIX,1drv.ms
 DOMAIN-SUFFIX,onedrive.com
 DOMAIN-SUFFIX,onedrive.live.com
 # Other
