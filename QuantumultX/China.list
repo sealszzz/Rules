@@ -11,6 +11,7 @@ host-suffix, outlook.com, direct
 # Microsoft
 host-suffix, 1drv.com, direct
 host-suffix, 1drv.ms, direct
+host-suffix, appcenter.ms, direct
 host-suffix, live.com, direct
 host-suffix, live.net, direct
 host-suffix, microsoft.com, direct
