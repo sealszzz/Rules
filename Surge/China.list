@@ -30,6 +30,8 @@ DOMAIN-SUFFIX,live.com
 DOMAIN-SUFFIX,live.cn
 DOMAIN-SUFFIX,live.net
 DOMAIN-SUFFIX,livefilestore.com
+DOMAIN-SUFFIX,appcenter.ms
+DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,gfx.ms
 DOMAIN-SUFFIX,sfx.ms
 DOMAIN-SUFFIX,svc.ms
@@ -38,9 +40,9 @@ DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,microsoft.net
 DOMAIN-SUFFIX,microsoftonline.com
 DOMAIN-SUFFIX,msauth.net
+DOMAIN-SUFFIX,msecnd.net
 DOMAIN-SUFFIX,msocdn.com
 DOMAIN-SUFFIX,msftauth.net
-DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,office.com
 DOMAIN-SUFFIX,office.net
 DOMAIN-SUFFIX,office365.com
@@ -49,7 +51,7 @@ DOMAIN-SUFFIX,visualstudio.com
 DOMAIN-SUFFIX,windows.com
 DOMAIN-SUFFIX,windows.net
 DOMAIN-SUFFIX,windowsupdate.com
-DOMAIN,img-prod-cms-rt-microsoft-com.akamaized.net
-DOMAIN,microsoftwindows.112.2o7.net
+DOMAIN-SUFFIX,akamaihd.net
+DOMAIN-SUFFIX,akamaized.net
 # Other
 DOMAIN-SUFFIX,nvidia.com
