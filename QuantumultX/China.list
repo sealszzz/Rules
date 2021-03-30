@@ -14,8 +14,10 @@ host-suffix, 1drv.ms, direct
 host-suffix, appcenter.ms, direct
 host-suffix, live.com, direct
 host-suffix, live.net, direct
+host, mem.gfx.ms, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
+host-suffix, officehome.msocdn.com, direct
 host-suffix, office.com, direct
 host-suffix, office.net, direct
 host-suffix, onedrive.com, direct
