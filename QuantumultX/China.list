@@ -20,8 +20,8 @@ host, amcdn.msftauth.net, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
 host-suffix, microsoftonline.com, direct
-host, img-prod-cms-rt-microsoft-com.akamaized.net, direct
-host, statics-marketingsites-eas-ms-com.akamaized.net, direct
+host-suffix, akamaihd.net, direct
+host-suffix, akamaized.net, direct
 host-suffix, officehome.msocdn.com, direct
 host-suffix, office.com, direct
 host-suffix, office.net, direct
