@@ -17,6 +17,7 @@ host-suffix, live.net, direct
 host, mem.gfx.ms, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
+host-suffix, *microsoft-com.akamaized.net, direct
 host-suffix, officehome.msocdn.com, direct
 host-suffix, office.com, direct
 host-suffix, office.net, direct
