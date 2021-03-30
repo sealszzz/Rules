@@ -23,6 +23,7 @@ DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
+DOMAIN,login.live.com
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,azure.net
 DOMAIN-SUFFIX,azureedge.net
