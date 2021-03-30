@@ -39,6 +39,5 @@ host-suffix, windows.com, direct
 host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
 # Other
-ip-cidr, 239.255.255.250/32, direct
 host-suffix, nvidia.com, direct
 host-keyword, steam, direct
