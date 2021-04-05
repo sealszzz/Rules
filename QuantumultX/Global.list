@@ -70,6 +70,7 @@ host-suffix, onedrive.com, proxy
 host-suffix, onedrive.live.com, proxy
 host-suffix, skyapi.live.net, proxy
 # Other
+host,jdsharedresourcescdn.azureedge.net, proxy
 host-suffix, wikipedia.org, proxy
 host-suffix, noxinfluencer.com, proxy
 host-suffix, amazonaws.com, proxy
