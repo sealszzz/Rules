@@ -27,6 +27,7 @@ DOMAIN,login.live.com
 DOMAIN-SUFFIX,officeapps.live.com
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,azure.net
+DOMAIN-SUFFIX,azureedge.net
 DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,gfx.ms
 DOMAIN-SUFFIX,sfx.ms
