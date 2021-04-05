@@ -23,8 +23,6 @@ DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
-DOMAIN,login.live.com
-DOMAIN-SUFFIX,officeapps.live.com
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,azure.net
 DOMAIN-SUFFIX,azureedge.net
@@ -32,8 +30,10 @@ DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,gfx.ms
 DOMAIN-SUFFIX,sfx.ms
 DOMAIN-SUFFIX,svc.ms
-DOMAIN-SUFFIX,s-microsoft.com
+DOMAIN-SUFFIX,live.com
+DOMAIN-SUFFIX,live.net
 DOMAIN-SUFFIX,livefilestore.com
+DOMAIN-SUFFIX,s-microsoft.com
 DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,microsoft.net
 DOMAIN-SUFFIX,microsoftonline.com
