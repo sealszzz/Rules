@@ -9,8 +9,6 @@ host, outlook.live.com, direct
 host-suffix, hotmail.com, direct
 host-suffix, outlook.com, direct
 # Microsoft
-host, login.live.com, direct
-host-suffix, officeapps.live.com, direct
 host-suffix, appcenter.ms, direct
 host-suffix, azure.net, direct
 host-suffix, azureedge.net, direct
@@ -18,8 +16,10 @@ host-suffix, onestore.ms, direct
 host-suffix, gfx.ms, direct
 host-suffix, sfx.ms, direct
 host-suffix, svc.ms, direct
-host-suffix, s-microsoft.com, direct
+host-suffix, live.com, direct
+host-suffix, live.net, direct
 host-suffix, livefilestore.com, direct
+host-suffix, s-microsoft.com, direct
 host-suffix, microsoft.com, direct
 host-suffix, microsoft.net, direct
 host-suffix, microsoftonline.com, direct
