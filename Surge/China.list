@@ -18,6 +18,8 @@ DOMAIN-KEYWORD,torrent
 DOMAIN-KEYWORD,tracker
 # Apple
 IP-CIDR,17.0.0.0/8,no-resolve
+# Tencent
+DOMAIN-SUFFIX,qq.com
 # Email
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
