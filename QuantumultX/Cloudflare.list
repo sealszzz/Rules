@@ -15,4 +15,8 @@ ip-cidr, 190.93.240.0/20, proxy
 ip-cidr, 197.234.240.0/22, proxy
 ip-cidr, 198.41.128.0/17, proxy
 # Emby
-host-keyword, emby., proxy
+user-agent, Emby*, proxy
+host-keyword, emby, proxy
+host-suffix, mb3admin.com, proxy
+host-suffix, mickeycloud.com, proxy
+host-suffix, plusmedia.site, proxy
