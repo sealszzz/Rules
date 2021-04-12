@@ -19,7 +19,7 @@ DOMAIN-KEYWORD,tracker
 # Apple
 IP-CIDR,17.0.0.0/8,no-resolve
 # Tencent
-USER-AGENT,MicroMessenger Client
+USER-AGENT,MicroMessenger
 DOMAIN-SUFFIX,qq.com
 # Email
 DOMAIN,outlook.live.com
