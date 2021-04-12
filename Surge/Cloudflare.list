@@ -15,4 +15,8 @@ IP-CIDR,190.93.240.0/20,no-resolve
 IP-CIDR,197.234.240.0/22,no-resolve
 IP-CIDR,198.41.128.0/17,no-resolve
 # Emby
-DOMAIN-KEYWORD,emby.
+USER-AGENT,Emby*
+DOMAIN-KEYWORD,emby
+DOMAIN-SUFFIX,mb3admin.com
+DOMAIN-SUFFIX,mickeycloud.com
+DOMAIN-SUFFIX,plusmedia.site
