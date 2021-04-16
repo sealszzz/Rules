@@ -1,2 +1,3 @@
 AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP))
 AND,((DOMAIN-SUFFIX,gvt1.com),(PROTOCOL,UDP))
+AND,((DOMAIN-SUFFIX,play.googleapis.com),(PROTOCOL,UDP))
