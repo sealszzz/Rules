@@ -1,2 +1,2 @@
 AND,((DOMAIN-SUFFIX,googlevideo.com),(PROTOCOL,UDP))
-AND,((DOMAIN,r4---sn-i3belney.gvt1.com),(PROTOCOL,UDP))
+AND,((DOMAIN-SUFFIX,gvt1.com),(PROTOCOL,UDP))
