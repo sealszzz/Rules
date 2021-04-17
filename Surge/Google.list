@@ -1,5 +1,6 @@
 # Google
 DOMAIN,stun.l.google.com
+DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,2mdn.net
 DOMAIN-SUFFIX,abc.xyz
 DOMAIN-SUFFIX,admob.com
@@ -61,7 +62,6 @@ DOMAIN-SUFFIX,polymer-project.org
 DOMAIN-SUFFIX,recaptcha.net
 DOMAIN-SUFFIX,shattered.io
 DOMAIN-SUFFIX,synergyse.com
-DOMAIN-SUFFIX,telephony.goog
 DOMAIN-SUFFIX,tensorflow.org
 DOMAIN-SUFFIX,tfhub.dev
 DOMAIN-SUFFIX,tiltbrush.com
