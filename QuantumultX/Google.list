@@ -1,5 +1,6 @@
 # Google
 host, stun.l.google.com, proxy
+host, voice.telephony.goog, proxy
 host-suffix, 2mdn.net, proxy
 host-suffix, abc.xyz, proxy
 host-suffix, admob.com, proxy
@@ -61,7 +62,6 @@ host-suffix, polymer-project.org, proxy
 host-suffix, recaptcha.net, proxy
 host-suffix, shattered.io, proxy
 host-suffix, synergyse.com, proxy
-host-suffix, telephony.goog, proxy
 host-suffix, tensorflow.org, proxy
 host-suffix, tfhub.dev, proxy
 host-suffix, tiltbrush.com, proxy
