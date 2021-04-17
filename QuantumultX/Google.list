@@ -1,5 +1,5 @@
 # Google
-host, lens.l.google.com, proxy
+host-suffix, l.google.com, proxy
 host-suffix, 2mdn.net, proxy
 host-suffix, abc.xyz, proxy
 host-suffix, admob.com, proxy
