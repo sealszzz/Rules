@@ -1,5 +1,6 @@
 # Google
-DOMAIN,lens.l.google.com
+DOMAIN,stun.l.google.com
+DOMAIN-SUFFIX,l.google.com
 DOMAIN-SUFFIX,2mdn.net
 DOMAIN-SUFFIX,abc.xyz
 DOMAIN-SUFFIX,admob.com
