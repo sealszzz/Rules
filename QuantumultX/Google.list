@@ -73,6 +73,7 @@ host-suffix, whatbrowser.org, proxy
 host-suffix, widevine.com, proxy
 host-suffix, x.company, proxy
 host-suffix, xn--ngstr-lra8j.com, proxy
+host-suffix, youtube.com, proxy
 host-suffix, youtu.be, proxy
 host-suffix, yt.be, proxy
 host-suffix, ytimg.com, proxy
