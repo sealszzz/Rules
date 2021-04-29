@@ -1,9 +1,6 @@
 #!name=Advanced Settings & URL Redirect
 #!desc=高级设置及通用的 URL 重定向优化（如 Google 搜索及地图）
 
-[Script]
-Sub_info = type=http-request,pattern=http://sub\.info,script-path=https://raw.githubusercontent.com/mieqq/mieqq/master/sub_info.js
-
 [URL Rewrite]
 # Redirect Google Search Service
 ^(http|https):\/\/(www.)?(g|google)\.cn https://www.google.com 302
