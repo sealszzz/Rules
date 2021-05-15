@@ -77,5 +77,6 @@ DOMAIN-SUFFIX,digitimes.com.tw
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
+DOMAIN,doh.dns.apple.com
 DOMAIN-KEYWORD,clubhouse
 USER-AGENT,Clubhouse*
