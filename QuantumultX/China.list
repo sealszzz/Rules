@@ -41,3 +41,7 @@ host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
 # Other
 host-suffix, nvidia.com, direct
+host-suffix, cn-hongkong.log.aliyuncs.com, direct
+host-suffix, jegotrip.com.cn, direct
+host-suffix, accelerate.taiyulink.com, direct
+user-agent, Roam*, direct
