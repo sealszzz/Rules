@@ -1,3 +1,3 @@
-DOMAIN-SUFFIX,opencloud.wostore.cn
-DOMAIN-SUFFIX,config.cmpassport.com
-DOMAIN-SUFFIX,id6.me
+host-suffix, opencloud.wostore.cn, reject
+host-suffix, config.cmpassport.com, reject
+host-suffix, id6.me, reject
