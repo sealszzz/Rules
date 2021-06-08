@@ -40,6 +40,7 @@ host-suffix, windows.com, direct
 host-suffix, windows.net, direct
 host-suffix, windowsupdate.com, direct
 # Other
+host-suffix, 163.com, direct
 host-suffix, nvidia.com, direct
 host-suffix, cn-hongkong.log.aliyuncs.com, direct
 host-suffix, jegotrip.com.cn, direct
