@@ -82,4 +82,3 @@ host-suffix, ntp.nasa.gov, proxy
 host, insider.windows.com, proxy
 host-keyword, clubhouse, proxy 
 user-agent, Clubhouse*, proxy
-user-agent, Clubhouse*, proxy
