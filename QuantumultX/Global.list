@@ -79,6 +79,6 @@ host-suffix, noxinfluencer.com, proxy
 host-suffix, amazonaws.com, proxy
 host-suffix, doh.dns.apple.com, proxy
 host-suffix, ntp.nasa.gov, proxy
-host, insider.windows.com, proxy
+host, insider.windows.com, proxyy
 host-keyword, clubhouse, proxy 
 user-agent, Clubhouse*, proxy
