@@ -79,5 +79,6 @@ DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
 DOMAIN-SUFFIX,ntp.nasa.gov
 DOMAIN,doh.dns.apple.com
+DOMAIN,insider.windows.com
 DOMAIN-KEYWORD,clubhouse
 USER-AGENT,Clubhouse*
