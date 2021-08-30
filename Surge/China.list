@@ -20,6 +20,7 @@ DOMAIN-KEYWORD,tracker
 IP-CIDR,17.0.0.0/8,no-resolve
 # Tencent
 DOMAIN-SUFFIX,qq.com
+DOMAIN-SUFFIX,wechat.com
 USER-AGENT,MicroMessenger*
 # Email
 DOMAIN,outlook.live.com
