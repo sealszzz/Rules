@@ -35,6 +35,10 @@ DOMAIN-SUFFIX,g.co
 DOMAIN-SUFFIX,goo.gl
 DOMAIN-SUFFIX,google.cn
 DOMAIN-SUFFIX,google.com
+DOMAIN-SUFFIX,google.com.hk
+DOMAIN-SUFFIX,google.com.jp
+DOMAIN-SUFFIX,google.com.sg
+DOMAIN-SUFFIX,google.com.tw
 DOMAIN-SUFFIX,googleapis.cn
 DOMAIN-SUFFIX,googleapis.com
 DOMAIN-SUFFIX,google-analytics.com
