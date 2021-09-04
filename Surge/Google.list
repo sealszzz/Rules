@@ -77,7 +77,7 @@ DOMAIN-SUFFIX,youtube.com
 DOMAIN-SUFFIX,youtu.be
 DOMAIN-SUFFIX,yt.be
 DOMAIN-SUFFIX,ytimg.com
-DOMAIN-KEYWORD,blogspot.com
-DOMAIN-KEYWORD,gmail.com
-DOMAIN-KEYWORD,google.com
-DOMAIN-KEYWORD,youtube.com
+DOMAIN-KEYWORD,blogspot
+DOMAIN-KEYWORD,gmail
+DOMAIN-KEYWORD,google
+DOMAIN-KEYWORD,youtube
