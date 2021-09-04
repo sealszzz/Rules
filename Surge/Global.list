@@ -71,7 +71,7 @@ DOMAIN-SUFFIX,onedrive.com
 DOMAIN-SUFFIX,onedrive.live.com
 DOMAIN-SUFFIX,skyapi.live.net
 # Other
-DOMAIN-KEYWORD,.tw
+# DOMAIN-KEYWORD,.tw
 DOMAIN-SUFFIX,.tw
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,digitimes.com
