@@ -1,7 +1,14 @@
 # Apple
+DOMAIN-SUFFIX,apple.co
 DOMAIN-SUFFIX,apple.com
 DOMAIN-SUFFIX,apple-mapkit.com
+DOMAIN-SUFFIX,apple-cloudkit.com
+DOMAIN-SUFFIX,aaplimg.com
+DOMAIN-SUFFIX,appstore.com
 DOMAIN-SUFFIX,icloud.com
+DOMAIN-SUFFIX,icloud-content.com
+DOMAIN-SUFFIX,me.com
+DOMAIN-SUFFIX,mzstatic.com
 # Facebook
 DOMAIN-SUFFIX,cdninstagram.com
 DOMAIN-SUFFIX,facebook.com
