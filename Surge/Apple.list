@@ -1,3 +1,3 @@
 # Apple
-DOMAIN-SUFFIX,apple.com
-DOMAIN-SUFFIX,icloud.com
+IP-CIDR,17.0.0.0/8,no-resolve
+DOMAIN-SUFFIX,push.apple.com
