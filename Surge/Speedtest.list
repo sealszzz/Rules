@@ -1,6 +1,8 @@
 # Speedtest
 DOMAIN,speedtest.macpaw.com
+DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,speedtest.net
 DOMAIN-SUFFIX,ooklaserver.net
 DOMAIN-SUFFIX,netspeedtestmaster.com
 DOMAIN-KEYWORD,speedtest
+USER-AGENT,SpeedTest*
