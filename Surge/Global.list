@@ -734,7 +734,10 @@ DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
+DOMAIN-SUFFIX,pool.ntp.org
 DOMAIN-SUFFIX,ntp.nasa.gov
+DOMAIN,stun.services.mozilla.com
+DOMAIN,time.asia.apple.com
 DOMAIN,doh.dns.apple.com
 DOMAIN,insider.windows.com
 DOMAIN-KEYWORD,clubhouse
