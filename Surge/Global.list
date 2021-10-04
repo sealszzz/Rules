@@ -117,6 +117,7 @@ DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,amazonaws.com
 DOMAIN-SUFFIX,pool.ntp.org
 DOMAIN-SUFFIX,ntp.nasa.gov
+DOMAIN-SUFFIX,dns.sh
 DOMAIN,stun.services.mozilla.com
 DOMAIN,token.safebrowsing.apple
 DOMAIN,time.asia.apple.com
