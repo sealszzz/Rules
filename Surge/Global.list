@@ -110,14 +110,11 @@ USER-AGENT,OneDriveiOSApp*
 PROCESS-NAME,onedrive
 PROCESS-NAME,onedriveupdater
 # Other
-DOMAIN-KEYWORD,.tw
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
-DOMAIN-SUFFIX,amazonaws.com
 DOMAIN-SUFFIX,pool.ntp.org
 DOMAIN-SUFFIX,ntp.nasa.gov
-DOMAIN-SUFFIX,dns.sh
 DOMAIN,stun.services.mozilla.com
 DOMAIN-SUFFIX,safebrowsing.apple
 DOMAIN,time.asia.apple.com
