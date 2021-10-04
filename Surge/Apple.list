@@ -1,5 +1,6 @@
 # Apple
 # IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
-DOMAIN-SUFFIX,push.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
+DOMAIN-SUFFIX,me.com
+DOMAIN-SUFFIX,push.apple.com
