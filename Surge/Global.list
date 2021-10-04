@@ -119,7 +119,7 @@ DOMAIN-SUFFIX,pool.ntp.org
 DOMAIN-SUFFIX,ntp.nasa.gov
 DOMAIN-SUFFIX,dns.sh
 DOMAIN,stun.services.mozilla.com
-DOMAIN,token.safebrowsing.apple
+DOMAIN-SUFFIX,safebrowsing.apple
 DOMAIN,time.asia.apple.com
 DOMAIN,doh.dns.apple.com
 DOMAIN,insider.windows.com
