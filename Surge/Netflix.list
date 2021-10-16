@@ -26,6 +26,7 @@ DOMAIN-SUFFIX,nflximg.com
 DOMAIN-SUFFIX,nflximg.net
 DOMAIN-SUFFIX,nflxso.net
 DOMAIN-SUFFIX,nflxvideo.net
+DOMAIN-KEYWORD,apiproxy-device-prod-nlb
 DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
 DOMAIN-KEYWORD,dualstack.apiproxy-
