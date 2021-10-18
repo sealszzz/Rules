@@ -1,7 +1,7 @@
 # Apple
 DOMAIN,time.asia.apple.com
 DOMAIN,doh.dns.apple.com
-DOMAIN,reserve-prime.apple.com
+# DOMAIN,reserve-prime.apple.com
 DOMAIN-SUFFIX,safebrowsing.apple
 # Github
 DOMAIN-SUFFIX,atom.io
