@@ -8,6 +8,8 @@ DOMAIN,netflix.com.edgesuite.net
 # DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com
 # DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
 # DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com
+DOMAIN-SUFFIX,cdn.cookielaw.org
+DOMAIN-SUFFIX,geolocation.onetrust.com
 DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,netflix.com
 DOMAIN-SUFFIX,netflix.net
