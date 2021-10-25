@@ -1,5 +1,5 @@
 # Google
-IP-CIDR,8.8.8.8/32,no-resolve
+# IP-CIDR,8.8.8.8/32,no-resolve
 DOMAIN,stun.l.google.com
 DOMAIN,voice.telephony.goog
 DOMAIN-SUFFIX,2mdn.net
