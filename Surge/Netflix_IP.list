@@ -20,11 +20,11 @@ IP-CIDR,203.75.0.0/16,no-resolve
 IP-CIDR,203.116.0.0/16,no-resolve
 IP-CIDR,207.45.72.0/22,no-resolve
 IP-CIDR,208.75.76.0/22,no-resolve
-DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com
-DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com
-DOMAIN-SUFFIX,elb.eu-west-2.amazonaws.com
-DOMAIN-SUFFIX,eu-west-2.elb.amazonaws.com
-DOMAIN-SUFFIX,elb.us-east-1.amazonaws.com
-DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com
-DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
-DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com
+# DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com
+# DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com
+# DOMAIN-SUFFIX,elb.eu-west-2.amazonaws.com
+# DOMAIN-SUFFIX,eu-west-2.elb.amazonaws.com
+# DOMAIN-SUFFIX,elb.us-east-1.amazonaws.com
+# DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com
+# DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
+# DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com
