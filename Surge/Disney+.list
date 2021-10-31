@@ -7,6 +7,7 @@ DOMAIN-SUFFIX,dssott.com
 DOMAIN-SUFFIX,cws.conviva.com
 DOMAIN,disney.my.sentry.io
 DOMAIN,sdk.iad-03.braze.com
+DOMAIN,playback-certs.bamgrid.com:443
 DOMAIN,disney.api.edge.bamgrid.com
 DOMAIN,disney.connections.edge.bamgrid.com
 DOMAIN,disney.content.edge.bamgrid.com
