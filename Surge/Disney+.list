@@ -6,7 +6,7 @@ DOMAIN-SUFFIX,disneystreaming.com
 DOMAIN-SUFFIX,media.dssott.com
 DOMAIN-SUFFIX,cws.conviva.com
 DOMAIN,disney.my.sentry.io
-DOMAIN,sdk.iad-03.braze.com
+DOMAIN-SUFFIX,braze.com
 DOMAIN-SUFFIX,disney.demdex.net
 DOMAIN,disney.api.edge.bamgrid.com
 DOMAIN,global.edge.bamgrid.com
