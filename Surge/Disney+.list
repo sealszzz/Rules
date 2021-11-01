@@ -1,6 +1,5 @@
 # Disney+
 USER-AGENT,Disney*
-DOMAIN-SUFFIX,assets.adobedtm.com
 DOMAIN-SUFFIX,bamgrid.com
 DOMAIN-SUFFIX,braze.com
 DOMAIN-SUFFIX,cws.conviva.com
@@ -10,8 +9,7 @@ DOMAIN-SUFFIX,disney-plus.net
 DOMAIN-SUFFIX,disneystreaming.com
 DOMAIN-SUFFIX,disney.demdex.net
 DOMAIN-SUFFIX,disney.my.sentry.io
-DOMAIN-SUFFIX,media.dssott.com
-DOMAIN-SUFFIX,svcs.dssott.com
+DOMAIN-SUFFIX,dssott.com
 DOMAIN-SUFFIX,registerdisney.go.com
 
 # DOMAIN,global.edge.bamgrid.com
