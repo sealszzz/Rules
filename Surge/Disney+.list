@@ -1,5 +1,6 @@
 # Disney+
 USER-AGENT,Disney*
+DOMAIN-SUFFIX,assets.adobedtm.com
 DOMAIN-SUFFIX,bamgrid.com
 DOMAIN-SUFFIX,braze.com
 DOMAIN-SUFFIX,cws.conviva.com
