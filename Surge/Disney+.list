@@ -6,22 +6,23 @@ DOMAIN,disney.demdex.net
 DOMAIN,disney.my.sentry.io
 DOMAIN,sdk.iad-03.braze.com
 DOMAIN-SUFFIX,bamgrid.com
-DOMAIN-SUFFIX,cloudfront.net
 DOMAIN-SUFFIX,cws.conviva.com
-DOMAIN-SUFFIX,d9.flashtalking.com
-DOMAIN-SUFFIX,dadcdigital.com
-DOMAIN-SUFFIX,disco-api.com
-DOMAIN-SUFFIX,disney.com
-DOMAIN-SUFFIX,disneyjunior.com
-DOMAIN-SUFFIX,disneynow.com
-DOMAIN-SUFFIX,disneyplus.bn5x.net
 DOMAIN-SUFFIX,disneyplus.com
-DOMAIN-SUFFIX,disneyplus.com.ssl.sc.omtrdc.net
 DOMAIN-SUFFIX,disney-plus.net
-DOMAIN-SUFFIX,disney-portal.my.onetrust.com
-DOMAIN-SUFFIX,disneystreaming.com
-DOMAIN-SUFFIX,dssott.com.akamaized.net
 DOMAIN-SUFFIX,media.dssott.com
-DOMAIN-SUFFIX,go-mpulse.net
-DOMAIN-SUFFIX,optimizely.com
 DOMAIN-KEYWORD,disney
+
+# DOMAIN-SUFFIX,cloudfront.net
+# DOMAIN-SUFFIX,d9.flashtalking.com
+# DOMAIN-SUFFIX,disco-api.com
+# DOMAIN-SUFFIX,disney.com
+# DOMAIN-SUFFIX,disneyjunior.com
+# DOMAIN-SUFFIX,disneynow.com
+# DOMAIN-SUFFIX,disneyplus.bn5x.net
+# DOMAIN-SUFFIX,disneyplus.com.ssl.sc.omtrdc.net
+# DOMAIN-SUFFIX,disney-portal.my.onetrust.com
+# DOMAIN-SUFFIX,disneystreaming.com
+# DOMAIN-SUFFIX,dssott.com.akamaized.net
+# DOMAIN-SUFFIX,dadcdigital.com
+# DOMAIN-SUFFIX,go-mpulse.net
+# DOMAIN-SUFFIX,optimizely.com
