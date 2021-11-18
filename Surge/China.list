@@ -35,8 +35,8 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
 DOMAIN-SUFFIX,appcenter.ms
-DOMAIN-SUFFIX,azure.net
-DOMAIN-SUFFIX,azureedge.net
+# DOMAIN-SUFFIX,azure.net
+# DOMAIN-SUFFIX,azureedge.net
 DOMAIN-SUFFIX,onestore.ms
 DOMAIN-SUFFIX,gfx.ms
 DOMAIN-SUFFIX,sfx.ms
