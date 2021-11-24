@@ -6,7 +6,7 @@ DOMAIN,disney.demdex.net
 DOMAIN,disney.my.sentry.io
 DOMAIN,sdk.iad-03.braze.com
 DOMAIN-SUFFIX,bamgrid.com
-DOMAIN-SUFFIX,cws.conviva.com, no-resolve
+DOMAIN-SUFFIX,cws.conviva.com,no-resolve
 DOMAIN-SUFFIX,disneyplus.com
 DOMAIN-SUFFIX,disney-plus.net
 DOMAIN-SUFFIX,media.dssott.com
