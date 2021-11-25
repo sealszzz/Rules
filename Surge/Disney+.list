@@ -1,7 +1,6 @@
 # Disney+
 USER-AGENT,Disney+*
 DOMAIN,assets.adobedtm.com
-DOMAIN,cdn.registerdisney.go.com
 DOMAIN,disney.demdex.net
 DOMAIN,disney.my.sentry.io
 DOMAIN,sdk.iad-03.braze.com
@@ -11,5 +10,6 @@ DOMAIN-SUFFIX,disneyplus.com
 DOMAIN-SUFFIX,disney-plus.net
 DOMAIN-SUFFIX,disney.com
 DOMAIN-SUFFIX,media.dssott.com
+DOMAIN-SUFFIX,registerdisney.go.com
 DOMAIN-SUFFIX,thewaltdisneycompany.com
 DOMAIN-KEYWORD,disney
