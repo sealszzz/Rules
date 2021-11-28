@@ -22,8 +22,14 @@ DOMAIN-SUFFIX,me.com
 DOMAIN-SUFFIX,push.apple.com
 # BitTorrent
 DOMAIN-KEYWORD,announce
+DOMAIN-KEYWORD,protocol
+DOMAIN-KEYWORD,BitTorrent
 DOMAIN-KEYWORD,torrent
 DOMAIN-KEYWORD,tracker
+DOMAIN-KEYWORD,xunlei
+DOMAIN-KEYWORD,sandai
+DOMAIN-KEYWORD,Thunder
+DOMAIN-KEYWORD,XLLiveUD
 # Tencent
 DOMAIN-SUFFIX,qq.com
 DOMAIN-SUFFIX,wechat.com
@@ -64,6 +70,10 @@ DOMAIN-SUFFIX,windows.net
 DOMAIN-SUFFIX,windowsupdate.com
 # Other
 DOMAIN-KEYWORD,.cn
+DOMAIN-SUFFIX,360.cn
+DOMAIN-SUFFIX,360.com
+DOMAIN-SUFFIX,so.cn
+DOMAIN-SUFFIX,so.com
 DOMAIN-SUFFIX,163.com
 DOMAIN-SUFFIX,nvidia.com
 DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
