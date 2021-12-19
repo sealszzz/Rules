@@ -13,7 +13,7 @@ PROCESS-NAME,uTorrent
 PROCESS-NAME,WebTorrent
 PROCESS-NAME,WebTorrent Helper
 # Apple
-# IP-CIDR,17.0.0.0/8,no-resolve
+IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
 DOMAIN,gs-loc-cn.apple.com
 DOMAIN-SUFFIX,swcdn.apple.com
