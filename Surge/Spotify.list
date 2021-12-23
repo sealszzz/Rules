@@ -1,4 +1,6 @@
 # Spotify
+DOMAIN-SUFFIX,branch.io
+DOMAIN-SUFFIX,scorecardresearch.com
 DOMAIN-SUFFIX,spotify-com.akamaized.net
 DOMAIN-SUFFIX,audio-ak-spotify-com.akamaized.net
 DOMAIN-SUFFIX,heads-ak-spotify-com.akamaized.net
@@ -17,6 +19,7 @@ DOMAIN-SUFFIX,spotifyforbrands.com
 DOMAIN-SUFFIX,spotifyjobs.com
 DOMAIN-KEYWORD,-spotify-com
 DOMAIN-KEYWORD,spotify.com
+DOMAIN-KEYWORD,spotify
 IP-CIDR,35.186.224.47/32,no-resolve
 USER-AGENT,*Spotify*
 USER-AGENT,Spotify*
