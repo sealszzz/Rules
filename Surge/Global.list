@@ -122,6 +122,7 @@ DOMAIN-SUFFIX,pool.ntp.org
 DOMAIN-SUFFIX,ntp.nasa.gov
 DOMAIN,stun.services.mozilla.com
 DOMAIN,insider.windows.com
+DOMAIN-SUFFIX,dns.msftncsi.com
 DOMAIN-KEYWORD,.tw
 DOMAIN-KEYWORD,clubhouse
 USER-AGENT,Clubhouse*
