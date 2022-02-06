@@ -1,7 +1,4 @@
 # Netflix
-DOMAIN,netflix.com.edgesuite.net
-DOMAIN-SUFFIX,cdn.cookielaw.org
-DOMAIN-SUFFIX,geolocation.onetrust.com
 DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,netflixdnstest0.com
 DOMAIN-SUFFIX,netflixdnstest1.com
@@ -13,7 +10,6 @@ DOMAIN-SUFFIX,netflixdnstest6.com
 DOMAIN-SUFFIX,netflixdnstest7.com
 DOMAIN-SUFFIX,netflixdnstest8.com
 DOMAIN-SUFFIX,netflixdnstest9.com
-DOMAIN-SUFFIX,netflixdnstest10.com
 DOMAIN-SUFFIX,netflix.com
 DOMAIN-SUFFIX,netflix.net
 DOMAIN-SUFFIX,nflxext.com
@@ -26,7 +22,6 @@ DOMAIN-SUFFIX,netflixinvestor.com
 DOMAIN-SUFFIX,netflixtechblog.com
 DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
-DOMAIN-KEYWORD,apiproxy-device-prod-nlb
 DOMAIN-KEYWORD,dualstack.apiproxy-
 DOMAIN-KEYWORD,dualstack.ichnaea-web-
 USER-AGENT,Argo*
