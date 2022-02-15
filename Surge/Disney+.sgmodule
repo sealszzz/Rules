@@ -2,7 +2,7 @@
 #!desc=Disney+ Dualsub for Surge by Neurogram
 
 [Script]
-DisneyPlus-Dualsub = type=http-response, pattern=https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*), requires-body=true, max-size=307200, script-path=https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
+DisneyPlus-Dualsub = type=http-response,pattern=https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*),requires-body=true,max-size=307200,script-path=https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
 
 [MITM]
 hostname = *.media.dssott.com
