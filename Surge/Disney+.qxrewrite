@@ -1,0 +1,3 @@
+^https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*) url script-echo-response https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
+
+hostname = *.media.dssott.com
