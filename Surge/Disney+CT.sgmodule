@@ -1,8 +1,0 @@
-#!name=Disney+繁中第二字幕
-#!desc=Disney+ Dualsub for Surge by Neurogram
-
-[Script]
-DisneyPlus-Dualsub = type=http-response,pattern=https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*),requires-body=true,max-size=307200,script-path=https://raw.githubusercontent.com/sealszzz/Rules/master/Surge/DisneyPlus-Dualsub.js
-
-[MITM]
-hostname = *.media.dssott.com
