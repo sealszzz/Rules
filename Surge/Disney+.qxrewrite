@@ -1,3 +1,4 @@
-^https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*) url script-response-body https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
+https:\/\/.+media.dssott.com\/ps01\/disney\?action=(get|set) url script-request-body https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
+https:\/\/.+media.dssott.com\/ps01\/disney\/.+(-MAIN.+\.vtt|-all-.+\.m3u8.*) url script-response-body https://raw.githubusercontent.com/Neurogram-R/Surge/master/DisneyPlus-Dualsub.js
 
-hostname = *.media.dssott.com
+hostname = %APPEND% *.media.dssott.com
