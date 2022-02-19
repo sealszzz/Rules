@@ -7,7 +7,7 @@
         - Customized language support
  
     Manual：
-        Shortcuts: https://www.icloud.com/shortcuts/6174b5832d49457b80405ac0d067aaed
+        Shortcuts: https://www.icloud.com/shortcuts/aa6056ad31c14f25aedbee6cd1d7a799
         Surge:
         [Script]
         DisneyPlus-Dualsub = type=http-response,pattern=https:\/\/.+media.dssott.com\/ps01\/disney\/.+(\.vtt|-all-.+\.m3u8.*),requires-body=true,max-size=0,script-path=DisneyPlus-Dualsub.js
@@ -145,7 +145,7 @@ async function machine_subtitles(type) {
             let sentences = trans.sentences
 
             for (let k in sentences) {
-                if (sentences[k].trans) t_sentences.push(sentences[k].trans.replace(/\n$/g, "").replace(/\n/g, " "))
+                if (sentences[k].trans) t_sentences.push(sentences[k].trans.replace(/\n$/g, "").replace(/\n/g, " ").replace(/〜/g, "~"))
             }
 
             t_sentences = t_sentences.join(" ").match(/~\d+~[^~]+/g)
