@@ -1,0 +1,7 @@
+# QX Youtube 无中文字幕机翻方案
+# 提示：仅英文时自动开启，不影响已有中文字幕
+# https://raw.githubusercontent.com/id77/QuantumultX/master/rewrite/Youtube_CC.conf
+
+https:\/\/www.youtube.com\/api\/timedtext\?.+&lang=en.+?((?!&tlang=zh\-Hant).)*$ url request-header \sHTTP/1\.1(\r\n) request-header &tlang=zh-Hant HTTP/1.1$1
+
+hostname= www.youtube.com
