@@ -1,5 +1,6 @@
 # Spotify
 DOMAIN,api.waqi.info
+DOMAIN,logx.optimizely.com
 DOMAIN-SUFFIX,spotify-com.akamaized.net
 DOMAIN-SUFFIX,audio-ak-spotify-com.akamaized.net
 DOMAIN-SUFFIX,heads-ak-spotify-com.akamaized.net
