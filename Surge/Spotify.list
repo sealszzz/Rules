@@ -1,6 +1,7 @@
 # Spotify
 DOMAIN,api.waqi.info
 DOMAIN,logx.optimizely.com
+DOMAIN,insight.adsrvr.org
 DOMAIN-SUFFIX,spotify-com.akamaized.net
 DOMAIN-SUFFIX,audio-ak-spotify-com.akamaized.net
 DOMAIN-SUFFIX,heads-ak-spotify-com.akamaized.net
@@ -9,6 +10,7 @@ DOMAIN-SUFFIX,byspotify.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,pinimg.com
 DOMAIN-SUFFIX,pinterest.com
+DOMAIN-SUFFIX,pinterest.ph
 DOMAIN-SUFFIX,scdn.co
 DOMAIN-SUFFIX,spoti.fi
 DOMAIN-SUFFIX,spotify-everywhere.com
@@ -23,5 +25,6 @@ DOMAIN-SUFFIX,spotifyjobs.com
 DOMAIN-KEYWORD,spotify-com
 DOMAIN-KEYWORD,spotify.com
 DOMAIN-KEYWORD,spotify
+DOMAIN-KEYWORD,pinterest
 IP-CIDR,35.186.224.47/32,no-resolve
 USER-AGENT,Spotify*
