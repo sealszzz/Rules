@@ -15,6 +15,7 @@ PROCESS-NAME,WebTorrent Helper
 # Apple
 # IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
+DOMAIN,time.asia.apple.com
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
 DOMAIN-SUFFIX,push.apple.com
