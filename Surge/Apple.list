@@ -1,23 +1,21 @@
 # Apple
-DOMAIN,apps.mzstatic.com
-DOMAIN,guzzoni.apple.com
-DOMAIN,ocsp2.apple.com
-# DOMAIN,app-site-association.cdn-apple.com
-DOMAIN,iosapps.itunes.apple.com
-DOMAIN,downloaddispatch.itunes.apple.com
-DOMAIN-SUFFIX,mzstatic.com
 DOMAIN,api-edge.apps.apple.com
+# DOMAIN,app-site-association.cdn-apple.com
+DOMAIN,bag.itunes.apple.com
+DOMAIN,doh.dns.apple.com
+DOMAIN,downloaddispatch.itunes.apple.com
+DOMAIN,friend.gc.apple.com
+DOMAIN,gsp-ssl.ls.apple.com
+DOMAIN,guzzoni.apple.com
+DOMAIN,init.gc.apple.com
+DOMAIN,iosapps.itunes.apple.com
+DOMAIN,journey.pcms.apple.com
+DOMAIN,ocsp2.apple.com
 DOMAIN,pd.itunes.apple.com
 DOMAIN,play.itunes.apple.com
-DOMAIN,friend.gc.apple.com
-DOMAIN,init.gc.apple.com
-DOMAIN,gsp-ssl.ls.apple.com
-DOMAIN,journey.pcms.apple.com
-DOMAIN,su.itunes.apple.com
-DOMAIN,bag.itunes.apple.com
-DOMAIN,time.asia.apple.com
-DOMAIN,doh.dns.apple.com
 DOMAIN,reserve-prime.apple.com
+DOMAIN,su.itunes.apple.com
 DOMAIN,xp.apple.com
-DOMAIN-SUFFIX,safebrowsing.apple
 DOMAIN-SUFFIX,appldnld.apple.com
+# DOMAIN-SUFFIX,mzstatic.com
+DOMAIN-SUFFIX,safebrowsing.apple
