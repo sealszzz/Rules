@@ -1,1 +1,7 @@
+# Apple
 DOMAIN,bag.itunes.apple.com
+DOMAIN,time.asia.apple.com
+DOMAIN,doh.dns.apple.com
+DOMAIN,reserve-prime.apple.com
+DOMAIN-SUFFIX,safebrowsing.apple
+DOMAIN-SUFFIX,appldnld.apple.com
