@@ -1,5 +1,11 @@
 # Apple
 DOMAIN,apps.mzstatic.com
+DOMAIN,guzzoni.apple.com
+DOMAIN,ocsp2.apple.com
+# DOMAIN,app-site-association.cdn-apple.com
+DOMAIN,iosapps.itunes.apple.com
+DOMAIN,downloaddispatch.itunes.apple.com
+DOMAIN-SUFFIX,mzstatic.com
 DOMAIN,api-edge.apps.apple.com
 DOMAIN,pd.itunes.apple.com
 DOMAIN,play.itunes.apple.com
