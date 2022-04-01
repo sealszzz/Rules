@@ -121,4 +121,5 @@ DOMAIN,insider.windows.com
 DOMAIN-SUFFIX,dns.msftncsi.com
 DOMAIN-KEYWORD,.tw
 DOMAIN-KEYWORD,clubhouse
+DOMAIN-KEYWORD,duolingo
 USER-AGENT,Clubhouse*
