@@ -4,4 +4,5 @@ DOMAIN-SUFFIX,hbomax.com
 DOMAIN-SUFFIX,hbomaxcdn.com
 DOMAIN-SUFFIX,hbonow.com
 DOMAIN-SUFFIX,maxgo.com
+DOMAIN-KEYWORD,hbomax
 USER-AGENT,HBOMAX*
