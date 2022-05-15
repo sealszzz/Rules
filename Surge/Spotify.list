@@ -2,6 +2,7 @@
 DOMAIN,api.waqi.info
 DOMAIN,logx.optimizely.com
 DOMAIN-SUFFIX,adsrvr.org
+DOMAIN-SUFFIX,branch.io
 DOMAIN-SUFFIX,ingest.sentry.io
 DOMAIN-SUFFIX,spotify-com.akamaized.net
 DOMAIN-SUFFIX,audio-ak-spotify-com.akamaized.net
@@ -23,6 +24,7 @@ DOMAIN-SUFFIX,spotifycharts.com
 DOMAIN-SUFFIX,spotifycodes.com
 DOMAIN-SUFFIX,spotifyforbrands.com
 DOMAIN-SUFFIX,spotifyjobs.com
+DOMAIN-SUFFIX,scorecardresearch.com
 DOMAIN-KEYWORD,spotify-com
 DOMAIN-KEYWORD,spotify.com
 DOMAIN-KEYWORD,spotify
