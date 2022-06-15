@@ -1,4 +1,5 @@
 DOMAIN,sdk.iad-01.braze.com
+DOMAIN,wa.appsflyer.com
 DOMAIN-SUFFIX,onelink.me
 DOMAIN-SUFFIX,appspot.com
 DOMAIN-SUFFIX,cinemax.com
@@ -12,5 +13,6 @@ DOMAIN-SUFFIX,recaptcha.net
 DOMAIN-SUFFIX,adnxs.com
 DOMAIN-SUFFIX,teads.tv
 DOMAIN-SUFFIX,wmcdp.io
+DOMAIN-SUFFIX,warnermediacdn.com
 DOMAIN-KEYWORD,hbomax
 USER-AGENT,HBOMAX*
