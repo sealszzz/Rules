@@ -7,5 +7,7 @@ DOMAIN-SUFFIX,hbomaxcdn.com
 DOMAIN-SUFFIX,hbonow.com
 DOMAIN-SUFFIX,maxgo.com
 DOMAIN-SUFFIX,recaptcha.net
+DOMAIN-SUFFIX,adnxs.com
+DOMAIN-SUFFIX,teads.tv
 DOMAIN-KEYWORD,hbomax
 USER-AGENT,HBOMAX*
