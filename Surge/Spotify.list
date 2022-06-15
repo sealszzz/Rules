@@ -1,6 +1,6 @@
 # Spotify
 DOMAIN,api.waqi.info
-DOMAIN,logx.optimizely.com
+DOMAIN-SUFFIX,optimizely.com
 DOMAIN-SUFFIX,adsrvr.org
 DOMAIN-SUFFIX,branch.io
 DOMAIN-SUFFIX,ingest.sentry.io
