@@ -12,7 +12,12 @@ DOMAIN-SUFFIX,maxgo.com
 DOMAIN-SUFFIX,recaptcha.net
 DOMAIN-SUFFIX,adnxs.com
 DOMAIN-SUFFIX,teads.tv
+DOMAIN-SUFFIX,ispot.tv
 DOMAIN-SUFFIX,wmcdp.io
+DOMAIN-SUFFIX,mathtag.com
+DOMAIN-SUFFIX,spreedly.com
+DOMAIN,cdn.cookielaw.org
+DOMAIN,action.media6degrees.com
 DOMAIN-SUFFIX,warnermediacdn.com
 DOMAIN-KEYWORD,hbomax
 USER-AGENT,HBOMAX*
