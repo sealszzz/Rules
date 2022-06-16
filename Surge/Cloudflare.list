@@ -42,9 +42,3 @@ IP-CIDR6,2606:4700::/32,no-resolve
 IP-CIDR6,2803:f800::/32,no-resolve
 IP-CIDR6,2a06:98c0::/29,no-resolve
 IP-CIDR6,2c0f:f248::/32,no-resolve
-# Emby
-USER-AGENT,Emby*
-DOMAIN-KEYWORD,emby
-DOMAIN-SUFFIX,mb3admin.com
-DOMAIN-SUFFIX,mickeycloud.com
-DOMAIN-SUFFIX,plusmedia.site
