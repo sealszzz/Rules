@@ -1,12 +1,10 @@
 # Spotify
 DOMAIN,sb.scorecardresearch.com
+DOMAIN,api.waqi.info
 DOMAIN-SUFFIX,branch.io
-DOMAIN-SUFFIX,byspotify.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
 DOMAIN-SUFFIX,spoti.fi
-DOMAIN-SUFFIX,spotify-com.akamaized.net
-DOMAIN-SUFFIX,spotify-everywhere.com
 DOMAIN-SUFFIX,spotify.com
 DOMAIN-SUFFIX,spotify.design
 DOMAIN-SUFFIX,spotifycdn.com
