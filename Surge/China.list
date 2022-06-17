@@ -1,17 +1,3 @@
-# Proxy
-PROCESS-NAME,v2ray
-PROCESS-NAME,ss-local
-PROCESS-NAME,UUBooster
-# Download
-PROCESS-NAME,aria2c
-PROCESS-NAME,fdm
-PROCESS-NAME,Folx
-PROCESS-NAME,NetTransport
-PROCESS-NAME,Thunder
-PROCESS-NAME,Transmission
-PROCESS-NAME,uTorrent
-PROCESS-NAME,WebTorrent
-PROCESS-NAME,WebTorrent Helper
 # Apple
 # IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
@@ -34,7 +20,6 @@ DOMAIN-KEYWORD,XLLiveUD
 DOMAIN-SUFFIX,qq.com
 DOMAIN-SUFFIX,wechat.com
 DOMAIN-SUFFIX,servicewechat.com
-USER-AGENT,MicroMessenger*
 # Email
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
@@ -79,4 +64,3 @@ DOMAIN-SUFFIX,nvidia.com
 DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
 DOMAIN-SUFFIX,jegotrip.com.cn
 DOMAIN-SUFFIX,accelerate.taiyulink.com
-USER-AGENT,Roam*
