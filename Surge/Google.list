@@ -1,5 +1,4 @@
 # Google
-DOMAIN-SUFFIX,turinglabs.net
 IP-CIDR,8.8.8.8/32,no-resolve
 DOMAIN,stun.l.google.com
 DOMAIN,voice.telephony.goog
