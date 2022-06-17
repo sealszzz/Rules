@@ -22,6 +22,4 @@ DOMAIN-SUFFIX,netflixinvestor.com
 DOMAIN-SUFFIX,netflixtechblog.com
 DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
-DOMAIN-KEYWORD,dualstack.apiproxy-
-DOMAIN-KEYWORD,dualstack.ichnaea-web-
-USER-AGENT,Argo*
+
