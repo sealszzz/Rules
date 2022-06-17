@@ -1,7 +1,7 @@
 # Spotify
-DOMAIN-SUFFIX,audio-ak-spotify-com.akamaized.net
+DOMAIN,sb.scorecardresearch.com
+DOMAIN-SUFFIX,branch.io
 DOMAIN-SUFFIX,byspotify.com
-DOMAIN-SUFFIX,heads4-ak-spotify-com.akamaized.net
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
 DOMAIN-SUFFIX,spoti.fi
