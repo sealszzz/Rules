@@ -1,11 +1,5 @@
 # Github
-DOMAIN-SUFFIX,atom.io
-DOMAIN-SUFFIX,dependabot.com
-DOMAIN-SUFFIX,ghcr.io
 DOMAIN-SUFFIX,git.io
-DOMAIN-SUFFIX,github-atom-io-herokuapp-com.freetls.fastly.net
-DOMAIN-SUFFIX,github-avatars.oss-cn-hongkong.aliyuncs.com
-DOMAIN-SUFFIX,github-cloud.s3.amazonaws.com
 DOMAIN-SUFFIX,github.blog
 DOMAIN-SUFFIX,github.com
 DOMAIN-SUFFIX,github.community
@@ -18,13 +12,8 @@ DOMAIN-SUFFIX,githubpreview.dev
 DOMAIN-SUFFIX,githubstatus.com
 DOMAIN-SUFFIX,githubuniverse.com
 DOMAIN-SUFFIX,githubusercontent.com
-DOMAIN-SUFFIX,myoctocat.com
-DOMAIN-SUFFIX,npm.community
-DOMAIN-SUFFIX,npmjs.com
-DOMAIN-SUFFIX,npmjs.org
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
-DOMAIN-SUFFIX,thegithubshop.com
 DOMAIN-KEYWORD,github
 # Telegram
 DOMAIN-SUFFIX,comments.app
@@ -105,10 +94,6 @@ DOMAIN-SUFFIX,storage.msn.com
 DOMAIN-KEYWORD,1drv
 DOMAIN-KEYWORD,onedrive
 DOMAIN-KEYWORD,skydrive
-USER-AGENT,OneDrive*
-USER-AGENT,OneDriveiOSApp*
-PROCESS-NAME,onedrive
-PROCESS-NAME,onedriveupdater
 # Other
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,wikipedia.org
@@ -122,4 +107,3 @@ DOMAIN-SUFFIX,dns.msftncsi.com
 DOMAIN-KEYWORD,.tw
 DOMAIN-KEYWORD,clubhouse
 DOMAIN-KEYWORD,duolingo
-USER-AGENT,Clubhouse*
