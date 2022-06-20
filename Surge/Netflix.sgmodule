@@ -3,7 +3,7 @@
 
 [General]
 compatibility-mode = 3
-force-http-engine-hosts = %APPEND% *nflxvideo.net:443
+force-http-engine-hosts = %APPEND% *.nflxvideo.net:443
 
 [MITM]
 tcp-connection = true
