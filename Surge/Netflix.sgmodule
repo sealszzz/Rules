@@ -1,0 +1,9 @@
+#!name=Netflix
+#!desc=Enable nflxvideo.net force 443 port HTTP proxy
+
+[General]
+compatibility-mode = 3
+force-http-engine-hosts = %APPEND% *nflxvideo.net:443
+
+[MITM]
+tcp-connection = true
