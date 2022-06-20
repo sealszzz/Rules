@@ -7,3 +7,4 @@ force-http-engine-hosts = %APPEND% *.nflxvideo.net:443
 
 [MITM]
 tcp-connection = true
+hostname = *.nflxvideo.net
