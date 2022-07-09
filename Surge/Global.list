@@ -76,24 +76,6 @@ IP-CIDR,199.96.56.0/21,no-resolve
 IP-CIDR,202.160.128.0/22,no-resolve
 IP-CIDR,209.237.192.0/19,no-resolve
 IP-CIDR,69.195.160.0/19,no-resolve
-# OneDrive
-DOMAIN-SUFFIX,1drv.com
-DOMAIN-SUFFIX,1drv.ms
-DOMAIN-SUFFIX,livefilestore.com
-DOMAIN-SUFFIX,oneclient.sfx.ms
-DOMAIN-SUFFIX,onedrive.com
-DOMAIN-SUFFIX,onedrive.live.com
-DOMAIN-SUFFIX,photos.live.com
-DOMAIN-SUFFIX,sharepoint.com
-DOMAIN-SUFFIX,sharepointonline.com
-DOMAIN-SUFFIX,skyapi.live.net
-DOMAIN-SUFFIX,skydrive.wns.windows.com
-DOMAIN-SUFFIX,spoprod-a.akamaihd.net
-DOMAIN-SUFFIX,storage.live.com
-DOMAIN-SUFFIX,storage.msn.com
-DOMAIN-KEYWORD,1drv
-DOMAIN-KEYWORD,onedrive
-DOMAIN-KEYWORD,skydrive
 # Other
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,wikipedia.org
