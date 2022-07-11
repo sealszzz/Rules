@@ -78,6 +78,7 @@ IP-CIDR,209.237.192.0/19,no-resolve
 IP-CIDR,69.195.160.0/19,no-resolve
 # Other
 DOMAIN,jdsharedresourcescdn.azureedge.net
+DOMAIN-SUFFIX,kylc.com
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,pool.ntp.org
