@@ -6,6 +6,7 @@ DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
 DOMAIN-SUFFIX,push.apple.com
+DOMAIN,commnat-main-gc.ess.apple.com
 # BitTorrent
 DOMAIN-KEYWORD,announce
 DOMAIN-KEYWORD,protocol
