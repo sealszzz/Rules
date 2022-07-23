@@ -1,4 +1,5 @@
 # Netflix
+DOMAIN,events.backtrace.io
 DOMAIN-SUFFIX,fast.com
 DOMAIN-SUFFIX,netflixdnstest0.com
 DOMAIN-SUFFIX,netflixdnstest1.com
