@@ -1,4 +1,5 @@
 # Speedtest
+DOMAIN,ipgeo.wlvpn.com
 DOMAIN-SUFFIX,speedtest.net
 DOMAIN-SUFFIX,ooklaserver.net
 DOMAIN-KEYWORD,speedtest
