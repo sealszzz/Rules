@@ -3,8 +3,8 @@
 DOMAIN,time.apple.com
 DOMAIN,time.asia.apple.com
 DOMAIN-SUFFIX,mail.me.com
-DOMAIN-SUFFIX,swcdn.apple.com
-DOMAIN-SUFFIX,cdn-apple.com
+# DOMAIN-SUFFIX,swcdn.apple.com
+# DOMAIN-SUFFIX,cdn-apple.com
 DOMAIN-SUFFIX,push.apple.com
 DOMAIN,commnat-main-gc.ess.apple.com
 DOMAIN,commnat-cohort-gc.ess.apple.com
