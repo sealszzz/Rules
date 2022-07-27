@@ -1,3 +1,5 @@
 # Apple
 DOMAIN,iosapps.itunes.apple.com
 DOMAIN-SUFFIX,safebrowsing.apple
+DOMAIN-SUFFIX,swcdn.apple.com
+DOMAIN-SUFFIX,updates.cdn-apple.com
