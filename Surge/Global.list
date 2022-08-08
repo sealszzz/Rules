@@ -35,10 +35,10 @@ DOMAIN-SUFFIX,tx.me
 DOMAIN-KEYWORD,nicegram
 DOMAIN-KEYWORD,telegram
 # Telegram
-IP-ASN,62041,no-resolve
-IP-ASN,62014,no-resolve
-IP-ASN,59930,no-resolve
 IP-ASN,44907,no-resolve
+IP-ASN,59930,no-resolve
+IP-ASN,62014,no-resolve
+IP-ASN,62041,no-resolve
 IP-ASN,211157,no-resolve
 # Twitter
 DOMAIN-SUFFIX,ads-twitter.com
@@ -62,10 +62,16 @@ DOMAIN-SUFFIX,vine.co
 DOMAIN-KEYWORD,twitter
 # Twitter
 IP-ASN,8945,no-resolve
-IP-ASN,63179,no-resolve
-IP-ASN,54888,no-resolve
-IP-ASN,35995,no-resolve
 IP-ASN,13414,no-resolve
+IP-ASN,35995,no-resolve
+IP-ASN,54888,no-resolve
+IP-ASN,63179,no-resolve
+# Facebook
+IP-ASN,32934,no-resolve
+IP-ASN,34825,no-resolve
+IP-ASN,54115,no-resolve
+IP-ASN,63293,no-resolve
+IP-ASN,149642,no-resolve
 # Other
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,kylc.com
