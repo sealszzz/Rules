@@ -15,8 +15,8 @@ DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
 DOMAIN-KEYWORD,netflixdnstest
 # Netflix
-IP-ASN,55095,no-resolve
-IP-ASN,40027,no-resolve
-IP-ASN,394406,no-resolve
 IP-ASN,2906,no-resolve
+IP-ASN,40027,no-resolve
+IP-ASN,55095,no-resolve
 IP-ASN,136292,no-resolve
+IP-ASN,394406,no-resolve
