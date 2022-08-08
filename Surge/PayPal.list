@@ -7,3 +7,7 @@ DOMAIN-SUFFIX,pypl.net
 DOMAIN-SUFFIX,pypl.tv
 DOMAIN-KEYWORD,paypal
 DOMAIN-KEYWORD,pypl
+IP-ASN,1449,no-resolve
+IP-ASN,17012,no-resolve
+IP-ASN,26444,no-resolve
+IP-ASN,206753,no-resolve
