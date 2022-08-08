@@ -3,3 +3,8 @@ DOMAIN,iosapps.itunes.apple.com
 DOMAIN-SUFFIX,safebrowsing.apple
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,updates.cdn-apple.com
+IP-ASN,714,no-resolve
+IP-ASN,1036,no-resolve
+IP-ASN,1042,no-resolve
+IP-ASN,2709,no-resolve
+IP-ASN,6185,no-resolve
