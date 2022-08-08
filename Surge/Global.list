@@ -15,6 +15,7 @@ DOMAIN-SUFFIX,githubusercontent.com
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-KEYWORD,github
+IP-ASN,36459,no-resolve
 # Telegram
 DOMAIN-SUFFIX,comments.app
 DOMAIN-SUFFIX,graph.org
