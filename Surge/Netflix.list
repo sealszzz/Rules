@@ -14,12 +14,6 @@ DOMAIN-SUFFIX,netflixtechblog.com
 DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
 DOMAIN-KEYWORD,netflixdnstest
-# ASN
-IP-ASN,2906,no-resolve
-IP-ASN,40027,no-resolve
-IP-ASN,55095,no-resolve
-IP-ASN,136292,no-resolve
-IP-ASN,394406,no-resolve
 # IP
 IP-CIDR,8.41.4.0/24,no-resolve
 IP-CIDR,23.78.0.0/16,no-resolve
