@@ -73,6 +73,7 @@ IP-ASN,149642,no-resolve
 # Other
 DOMAIN,jdsharedresourcescdn.azureedge.net
 DOMAIN-SUFFIX,kylc.com
+DOMAIN,stream.live.vc.bbcmedia.co.uk
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,noxinfluencer.com
 DOMAIN-SUFFIX,pool.ntp.org
