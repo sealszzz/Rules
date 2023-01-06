@@ -1,6 +1,5 @@
 DOMAIN,ceres.iad-03.braze.com
 DOMAIN,cbs.hb-api.omtrdc.net
-DOMAIN,co.akisinn.info
 DOMAIN,cbsi.live.ott.irdeto.com
 DOMAIN,mobile-data.onetrust.io
 DOMAIN,sp.auth.adobe.com
@@ -15,3 +14,4 @@ DOMAIN-SUFFIX,imrworldwide.com
 DOMAIN-SUFFIX,newrelic.com
 DOMAIN-SUFFIX,vaicore.site
 DOMAIN-SUFFIX,v.fwmrm.net
+DOMAIN-SUFFIX,int.akisinn.info
