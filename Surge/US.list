@@ -1,3 +1,4 @@
+# CBS
 DOMAIN,ceres.iad-03.braze.com
 DOMAIN,cbs.hb-api.omtrdc.net
 DOMAIN,cbsi.live.ott.irdeto.com
@@ -19,3 +20,5 @@ DOMAIN-SUFFIX,vaicore.site
 DOMAIN-SUFFIX,v.fwmrm.net
 DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
+# ChatAPI
+DOMAIN-SUFFIX,openai.com
