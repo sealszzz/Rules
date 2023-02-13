@@ -21,5 +21,6 @@ DOMAIN-SUFFIX,v.fwmrm.net
 DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
 # ChatAPI
-DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,bing.com
+DOMAIN-SUFFIX,openai.com
+DOMAIN-SUFFIX,stripe.com
