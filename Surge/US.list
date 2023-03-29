@@ -24,3 +24,5 @@ DOMAIN-SUFFIX,fastly.net
 DOMAIN-SUFFIX,bing.com
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,stripe.com
+# grammarly
+DOMAIN-SUFFIX,grammarly.com
