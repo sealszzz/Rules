@@ -1,6 +1,8 @@
+# BBC
 DOMAIN-SUFFIX,bbc.com
 DOMAIN-SUFFIX,bbc.co.uk
 DOMAIN-SUFFIX,bbci.co.uk
+# Europe
 GEOIP,AD,no-resolve
 GEOIP,AL,no-resolve
 GEOIP,AT,no-resolve
