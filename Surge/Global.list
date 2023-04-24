@@ -19,17 +19,3 @@ IP-ASN,59930,no-resolve
 IP-ASN,62014,no-resolve
 IP-ASN,62041,no-resolve
 IP-ASN,211157,no-resolve
-# Other
-DOMAIN,jdsharedresourcescdn.azureedge.net
-DOMAIN-SUFFIX,kylc.com
-DOMAIN-SUFFIX,wikipedia.org
-DOMAIN-SUFFIX,noxinfluencer.com
-DOMAIN-SUFFIX,pool.ntp.org
-DOMAIN-SUFFIX,ntp.nasa.gov
-DOMAIN-SUFFIX,pincong.rocks
-DOMAIN,stun.services.mozilla.com
-DOMAIN,insider.windows.com
-DOMAIN-SUFFIX,dns.msftncsi.com
-DOMAIN-KEYWORD,.tw
-DOMAIN-KEYWORD,clubhouse
-DOMAIN-KEYWORD,duolingo
