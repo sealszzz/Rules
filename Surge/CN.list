@@ -4,7 +4,7 @@ DOMAIN-KEYWORD,.cn
 # IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
 DOMAIN,time.asia.apple.com
-DOMAIN,captive.apple.com
+# DOMAIN,captive.apple.com
 DOMAIN-KEYWORD,mailws.icloud.com
 DOMAIN-KEYWORD,imap.mail.me.com
 DOMAIN-SUFFIX,swcdn.apple.com
