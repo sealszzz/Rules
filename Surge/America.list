@@ -70,8 +70,12 @@ DOMAIN-SUFFIX,vaicore.site
 DOMAIN-SUFFIX,v.fwmrm.net
 DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
-# ChatAPI
-DOMAIN-SUFFIX,bing.com
+# ChatGPT
+DOMAIN,cdn.auth0.com
+DOMAIN,challenges.cloudflare.com
+DOMAIN,openaiapi-site.azureedge.net
+DOMAIN-SUFFIX,ai.com
+DOMAIN-SUFFIX,identrust.com
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,stripe.com
 # grammarly
