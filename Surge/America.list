@@ -80,7 +80,3 @@ DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,stripe.com
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
-# Others
-DOMAIN,api.immtel.co
-DOMAIN,api.flowercloud.xyz
-DOMAIN,api.prprcloud.life
