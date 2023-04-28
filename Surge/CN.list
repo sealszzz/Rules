@@ -76,6 +76,6 @@ DOMAIN-SUFFIX,jegotrip.com.cn
 DOMAIN-SUFFIX,accelerate.taiyulink.com
 IP-CIDR,223.5.5.5/32,no-resolve
 # Others
-DOMAIN,api.immtel.co
+# DOMAIN,api.immtel.co
 # DOMAIN,api.flowercloud.xyz
 # DOMAIN,api.prprcloud.life
