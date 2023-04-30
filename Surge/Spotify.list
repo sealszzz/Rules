@@ -1,5 +1,5 @@
 # Spotify
-DOMAIN-SUFFIX,branch.io
+DOMAIN-SUFFIX,byspotify.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
 DOMAIN-SUFFIX,spoti.fi
@@ -11,6 +11,10 @@ DOMAIN-SUFFIX,spotifycharts.com
 DOMAIN-SUFFIX,spotifycodes.com
 DOMAIN-SUFFIX,spotifyforbrands.com
 DOMAIN-SUFFIX,spotifyjobs.com
+DOMAIN-SUFFIX,spotifynewsroom.jp
+DOMAIN-SUFFIX,spotilocal.com
+DOMAIN-SUFFIX,tospotify.com
 DOMAIN-KEYWORD,spotify
 IP-CIDR,35.186.224.47/32,no-resolve
+IP-CIDR,104.154.127.126/32,no-resolve
 IP-ASN,8403,no-resolve
