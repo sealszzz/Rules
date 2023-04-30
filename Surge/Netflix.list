@@ -1,16 +1,14 @@
 # Netflix
-DOMAIN,events.backtrace.io
 DOMAIN-SUFFIX,fast.com
+DOMAIN-SUFFIX,flxvpn.net
 DOMAIN-SUFFIX,netflix.com
 DOMAIN-SUFFIX,netflix.net
 DOMAIN-SUFFIX,nflxext.com
 DOMAIN-SUFFIX,nflximg.com
 DOMAIN-SUFFIX,nflximg.net
+DOMAIN-SUFFIX,nflxsearch.net
 DOMAIN-SUFFIX,nflxso.net
 DOMAIN-SUFFIX,nflxvideo.net
-DOMAIN-SUFFIX,nflxsearch.net
-DOMAIN-SUFFIX,netflixinvestor.com
-DOMAIN-SUFFIX,netflixtechblog.com
 DOMAIN-KEYWORD,netflix
 DOMAIN-KEYWORD,nflx
 DOMAIN-KEYWORD,netflixdnstest
