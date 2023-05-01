@@ -1,5 +1,5 @@
 # CN
-DOMAIN-KEYWORD,.cn
+# DOMAIN-KEYWORD,.cn
 # Apple
 # IP-CIDR,17.0.0.0/8,no-resolve
 DOMAIN,time.apple.com
