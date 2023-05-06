@@ -37,7 +37,6 @@ DOMAIN-SUFFIX,twttr.com
 DOMAIN-SUFFIX,vine.co
 DOMAIN-KEYWORD,twitter
 # Twitter
-IP-ASN,8945,no-resolve
 IP-ASN,13414,no-resolve
 IP-ASN,35995,no-resolve
 IP-ASN,54888,no-resolve
