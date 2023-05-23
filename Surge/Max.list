@@ -19,6 +19,8 @@ IP-ASN,50651,no-resolve
 IP-ASN,201568,no-resolve
 IP-ASN,207067,no-resolve
 IP-ASN,393808,no-resolve
-DOMAIN,launches.appsflyer.com
+DOMAIN-SUFFIX,appsflyer.com
+DOMAIN-SUFFIX,appsflyersdk.com
 DOMAIN-SUFFIX,discomax.com
 DOMAIN,api2.branch.io
+DOMAIN,cdn.branch.io
