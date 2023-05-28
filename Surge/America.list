@@ -77,5 +77,6 @@ DOMAIN-SUFFIX,ai.com
 DOMAIN-SUFFIX,identrust.com
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,stripe.com
+DOMAIN-SUFFIX,sentry.io
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
