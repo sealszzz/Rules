@@ -78,5 +78,5 @@ DOMAIN-SUFFIX,accelerate.taiyulink.com
 IP-CIDR,223.5.5.5/32,no-resolve
 # Others
 DOMAIN,vfuiov.sbs
-# DOMAIN,api.flowercloud.xyz
-# DOMAIN,api.prprcloud.life
+DOMAIN,api.flowercloud.xyz
+DOMAIN,api.prprcloud.life
