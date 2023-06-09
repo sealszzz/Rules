@@ -1,4 +1,5 @@
-DOMAIN-SUFFIX,opencloud.wostore.cn
-DOMAIN-SUFFIX,unilog.wostore.cn
-DOMAIN-SUFFIX,cmpassport.com
-DOMAIN-SUFFIX,id6.me
+IP-CIDR,157.148.47.204/32,REJECT
+# DOMAIN-SUFFIX,opencloud.wostore.cn
+# DOMAIN-SUFFIX,unilog.wostore.cn
+# DOMAIN-SUFFIX,cmpassport.com
+# DOMAIN-SUFFIX,id6.me
