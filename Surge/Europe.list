@@ -1,5 +1,6 @@
 # BBC
 DOMAIN-SUFFIX,bbc.com
 DOMAIN-SUFFIX,bbc.co.uk
-DOMAIN-SUFFIX,bbci.co.uk
+DOMAIN-SUFFIX,r.bbci.co.uk
 DOMAIN,stream.live.vc.bbcmedia.co.uk
+DOMAIN-KEYWORD,bbc
