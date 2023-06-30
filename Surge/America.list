@@ -15,7 +15,7 @@ DOMAIN-SUFFIX,githubusercontent.com
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-KEYWORD,github
-# IP-ASN,36459,no-resolve
+IP-ASN,36459,no-resolve
 # Twitter
 DOMAIN-SUFFIX,ads-twitter.com
 DOMAIN-SUFFIX,periscope.tv
@@ -37,16 +37,16 @@ DOMAIN-SUFFIX,twttr.com
 DOMAIN-SUFFIX,vine.co
 DOMAIN-KEYWORD,twitter
 # Twitter
-# IP-ASN,13414,no-resolve
-# IP-ASN,35995,no-resolve
-# IP-ASN,54888,no-resolve
-# IP-ASN,63179,no-resolve
+IP-ASN,13414,no-resolve
+IP-ASN,35995,no-resolve
+IP-ASN,54888,no-resolve
+IP-ASN,63179,no-resolve
 # Facebook
-# IP-ASN,32934,no-resolve
-# IP-ASN,34825,no-resolve
-# IP-ASN,54115,no-resolve
-# IP-ASN,63293,no-resolve
-# IP-ASN,149642,no-resolve
+IP-ASN,32934,no-resolve
+IP-ASN,34825,no-resolve
+IP-ASN,54115,no-resolve
+IP-ASN,63293,no-resolve
+IP-ASN,149642,no-resolve
 # CBS
 DOMAIN,ceres.iad-03.braze.com
 DOMAIN,cbs.hb-api.omtrdc.net
