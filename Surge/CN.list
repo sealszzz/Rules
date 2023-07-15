@@ -33,6 +33,7 @@ DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
+IP-ASN,8075,no-resolve
 DOMAIN,speech.platform.bing.com
 DOMAIN,dns.msftncsi.com
 DOMAIN-SUFFIX,appcenter.ms
