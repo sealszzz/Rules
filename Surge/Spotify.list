@@ -1,6 +1,7 @@
 # Spotify
 DOMAIN,cdn.branch.io
 DOMAIN,api2.branch.io
+DOMAIN,sb.scorecardresearch.com
 DOMAIN-SUFFIX,byspotify.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
