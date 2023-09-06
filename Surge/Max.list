@@ -22,8 +22,6 @@ IP-ASN,393808,no-resolve
 DOMAIN-SUFFIX,appsflyer.com
 DOMAIN-SUFFIX,appsflyersdk.com
 DOMAIN-SUFFIX,discomax.com
-DOMAIN,api2.branch.io
-DOMAIN,cdn.branch.io
 DOMAIN,ocsp.r2m01.amazontrust.com
 DOMAIN,api.apptentive.com
 DOMAIN,wbd-api.arkoselabs.com
