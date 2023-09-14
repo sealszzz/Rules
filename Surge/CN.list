@@ -34,35 +34,35 @@ DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Microsoft
 # IP-ASN,8075,no-resolve
-DOMAIN,speech.platform.bing.com
-DOMAIN,dns.msftncsi.com
-DOMAIN-SUFFIX,appcenter.ms
-DOMAIN-SUFFIX,azure.net
-DOMAIN-SUFFIX,azureedge.net
-DOMAIN-SUFFIX,onestore.ms
-DOMAIN-SUFFIX,gfx.ms
-DOMAIN-SUFFIX,sfx.ms
-DOMAIN-SUFFIX,svc.ms
-DOMAIN-SUFFIX,live.com
-DOMAIN-SUFFIX,live.net
-DOMAIN-SUFFIX,livefilestore.com
-DOMAIN-SUFFIX,s-microsoft.com
+# DOMAIN,speech.platform.bing.com
+# DOMAIN,dns.msftncsi.com
+# DOMAIN-SUFFIX,appcenter.ms
+# DOMAIN-SUFFIX,azure.net
+# DOMAIN-SUFFIX,azureedge.net
+# DOMAIN-SUFFIX,onestore.ms
+# DOMAIN-SUFFIX,gfx.ms
+# DOMAIN-SUFFIX,sfx.ms
+# DOMAIN-SUFFIX,svc.ms
+# DOMAIN-SUFFIX,live.com
+# DOMAIN-SUFFIX,live.net
+# DOMAIN-SUFFIX,livefilestore.com
+# DOMAIN-SUFFIX,s-microsoft.com
 # DOMAIN-SUFFIX,microsoft.com
-DOMAIN-SUFFIX,microsoft.net
-DOMAIN-SUFFIX,microsoftonline.com
-DOMAIN-SUFFIX,msauth.net
-DOMAIN-SUFFIX,msecnd.net
-DOMAIN-SUFFIX,msocdn.com
-DOMAIN-SUFFIX,msftauth.net
-DOMAIN-SUFFIX,office.com
-DOMAIN-SUFFIX,office.net
-DOMAIN-SUFFIX,office365.com
-DOMAIN-SUFFIX,office365.net
-DOMAIN-SUFFIX,sharepointonline.com
-DOMAIN-SUFFIX,visualstudio.com
-DOMAIN-SUFFIX,windows.com
-DOMAIN-SUFFIX,windows.net
-DOMAIN-SUFFIX,windowsupdate.com
+# DOMAIN-SUFFIX,microsoft.net
+# DOMAIN-SUFFIX,microsoftonline.com
+# DOMAIN-SUFFIX,msauth.net
+# DOMAIN-SUFFIX,msecnd.net
+# DOMAIN-SUFFIX,msocdn.com
+# DOMAIN-SUFFIX,msftauth.net
+# DOMAIN-SUFFIX,office.com
+# DOMAIN-SUFFIX,office.net
+# DOMAIN-SUFFIX,office365.com
+# DOMAIN-SUFFIX,office365.net
+# DOMAIN-SUFFIX,sharepointonline.com
+# DOMAIN-SUFFIX,visualstudio.com
+# DOMAIN-SUFFIX,windows.com
+# DOMAIN-SUFFIX,windows.net
+# DOMAIN-SUFFIX,windowsupdate.com
 # Others
 DOMAIN-SUFFIX,1888.com.mo
 DOMAIN-SUFFIX,ctcmo.com
