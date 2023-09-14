@@ -47,7 +47,7 @@ DOMAIN-SUFFIX,live.com
 DOMAIN-SUFFIX,live.net
 DOMAIN-SUFFIX,livefilestore.com
 DOMAIN-SUFFIX,s-microsoft.com
-DOMAIN-SUFFIX,microsoft.com
+# DOMAIN-SUFFIX,microsoft.com
 DOMAIN-SUFFIX,microsoft.net
 DOMAIN-SUFFIX,microsoftonline.com
 DOMAIN-SUFFIX,msauth.net
