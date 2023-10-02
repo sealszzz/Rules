@@ -1,18 +1,24 @@
 # Bing
+DOMAIN,cdn.jsdelivr.net
 DOMAIN-SUFFIX,bing.com
-DOMAIN-SUFFIX,bingviz.com
 DOMAIN-SUFFIX,bing.cn
 DOMAIN-SUFFIX,bing.net
+DOMAIN-SUFFIX,bingviz.com
 DOMAIN-SUFFIX,msn.com
 DOMAIN-SUFFIX,msn.cn
 DOMAIN-SUFFIX,bingapis.com
-DOMAIN,cdn.jsdelivr.net
 DOMAIN-SUFFIX,appcenter.ms
 DOMAIN-SUFFIX,microsoftapp.net
 DOMAIN-SUFFIX,virtualearth.net
+DOMAIN-SUFFIX,outbrainimg.com
+DOMAIN-SUFFIX,outbrain.com
+DOMAIN-SUFFIX,zemanta.com
+DOMAIN-SUFFIX,azureedge.net
 DOMAIN-SUFFIX,microsoft-falcon.io.net
 DOMAIN-KEYWORD,bing
+DOMAIN-KEYWORD,msn-com
 DOMAIN-KEYWORD,microsoft
+DOMAIN-KEYWORD,windows
 # OneDrive
 # DOMAIN-SUFFIX,adjust.com  
 # DOMAIN-SUFFIX,api.live.net  
