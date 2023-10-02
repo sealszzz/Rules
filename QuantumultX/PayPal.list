@@ -1,5 +1,0 @@
-# PayPal
-host-suffix, paypal.com, proxy
-host-suffix, paypal.me, proxy
-host-suffix, paypalobjects.com, proxy
-host-keyword, paypal, proxy
