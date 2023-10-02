@@ -1,5 +1,0 @@
-payload:
-# Speedtest
-  - DOMAIN-SUFFIX,speedtest.net
-  - DOMAIN-SUFFIX,ooklaserver.net
-  - DOMAIN-KEYWORD,speedtest
