@@ -78,6 +78,7 @@ DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
 DOMAIN-SUFFIX,jegotrip.com.cn
 DOMAIN-SUFFIX,accelerate.taiyulink.com
 IP-CIDR,223.5.5.5/32,no-resolve
+DOMAIN-SUFFIX,adguard-dns.com
 # Others
 DOMAIN-SUFFIX,vfuiov.sbs
 DOMAIN-SUFFIX,api.immtel.co
