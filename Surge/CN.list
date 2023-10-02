@@ -79,9 +79,9 @@ DOMAIN-SUFFIX,jegotrip.com.cn
 DOMAIN-SUFFIX,accelerate.taiyulink.com
 # DNS
 IP-CIDR,223.5.5.5/32,no-resolve
-IP-CIDR,94.140.14.14/32,no-resolve
-IP-CIDR,94.140.15.15/32,no-resolve
-DOMAIN-SUFFIX,adguard-dns.com
+# IP-CIDR,94.140.14.14/32,no-resolve
+# IP-CIDR,94.140.15.15/32,no-resolve
+# DOMAIN-SUFFIX,adguard-dns.com
 # Others
 DOMAIN-SUFFIX,vfuiov.sbs
 DOMAIN-SUFFIX,api.immtel.co
