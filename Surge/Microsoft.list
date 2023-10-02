@@ -1,47 +1,53 @@
+# Bing
+DOMAIN-SUFFIX,bing.com
+DOMAIN-SUFFIX,bing.cn
+DOMAIN-SUFFIX,bing.net
+DOMAIN-SUFFIX,msn.com
+DOMAIN-SUFFIX,msn.con
 # OneDrive
-DOMAIN-SUFFIX,adjust.com  
-DOMAIN-SUFFIX,api.live.net  
-DOMAIN-SUFFIX,apis.live.net  
-DOMAIN-SUFFIX,aria.microsoft.com  
-DOMAIN-SUFFIX,branch.io  
-DOMAIN-SUFFIX,crashlytics.com  
-DOMAIN-SUFFIX,docs.live.net  
-DOMAIN-SUFFIX,fabric.io  
-DOMAIN-SUFFIX,favorites.live.com  
-DOMAIN-SUFFIX,files.1drv.com  
-DOMAIN-SUFFIX,g.live.com  
-DOMAIN-SUFFIX,groups.office.live.com  
-DOMAIN-SUFFIX,groups.photos.live.com  
-DOMAIN-SUFFIX,groups.skydrive.live.com  
-DOMAIN-SUFFIX,livefilestore.com  
-DOMAIN-SUFFIX,login.live.com  
-DOMAIN-SUFFIX,login.microsoftonline.com
-DOMAIN-SUFFIX,login.windows.net  
-DOMAIN-SUFFIX,mesh.com  
-DOMAIN-SUFFIX,microsoft.com  
-DOMAIN-SUFFIX,mobileengagement.windows.net  
-DOMAIN-SUFFIX,oauth.live.com  
-DOMAIN-SUFFIX,odc.officeapps.live.com  
-DOMAIN-SUFFIX,office.com  
-DOMAIN-SUFFIX,officeapps.live.com  
-DOMAIN-SUFFIX,oneclient.sfx.ms  
-DOMAIN-SUFFIX,onedrive.com  
-DOMAIN-SUFFIX,onedrive.live.com  
-DOMAIN-SUFFIX,onedrive.live.com  
-DOMAIN-SUFFIX,p.sfx.ms  
-DOMAIN-SUFFIX,photos.live.com  
-DOMAIN-SUFFIX,policies.live.net  
-DOMAIN-SUFFIX,posarprodcssservice.accesscontrol.windows.net  
-DOMAIN-SUFFIX,redemptionservices.accesscontrol.windows.net  
-DOMAIN-SUFFIX,servicebus.windows.net  
-DOMAIN-SUFFIX,settings.live.net  
-DOMAIN-SUFFIX,skyapi.live.net  
-DOMAIN-SUFFIX,skydrive.live.com  
-DOMAIN-SUFFIX,snapi.live.net  
-DOMAIN-SUFFIX,spoprod-a.akamaihd.net  
-DOMAIN-SUFFIX,storage.live.com  
-DOMAIN-SUFFIX,storage.msn.com  
-DOMAIN-SUFFIX,token.cp.microsoft.com  
-DOMAIN-SUFFIX,tokensit.cp.microsoft-tst.com  
-DOMAIN-SUFFIX,vas.samsungapps.com  
-DOMAIN-SUFFIX,vortex.data.microsoft.com  
+# DOMAIN-SUFFIX,adjust.com  
+# DOMAIN-SUFFIX,api.live.net  
+# DOMAIN-SUFFIX,apis.live.net
+# DOMAIN-SUFFIX,aria.microsoft.com  
+# DOMAIN-SUFFIX,branch.io  
+# DOMAIN-SUFFIX,crashlytics.com  
+# DOMAIN-SUFFIX,docs.live.net  
+# DOMAIN-SUFFIX,fabric.io  
+# DOMAIN-SUFFIX,favorites.live.com  
+# DOMAIN-SUFFIX,files.1drv.com  
+# DOMAIN-SUFFIX,g.live.com  
+# DOMAIN-SUFFIX,groups.office.live.com  
+# DOMAIN-SUFFIX,groups.photos.live.com  
+# DOMAIN-SUFFIX,groups.skydrive.live.com  
+# DOMAIN-SUFFIX,livefilestore.com  
+# DOMAIN-SUFFIX,login.live.com  
+# DOMAIN-SUFFIX,login.microsoftonline.com
+# DOMAIN-SUFFIX,login.windows.net  
+# DOMAIN-SUFFIX,mesh.com  
+# DOMAIN-SUFFIX,microsoft.com  
+# DOMAIN-SUFFIX,mobileengagement.windows.net  
+# DOMAIN-SUFFIX,oauth.live.com  
+# DOMAIN-SUFFIX,odc.officeapps.live.com  
+# DOMAIN-SUFFIX,office.com  
+# DOMAIN-SUFFIX,officeapps.live.com  
+# DOMAIN-SUFFIX,oneclient.sfx.ms  
+# DOMAIN-SUFFIX,onedrive.com  
+# DOMAIN-SUFFIX,onedrive.live.com  
+# DOMAIN-SUFFIX,onedrive.live.com  
+# DOMAIN-SUFFIX,p.sfx.ms  
+# DOMAIN-SUFFIX,photos.live.com  
+# DOMAIN-SUFFIX,policies.live.net  
+# DOMAIN-SUFFIX,posarprodcssservice.accesscontrol.windows.net  
+# DOMAIN-SUFFIX,redemptionservices.accesscontrol.windows.net  
+# DOMAIN-SUFFIX,servicebus.windows.net  
+# DOMAIN-SUFFIX,settings.live.net  
+# DOMAIN-SUFFIX,skyapi.live.net  
+# DOMAIN-SUFFIX,skydrive.live.com  
+# DOMAIN-SUFFIX,snapi.live.net  
+# DOMAIN-SUFFIX,spoprod-a.akamaihd.net  
+# DOMAIN-SUFFIX,storage.live.com  
+# DOMAIN-SUFFIX,storage.msn.com  
+# DOMAIN-SUFFIX,token.cp.microsoft.com  
+# DOMAIN-SUFFIX,tokensit.cp.microsoft-tst.com  
+# DOMAIN-SUFFIX,vas.samsungapps.com  
+# DOMAIN-SUFFIX,vortex.data.microsoft.com  
