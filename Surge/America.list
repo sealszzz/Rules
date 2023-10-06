@@ -74,6 +74,8 @@ DOMAIN-SUFFIX,fastly.net
 DOMAIN,cdn.auth0.com
 DOMAIN,challenges.cloudflare.com
 DOMAIN,openaiapi-site.azureedge.net
+DOMAIN,api.statsig.com
+DOMAIN,api.revenuecat.com
 DOMAIN-SUFFIX,ai.com
 DOMAIN-SUFFIX,identrust.com
 DOMAIN-SUFFIX,openai.com
