@@ -76,6 +76,8 @@ DOMAIN,challenges.cloudflare.com
 DOMAIN,openaiapi-site.azureedge.net
 DOMAIN,api.statsig.com
 DOMAIN,api.revenuecat.com
+DOMAIN,s.gravatar.com
+DOMAIN-SUFFIX,wp.com
 DOMAIN-SUFFIX,ai.com
 DOMAIN-SUFFIX,identrust.com
 DOMAIN-SUFFIX,openai.com
