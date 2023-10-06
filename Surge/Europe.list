@@ -1,4 +1,7 @@
 # BBC
+DOMAIN,as-hls-uk-live.akamaized.net
+DOMAIN,uk-script.dotmetrics.net
+DOMAIN-SUFFIX,urbanairship.com
 DOMAIN-SUFFIX,bbc.com
 DOMAIN-SUFFIX,bbc.co.uk
 DOMAIN-SUFFIX,bbci.co.uk
