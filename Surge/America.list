@@ -92,3 +92,5 @@ DOMAIN-SUFFIX,sentry.io
 DOMAIN-KEYWORD,openai
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
+# Others
+DOMAIN,ocsp.digicert.com
