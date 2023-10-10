@@ -79,6 +79,7 @@ DOMAIN,events.statsigapi.net
 DOMAIN,api.statsig.com
 DOMAIN,api.mixpanel.com
 DOMAIN,api.revenuecat.com
+DOMAIN,zerossl.ocsp.sectigo.com
 DOMAIN,s.gravatar.com
 DOMAIN-SUFFIX,wp.com
 DOMAIN-SUFFIX,ai.com
@@ -99,3 +100,4 @@ IP-ASN,14061,no-resolve
 DOMAIN-SUFFIX,grammarly.com
 # Others
 DOMAIN,ocsp.digicert.com
+DOMAIN,ocsp.usertrust.com
