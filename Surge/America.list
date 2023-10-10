@@ -94,6 +94,7 @@ DOMAIN-SUFFIX,sentry.io
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,chatgpt
+IP-ASN,14061,no-resolve
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
 # Others
