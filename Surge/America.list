@@ -88,10 +88,12 @@ DOMAIN-SUFFIX,intercom.io
 DOMAIN-SUFFIX,intercomcdn.com
 DOMAIN-SUFFIX,poe.com
 DOMAIN-SUFFIX,openai.com
+DOMAIN-SUFFIX,livekit.cloud
 DOMAIN-SUFFIX,stripe.com
 DOMAIN-SUFFIX,sentry.io
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
+DOMAIN-KEYWORD,chatgpt
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
 # Others
