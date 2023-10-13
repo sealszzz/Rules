@@ -5,9 +5,9 @@
 DOMAIN,time.apple.com
 DOMAIN,time.asia.apple.com
 DOMAIN-SUFFIX,push.apple.com
+DOMAIN-KEYWORD,mailws.icloud.com
+DOMAIN-KEYWORD,imap.mail.me.com
 # DOMAIN,captive.apple.com
-# DOMAIN-KEYWORD,mailws.icloud.com
-# DOMAIN-KEYWORD,imap.mail.me.com
 # DOMAIN-SUFFIX,swcdn.apple.com
 # DOMAIN-SUFFIX,cdn-apple.com
 # DOMAIN,commnat-main-gc.ess.apple.com
