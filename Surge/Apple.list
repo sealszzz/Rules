@@ -10,7 +10,7 @@ DOMAIN-SUFFIX,safebrowsing.apple
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,updates.cdn-apple.com
 DOMAIN-KEYWORD,weather-map
-DOMAIN-KEYWORD,-ssl.ls.apple.com
+# DOMAIN-KEYWORD,-ssl.ls.apple.com
 IP-ASN,714,no-resolve
 IP-ASN,1036,no-resolve
 IP-ASN,1042,no-resolve
