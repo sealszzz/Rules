@@ -1,5 +1,6 @@
 # Apple
 DOMAIN,iosapps.itunes.apple.com
+DOMAIN,configuration.apple.com
 DOMAIN,configuration.ls.apple.com
 DOMAIN,weather-data.apple.com
 DOMAIN,weather-analytics-events.apple.com
