@@ -12,6 +12,7 @@ DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,updates.cdn-apple.com
 DOMAIN-SUFFIX,itunes.apple.com
 DOMAIN-SUFFIX,smoot.apple.com
+DOMAIN-SUFFIX,captive.apple.com
 # DOMAIN-KEYWORD,weather-map
 DOMAIN-KEYWORD,-ssl.ls.apple.com
 IP-ASN,714,no-resolve
