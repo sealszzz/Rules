@@ -1,12 +1,12 @@
 # PayPal
-DOMAIN-SUFFIX,paypal.com
-DOMAIN-SUFFIX,paypal.me
-DOMAIN-SUFFIX,pypl.com
-DOMAIN-SUFFIX,pypl.info
-DOMAIN-SUFFIX,pypl.net
-DOMAIN-SUFFIX,pypl.tv
-DOMAIN-KEYWORD,paypal
-DOMAIN-KEYWORD,pypl
+DOMAIN-SUFFIX,paypal.com,extended-matching
+DOMAIN-SUFFIX,paypal.me,extended-matching
+DOMAIN-SUFFIX,pypl.com,extended-matching
+DOMAIN-SUFFIX,pypl.info,extended-matching
+DOMAIN-SUFFIX,pypl.net,extended-matching
+DOMAIN-SUFFIX,pypl.tv,extended-matching
+DOMAIN-KEYWORD,paypal,extended-matching
+DOMAIN-KEYWORD,pypl,extended-matching
 IP-ASN,1449,no-resolve
 IP-ASN,17012,no-resolve
 IP-ASN,21893,no-resolve
