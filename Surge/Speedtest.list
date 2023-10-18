@@ -1,6 +1,6 @@
 # Speedtest
-DOMAIN,ipgeo.wlvpn.com
-DOMAIN-SUFFIX,speedtest.net
-DOMAIN-SUFFIX,ooklaserver.net
-DOMAIN-KEYWORD,speedtest
+DOMAIN,ipgeo.wlvpn.com,extended-matching
+DOMAIN-SUFFIX,speedtest.net,extended-matching
+DOMAIN-SUFFIX,ooklaserver.net,extended-matching
+DOMAIN-KEYWORD,speedtest,extended-matching
 IP-ASN,136625,no-resolve
