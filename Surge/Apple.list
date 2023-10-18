@@ -1,20 +1,20 @@
 # Apple
-DOMAIN,iosapps.itunes.apple.com
-DOMAIN,configuration.apple.com
-DOMAIN,configuration.ls.apple.com
-DOMAIN,testflight.apple.com
-# DOMAIN,weather-data.apple.com
-# DOMAIN,weather-analytics-events.apple.com
-# DOMAIN-SUFFIX,apple.com
-DOMAIN-SUFFIX,icloud.com
-DOMAIN-SUFFIX,safebrowsing.apple
-DOMAIN-SUFFIX,swcdn.apple.com
-DOMAIN-SUFFIX,updates.cdn-apple.com
-DOMAIN-SUFFIX,itunes.apple.com
-DOMAIN-SUFFIX,smoot.apple.com
-DOMAIN-SUFFIX,captive.apple.com
-# DOMAIN-KEYWORD,weather-map
-# DOMAIN-KEYWORD,-ssl.ls.apple.com
+DOMAIN,iosapps.itunes.apple.com,extended-matching
+DOMAIN,configuration.apple.com,extended-matching
+DOMAIN,configuration.ls.apple.com,extended-matching
+DOMAIN,testflight.apple.com,extended-matching
+# DOMAIN,weather-data.apple.com,extended-matching
+# DOMAIN,weather-analytics-events.apple.com,extended-matching
+# DOMAIN-SUFFIX,apple.com,extended-matching
+DOMAIN-SUFFIX,icloud.com,extended-matching
+DOMAIN-SUFFIX,safebrowsing.apple,extended-matching
+DOMAIN-SUFFIX,swcdn.apple.com,extended-matching
+DOMAIN-SUFFIX,updates.cdn-apple.com,extended-matching
+DOMAIN-SUFFIX,itunes.apple.com,extended-matching
+DOMAIN-SUFFIX,smoot.apple.com,extended-matching
+DOMAIN-SUFFIX,captive.apple.com,extended-matching
+# DOMAIN-KEYWORD,weather-map,extended-matching
+# DOMAIN-KEYWORD,-ssl.ls.apple.com,extended-matching
 IP-ASN,714,no-resolve
 IP-ASN,1036,no-resolve
 IP-ASN,1042,no-resolve
