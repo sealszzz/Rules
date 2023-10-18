@@ -1,27 +1,27 @@
 # Netflix
-DOMAIN-SUFFIX,fast.com
-DOMAIN-SUFFIX,flxvpn.net
-DOMAIN-SUFFIX,netflix.com
-DOMAIN-SUFFIX,netflix.net
-DOMAIN-SUFFIX,nflxext.com
-DOMAIN-SUFFIX,nflximg.com
-DOMAIN-SUFFIX,nflximg.net
-DOMAIN-SUFFIX,nflxsearch.net
-DOMAIN-SUFFIX,nflxso.net
-DOMAIN-SUFFIX,nflxvideo.net
-DOMAIN-KEYWORD,netflix
-DOMAIN-KEYWORD,nflx
-DOMAIN-KEYWORD,netflixdnstest
+DOMAIN-SUFFIX,fast.com,extended-matching
+DOMAIN-SUFFIX,flxvpn.net,extended-matching
+DOMAIN-SUFFIX,netflix.com,extended-matching
+DOMAIN-SUFFIX,netflix.net,extended-matching
+DOMAIN-SUFFIX,nflxext.com,extended-matching
+DOMAIN-SUFFIX,nflximg.com,extended-matching
+DOMAIN-SUFFIX,nflximg.net,extended-matching
+DOMAIN-SUFFIX,nflxsearch.net,extended-matching
+DOMAIN-SUFFIX,nflxso.net,extended-matching
+DOMAIN-SUFFIX,nflxvideo.net,extended-matching
+DOMAIN-KEYWORD,netflix,extended-matching
+DOMAIN-KEYWORD,nflx,extended-matching
+DOMAIN-KEYWORD,netflixdnstest,extended-matching
 IP-ASN,2906,no-resolve
 IP-ASN,40027,no-resolve
 IP-ASN,55095,no-resolve
 IP-ASN,136292,no-resolve
 IP-ASN,394406,no-resolve
-# DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com
-# DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com
-# DOMAIN-SUFFIX,elb.eu-west-2.amazonaws.com
-# DOMAIN-SUFFIX,eu-west-2.elb.amazonaws.com
-# DOMAIN-SUFFIX,elb.us-east-1.amazonaws.com
-# DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com
-# DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com
-# DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com
+# DOMAIN-SUFFIX,elb.eu-west-1.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,eu-west-1.elb.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,elb.eu-west-2.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,eu-west-2.elb.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,elb.us-east-1.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,us-east-1.elb.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,elb.us-west-2.amazonaws.com,extended-matching
+# DOMAIN-SUFFIX,us-west-2.elb.amazonaws.com,extended-matching
