@@ -1,11 +1,11 @@
 # BBC
-DOMAIN,as-hls-uk-live.akamaized.net
-DOMAIN,aod-hls-uk-live.akamaized.net
-DOMAIN,uk-script.dotmetrics.net
-DOMAIN-SUFFIX,urbanairship.com
-DOMAIN-SUFFIX,bbc.com
-DOMAIN-SUFFIX,bbc.co.uk
-DOMAIN-SUFFIX,bbci.co.uk
-DOMAIN,stream.live.vc.bbcmedia.co.uk
-DOMAIN-SUFFIX,ati-host.net
-DOMAIN-KEYWORD,bbc
+DOMAIN,as-hls-uk-live.akamaized.net,extended-matching
+DOMAIN,aod-hls-uk-live.akamaized.net,extended-matching
+DOMAIN,uk-script.dotmetrics.net,extended-matching
+DOMAIN,stream.live.vc.bbcmedia.co.uk,extended-matching
+DOMAIN-SUFFIX,urbanairship.com,extended-matching
+DOMAIN-SUFFIX,bbc.com,extended-matching
+DOMAIN-SUFFIX,bbc.co.uk,extended-matching
+DOMAIN-SUFFIX,bbci.co.uk,extended-matching
+DOMAIN-SUFFIX,ati-host.net,extended-matching
+DOMAIN-KEYWORD,bbc,extended-matching
