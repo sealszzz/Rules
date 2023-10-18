@@ -1,69 +1,69 @@
 # Bing
-DOMAIN,cdn.jsdelivr.net
-DOMAIN-SUFFIX,bing.com
-DOMAIN-SUFFIX,bing.cn
-DOMAIN-SUFFIX,bing.net
-DOMAIN-SUFFIX,bingviz.com
-DOMAIN-SUFFIX,msn.com
-DOMAIN-SUFFIX,msn.cn
-DOMAIN-SUFFIX,bingapis.com
-DOMAIN-SUFFIX,appcenter.ms
-DOMAIN-SUFFIX,clarity.ms
-DOMAIN-SUFFIX,microsoftapp.net
-DOMAIN-SUFFIX,virtualearth.net
-DOMAIN-SUFFIX,outbrainimg.com
-DOMAIN-SUFFIX,outbrain.com
-DOMAIN-SUFFIX,zemanta.com
-DOMAIN-SUFFIX,azureedge.net
-DOMAIN-SUFFIX,microsoft-falcon.io.net
-DOMAIN-KEYWORD,bing
-DOMAIN-KEYWORD,msn-com
-DOMAIN-KEYWORD,microsoft
-DOMAIN-KEYWORD,windows
+DOMAIN,cdn.jsdelivr.net,extended-matching
+DOMAIN-SUFFIX,bing.com,extended-matching
+DOMAIN-SUFFIX,bing.cn,extended-matching
+DOMAIN-SUFFIX,bing.net,extended-matching
+DOMAIN-SUFFIX,bingviz.com,extended-matching
+DOMAIN-SUFFIX,msn.com,extended-matching
+DOMAIN-SUFFIX,msn.cn,extended-matching
+DOMAIN-SUFFIX,bingapis.com,extended-matching
+DOMAIN-SUFFIX,appcenter.ms,extended-matching
+DOMAIN-SUFFIX,clarity.ms,extended-matching,extended-matching
+DOMAIN-SUFFIX,microsoftapp.net,extended-matching
+DOMAIN-SUFFIX,virtualearth.net,extended-matching
+DOMAIN-SUFFIX,outbrainimg.com,extended-matching
+DOMAIN-SUFFIX,outbrain.com,extended-matching
+DOMAIN-SUFFIX,zemanta.com,extended-matching
+DOMAIN-SUFFIX,azureedge.net,extended-matching
+DOMAIN-SUFFIX,microsoft-falcon.io.net,extended-matching
+DOMAIN-KEYWORD,bing,extended-matching
+DOMAIN-KEYWORD,msn-com,extended-matching
+DOMAIN-KEYWORD,microsoft,extended-matching
+DOMAIN-KEYWORD,windows,extended-matching
 # OneDrive
-# DOMAIN-SUFFIX,adjust.com  
-# DOMAIN-SUFFIX,api.live.net  
-# DOMAIN-SUFFIX,apis.live.net
-# DOMAIN-SUFFIX,aria.microsoft.com  
-# DOMAIN-SUFFIX,branch.io  
-# DOMAIN-SUFFIX,crashlytics.com  
-# DOMAIN-SUFFIX,docs.live.net  
-# DOMAIN-SUFFIX,fabric.io  
-# DOMAIN-SUFFIX,favorites.live.com  
-# DOMAIN-SUFFIX,files.1drv.com  
-# DOMAIN-SUFFIX,g.live.com  
-# DOMAIN-SUFFIX,groups.office.live.com  
-# DOMAIN-SUFFIX,groups.photos.live.com  
-# DOMAIN-SUFFIX,groups.skydrive.live.com  
-# DOMAIN-SUFFIX,livefilestore.com  
-# DOMAIN-SUFFIX,login.live.com  
-# DOMAIN-SUFFIX,login.microsoftonline.com
-# DOMAIN-SUFFIX,login.windows.net  
-# DOMAIN-SUFFIX,mesh.com  
-# DOMAIN-SUFFIX,microsoft.com  
-# DOMAIN-SUFFIX,mobileengagement.windows.net  
-# DOMAIN-SUFFIX,oauth.live.com  
-# DOMAIN-SUFFIX,odc.officeapps.live.com  
-# DOMAIN-SUFFIX,office.com  
-# DOMAIN-SUFFIX,officeapps.live.com  
-# DOMAIN-SUFFIX,oneclient.sfx.ms  
-# DOMAIN-SUFFIX,onedrive.com  
-# DOMAIN-SUFFIX,onedrive.live.com  
-# DOMAIN-SUFFIX,onedrive.live.com  
-# DOMAIN-SUFFIX,p.sfx.ms  
-# DOMAIN-SUFFIX,photos.live.com  
-# DOMAIN-SUFFIX,policies.live.net  
-# DOMAIN-SUFFIX,posarprodcssservice.accesscontrol.windows.net  
-# DOMAIN-SUFFIX,redemptionservices.accesscontrol.windows.net  
-# DOMAIN-SUFFIX,servicebus.windows.net  
-# DOMAIN-SUFFIX,settings.live.net  
-# DOMAIN-SUFFIX,skyapi.live.net  
-# DOMAIN-SUFFIX,skydrive.live.com  
-# DOMAIN-SUFFIX,snapi.live.net  
-# DOMAIN-SUFFIX,spoprod-a.akamaihd.net  
-# DOMAIN-SUFFIX,storage.live.com  
-# DOMAIN-SUFFIX,storage.msn.com  
-# DOMAIN-SUFFIX,token.cp.microsoft.com  
-# DOMAIN-SUFFIX,tokensit.cp.microsoft-tst.com  
-# DOMAIN-SUFFIX,vas.samsungapps.com  
-# DOMAIN-SUFFIX,vortex.data.microsoft.com  
+# DOMAIN-SUFFIX,adjust.com,extended-matching
+# DOMAIN-SUFFIX,api.live.net,extended-matching
+# DOMAIN-SUFFIX,apis.live.net,extended-matching
+# DOMAIN-SUFFIX,aria.microsoft.com,extended-matching
+# DOMAIN-SUFFIX,branch.io,extended-matching
+# DOMAIN-SUFFIX,crashlytics.com,extended-matching
+# DOMAIN-SUFFIX,docs.live.net,extended-matching
+# DOMAIN-SUFFIX,fabric.io,extended-matching
+# DOMAIN-SUFFIX,favorites.live.com,extended-matching
+# DOMAIN-SUFFIX,files.1drv.com,extended-matching
+# DOMAIN-SUFFIX,g.live.com,extended-matching
+# DOMAIN-SUFFIX,groups.office.live.com,extended-matching
+# DOMAIN-SUFFIX,groups.photos.live.com,extended-matching
+# DOMAIN-SUFFIX,groups.skydrive.live.com,extended-matching
+# DOMAIN-SUFFIX,livefilestore.com,extended-matching
+# DOMAIN-SUFFIX,login.live.com,extended-matching
+# DOMAIN-SUFFIX,login.microsoftonline.com,extended-matching
+# DOMAIN-SUFFIX,login.windows.net,extended-matching
+# DOMAIN-SUFFIX,mesh.com,extended-matching
+# DOMAIN-SUFFIX,microsoft.com,extended-matching
+# DOMAIN-SUFFIX,mobileengagement.windows.net,extended-matching
+# DOMAIN-SUFFIX,oauth.live.com,extended-matching
+# DOMAIN-SUFFIX,odc.officeapps.live.com,extended-matching
+# DOMAIN-SUFFIX,office.com,extended-matching
+# DOMAIN-SUFFIX,officeapps.live.com,extended-matching
+# DOMAIN-SUFFIX,oneclient.sfx.ms,extended-matching
+# DOMAIN-SUFFIX,onedrive.com,extended-matching
+# DOMAIN-SUFFIX,onedrive.live.com,extended-matching
+# DOMAIN-SUFFIX,onedrive.live.com,extended-matching
+# DOMAIN-SUFFIX,p.sfx.ms,extended-matching
+# DOMAIN-SUFFIX,photos.live.com,extended-matching
+# DOMAIN-SUFFIX,policies.live.net,extended-matching
+# DOMAIN-SUFFIX,posarprodcssservice.accesscontrol.windows.net,extended-matching
+# DOMAIN-SUFFIX,redemptionservices.accesscontrol.windows.net,extended-matching
+# DOMAIN-SUFFIX,servicebus.windows.net,extended-matching
+# DOMAIN-SUFFIX,settings.live.net,extended-matching
+# DOMAIN-SUFFIX,skyapi.live.net,extended-matching
+# DOMAIN-SUFFIX,skydrive.live.com,extended-matching
+# DOMAIN-SUFFIX,snapi.live.net,extended-matching
+# DOMAIN-SUFFIX,spoprod-a.akamaihd.net,extended-matching
+# DOMAIN-SUFFIX,storage.live.com,extended-matching
+# DOMAIN-SUFFIX,storage.msn.com,extended-matching
+# DOMAIN-SUFFIX,token.cp.microsoft.com,extended-matching
+# DOMAIN-SUFFIX,tokensit.cp.microsoft-tst.com,extended-matching
+# DOMAIN-SUFFIX,vas.samsungapps.com,extended-matching
+# DOMAIN-SUFFIX,vortex.data.microsoft.com,extended-matching
