@@ -24,7 +24,7 @@ DOMAIN-KEYWORD,Thunder
 DOMAIN-KEYWORD,XLLiveUD
 # Tencent
 DOMAIN-SUFFIX,gtimg.com
-DOMAIN-SUFFIX,qq.com
+DOMAIN-SUFFIX,qq.com,extended-matching
 DOMAIN-SUFFIX,wechat.com
 DOMAIN-SUFFIX,wechatpay.cn
 DOMAIN-SUFFIX,servicewechat.com
