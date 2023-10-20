@@ -1,3 +1,4 @@
+# Max
 DOMAIN,sdk.iad-01.braze.com,extended-matching
 DOMAIN,hbo-max-gtm.wn.r.appspot.com,extended-matching
 DOMAIN-SUFFIX,cinemax.com,extended-matching
@@ -12,7 +13,6 @@ DOMAIN-SUFFIX,wmcdp.io,extended-matching
 DOMAIN-SUFFIX,warnermediacdn.com,extended-matching
 DOMAIN-KEYWORD,hbomax,extended-matching
 DOMAIN-KEYWORD,hbo,extended-matching
-# Max
 DOMAIN,api.apptentive.com,extended-matching
 DOMAIN,wbd-api.arkoselabs.com,extended-matching
 DOMAIN-SUFFIX,appsflyer.com,extended-matching
