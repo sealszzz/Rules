@@ -49,6 +49,13 @@ IP-ASN,34825,no-resolve
 IP-ASN,54115,no-resolve
 IP-ASN,63293,no-resolve
 IP-ASN,149642,no-resolve
+# Instagram
+DOMAIN-SUFFIX,facebook.com,extended-matching
+DOMAIN-SUFFIX,fbcdn.net,extended-matching
+DOMAIN-SUFFIX,instagram.com,extended-matching
+DOMAIN-SUFFIX,cdninstagram.com,extended-matching
+DOMAIN-KEYWORD,facebook,extended-matching
+DOMAIN-KEYWORD,instagram,extended-matching
 # CBS
 DOMAIN,ceres.iad-03.braze.com,extended-matching
 DOMAIN,cbs.hb-api.omtrdc.net,extended-matching
