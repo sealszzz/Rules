@@ -2,17 +2,7 @@
 IP-CIDR,1.1.1.1/32,no-resolve
 # Github
 DOMAIN-SUFFIX,git.io,extended-matching
-DOMAIN-SUFFIX,github.blog,extended-matching
 DOMAIN-SUFFIX,github.com,extended-matching
-DOMAIN-SUFFIX,github.community,extended-matching
-DOMAIN-SUFFIX,github.dev,extended-matching
-DOMAIN-SUFFIX,github.io,extended-matching
-DOMAIN-SUFFIX,githubapp.com,extended-matching
-DOMAIN-SUFFIX,githubassets.com,extended-matching
-DOMAIN-SUFFIX,githubhackathon.com,extended-matching
-DOMAIN-SUFFIX,githubpreview.dev,extended-matching
-DOMAIN-SUFFIX,githubstatus.com,extended-matching
-DOMAIN-SUFFIX,githubuniverse.com,extended-matching
 DOMAIN-SUFFIX,githubusercontent.com,extended-matching
 DOMAIN-SUFFIX,rawgit.com,extended-matching
 DOMAIN-SUFFIX,rawgithub.com,extended-matching
