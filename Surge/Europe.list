@@ -9,3 +9,7 @@ DOMAIN-SUFFIX,bbc.co.uk,extended-matching
 DOMAIN-SUFFIX,bbci.co.uk,extended-matching
 DOMAIN-SUFFIX,ati-host.net,extended-matching
 DOMAIN-KEYWORD,bbc,extended-matching
+IP-ASN,2818,no-resolve
+IP-ASN,9156,no-resolve
+IP-ASN,31459,no-resolve
+IP-ASN,34158,no-resolve
