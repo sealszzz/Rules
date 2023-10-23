@@ -1,5 +1,3 @@
-# DNS
-IP-CIDR,1.1.1.1/32,no-resolve
 # Github
 DOMAIN-SUFFIX,git.io,extended-matching
 DOMAIN-SUFFIX,github.com,extended-matching
@@ -20,10 +18,6 @@ DOMAIN-SUFFIX,twimg.com,extended-matching
 DOMAIN-SUFFIX,twimg.org,extended-matching
 DOMAIN-SUFFIX,twitpic.com,extended-matching
 DOMAIN-SUFFIX,twitter.com,extended-matching
-DOMAIN-SUFFIX,twitter.jp,extended-matching
-DOMAIN-SUFFIX,twitterinc.com,extended-matching
-DOMAIN-SUFFIX,twitteroauth.com,extended-matching
-DOMAIN-SUFFIX,twitterstat.us,extended-matching
 DOMAIN-SUFFIX,twtrdns.net,extended-matching
 DOMAIN-SUFFIX,twttr.com,extended-matching
 DOMAIN-SUFFIX,vine.co,extended-matching
@@ -35,10 +29,8 @@ IP-ASN,54888,no-resolve
 IP-ASN,63179,no-resolve
 # Facebook
 IP-ASN,32934,no-resolve
-IP-ASN,34825,no-resolve
 IP-ASN,54115,no-resolve
 IP-ASN,63293,no-resolve
-IP-ASN,149642,no-resolve
 # Instagram
 DOMAIN-SUFFIX,facebook.com,extended-matching
 DOMAIN-SUFFIX,fbcdn.net,extended-matching
@@ -92,7 +84,15 @@ DOMAIN-SUFFIX,sentry.io,extended-matching
 DOMAIN-KEYWORD,datadog,extended-matching
 DOMAIN-KEYWORD,openai,extended-matching
 DOMAIN-KEYWORD,chatgpt,extended-matching
+# DigitalOcean
 IP-ASN,14061,no-resolve
+IP-ASN,62567,no-resolve
+IP-ASN,200130,no-resolve
+IP-ASN,201229,no-resolve
+IP-ASN,202018,no-resolve
+IP-ASN,202109,no-resolve
+IP-ASN,393406,no-resolve
+IP-ASN,394362,no-resolve
 # grammarly
 DOMAIN-SUFFIX,grammarly.com,extended-matching
 # Others
