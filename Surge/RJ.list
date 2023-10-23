@@ -1,5 +1,0 @@
-IP-CIDR,157.148.47.204/32,REJECT
-# DOMAIN-SUFFIX,opencloud.wostore.cn,extended-matching
-# DOMAIN-SUFFIX,unilog.wostore.cn,extended-matching
-# DOMAIN-SUFFIX,cmpassport.com,extended-matching
-# DOMAIN-SUFFIX,id6.me,extended-matching
