@@ -51,3 +51,4 @@ DOMAIN-SUFFIX,vfuiov.sbs,extended-matching
 DOMAIN-SUFFIX,api.immtel.co,extended-matching
 DOMAIN-SUFFIX,api.flowercloud.xyz,extended-matching
 DOMAIN-SUFFIX,api.prprcloud.life,extended-matching
+DOMAIN-KEYWORD,READYSHARE.0.1.168.192.in-addr.arpa,extended-matching
