@@ -34,6 +34,7 @@ DOMAIN-SUFFIX,outlook.com,extended-matching
 DOMAIN-SUFFIX,1888.com.mo,extended-matching
 DOMAIN-SUFFIX,ctcmo.com,extended-matching
 DOMAIN-SUFFIX,jd.com,extended-matching
+DOMAIN-SUFFIX,jddebug.com,extended-matching
 DOMAIN-SUFFIX,360.cn,extended-matching
 DOMAIN-SUFFIX,360.com,extended-matching
 DOMAIN-SUFFIX,so.cn,extended-matching
