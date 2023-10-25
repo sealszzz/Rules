@@ -84,6 +84,7 @@ DOMAIN-SUFFIX,sentry.io,extended-matching
 DOMAIN-KEYWORD,datadog,extended-matching
 DOMAIN-KEYWORD,openai,extended-matching
 DOMAIN-KEYWORD,chatgpt,extended-matching
+DOMAIN-KEYWORD,in-addr.arpa,extended-matching
 # DigitalOcean
 IP-ASN,14061,no-resolve
 IP-ASN,62567,no-resolve
