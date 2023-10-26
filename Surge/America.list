@@ -70,6 +70,7 @@ DOMAIN,api.mixpanel.com,extended-matching
 DOMAIN,api.revenuecat.com,extended-matching
 DOMAIN,zerossl.ocsp.sectigo.com,extended-matching
 DOMAIN,s.gravatar.com,extended-matching
+DOMAIN-SUFFIX,in-addr.arpa,extended-matching
 DOMAIN-SUFFIX,wp.com,extended-matching
 DOMAIN-SUFFIX,ai.com,extended-matching
 DOMAIN-SUFFIX,featuregates.org,extended-matching
@@ -84,7 +85,6 @@ DOMAIN-SUFFIX,sentry.io,extended-matching
 DOMAIN-KEYWORD,datadog,extended-matching
 DOMAIN-KEYWORD,openai,extended-matching
 DOMAIN-KEYWORD,chatgpt,extended-matching
-DOMAIN-KEYWORD,in-addr.arpa,extended-matching
 # DigitalOcean
 IP-ASN,14061,no-resolve
 IP-ASN,62567,no-resolve
