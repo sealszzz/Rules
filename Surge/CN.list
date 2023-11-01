@@ -49,6 +49,7 @@ DOMAIN-SUFFIX,accelerate.taiyulink.com,extended-matching
 IP-CIDR,223.5.5.5/32,no-resolve
 # Others
 DOMAIN-SUFFIX,vfuiov.sbs,extended-matching
+DOMAIN-SUFFIX,vfzgvm.sbs,extended-matching
 DOMAIN-SUFFIX,api.immtel.co,extended-matching
 DOMAIN-SUFFIX,api.flowercloud.xyz,extended-matching
 DOMAIN-SUFFIX,api.prprcloud.life,extended-matching
