@@ -8,6 +8,7 @@ DOMAIN,uts-api.itunes.apple.com,extended-matching
 # DOMAIN,weather-analytics-events.apple.com,extended-matching
 # DOMAIN-SUFFIX,apple.com,extended-matching
 DOMAIN-SUFFIX,icloud.com,extended-matching
+DOMAIN-SUFFIX,icloud-content.com,extended-matching
 DOMAIN-SUFFIX,safebrowsing.apple,extended-matching
 DOMAIN-SUFFIX,swcdn.apple.com,extended-matching
 DOMAIN-SUFFIX,updates.cdn-apple.com,extended-matching
