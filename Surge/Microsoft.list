@@ -23,7 +23,7 @@ DOMAIN-KEYWORD,windows,extended-matching
 # Office
 DOMAIN,api.onedrive.com,extended-matching
 DOMAIN-SUFFIX,1drv.com,extended-matching
-DOMAIN-SUFFIX,officeapps.live.com,extended-matching
+DOMAIN-SUFFIX,live.com,extended-matching
 DOMAIN-SUFFIX,live.net,extended-matching
 DOMAIN-SUFFIX,office.com,extended-matching
 DOMAIN-SUFFIX,office.net,extended-matching
