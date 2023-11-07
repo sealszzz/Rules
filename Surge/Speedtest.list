@@ -1,5 +1,4 @@
 # Speedtest
-DOMAIN,ipgeo.wlvpn.com,extended-matching
 DOMAIN-SUFFIX,speedtest.net,extended-matching
 DOMAIN-SUFFIX,ooklaserver.net,extended-matching
 # DOMAIN-KEYWORD,speedtest,extended-matching
