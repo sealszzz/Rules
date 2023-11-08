@@ -94,6 +94,11 @@ IP-ASN,202018,no-resolve
 IP-ASN,202109,no-resolve
 IP-ASN,393406,no-resolve
 IP-ASN,394362,no-resolve
+# Discord
+DOMAIN,cdn.discordapp.com,extended-matching
+DOMAIN-SUFFIX,discord.com,extended-matching
+IP-ASN,49544,no-resolve
+DOMAIN-KEYWORD,discord,extended-matching
 # grammarly
 DOMAIN-SUFFIX,grammarly.com,extended-matching
 # Others
