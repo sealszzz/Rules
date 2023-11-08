@@ -1,43 +1,3 @@
-# Github
-DOMAIN-SUFFIX,git.io,extended-matching
-DOMAIN-SUFFIX,github.com,extended-matching
-DOMAIN-SUFFIX,githubusercontent.com,extended-matching
-DOMAIN-SUFFIX,rawgit.com,extended-matching
-DOMAIN-SUFFIX,rawgithub.com,extended-matching
-DOMAIN-KEYWORD,github,extended-matching
-IP-ASN,36459,no-resolve
-# Twitter
-DOMAIN-SUFFIX,ads-twitter.com,extended-matching
-DOMAIN-SUFFIX,periscope.tv,extended-matching
-DOMAIN-SUFFIX,pscp.tv,extended-matching
-DOMAIN-SUFFIX,t.co,extended-matching
-DOMAIN-SUFFIX,tellapart.com,extended-matching
-DOMAIN-SUFFIX,tweetdeck.com,extended-matching
-DOMAIN-SUFFIX,twimg.co,extended-matching
-DOMAIN-SUFFIX,twimg.com,extended-matching
-DOMAIN-SUFFIX,twimg.org,extended-matching
-DOMAIN-SUFFIX,twitpic.com,extended-matching
-DOMAIN-SUFFIX,twitter.com,extended-matching
-DOMAIN-SUFFIX,twtrdns.net,extended-matching
-DOMAIN-SUFFIX,twttr.com,extended-matching
-DOMAIN-SUFFIX,vine.co,extended-matching
-DOMAIN-KEYWORD,twitter,extended-matching
-# Twitter
-IP-ASN,13414,no-resolve
-IP-ASN,35995,no-resolve
-IP-ASN,54888,no-resolve
-IP-ASN,63179,no-resolve
-# Facebook
-IP-ASN,32934,no-resolve
-IP-ASN,54115,no-resolve
-IP-ASN,63293,no-resolve
-# Instagram
-DOMAIN-SUFFIX,facebook.com,extended-matching
-DOMAIN-SUFFIX,fbcdn.net,extended-matching
-DOMAIN-SUFFIX,instagram.com,extended-matching
-DOMAIN-SUFFIX,cdninstagram.com,extended-matching
-DOMAIN-KEYWORD,facebook,extended-matching
-DOMAIN-KEYWORD,instagram,extended-matching
 # CBS
 DOMAIN,ceres.iad-03.braze.com,extended-matching
 DOMAIN,cbs.hb-api.omtrdc.net,extended-matching
@@ -85,23 +45,3 @@ DOMAIN-SUFFIX,sentry.io,extended-matching
 DOMAIN-KEYWORD,datadog,extended-matching
 DOMAIN-KEYWORD,openai,extended-matching
 DOMAIN-KEYWORD,chatgpt,extended-matching
-# DigitalOcean
-IP-ASN,14061,no-resolve
-IP-ASN,62567,no-resolve
-IP-ASN,200130,no-resolve
-IP-ASN,201229,no-resolve
-IP-ASN,202018,no-resolve
-IP-ASN,202109,no-resolve
-IP-ASN,393406,no-resolve
-IP-ASN,394362,no-resolve
-# Discord
-DOMAIN,cdn.discordapp.com,extended-matching
-DOMAIN-SUFFIX,discord.com,extended-matching
-DOMAIN-SUFFIX,discord.media,extended-matching
-# IP-ASN,49544,no-resolve
-DOMAIN-KEYWORD,discord,extended-matching
-# grammarly
-DOMAIN-SUFFIX,grammarly.com,extended-matching
-# Others
-DOMAIN,ocsp.digicert.com,extended-matching
-DOMAIN,ocsp.usertrust.com,extended-matching
