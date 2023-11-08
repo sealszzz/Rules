@@ -97,6 +97,7 @@ IP-ASN,394362,no-resolve
 # Discord
 DOMAIN,cdn.discordapp.com,extended-matching
 DOMAIN-SUFFIX,discord.com,extended-matching
+DOMAIN-SUFFIX,discord.media,extended-matching
 IP-ASN,49544,no-resolve
 DOMAIN-KEYWORD,discord,extended-matching
 # grammarly
