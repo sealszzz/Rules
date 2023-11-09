@@ -1,13 +1,13 @@
 # Spotify
-DOMAIN,cdn.branch.io,extended-matching
-DOMAIN,api2.branch.io,extended-matching
-DOMAIN,sb.scorecardresearch.com,extended-matching
-DOMAIN-SUFFIX,pscdn.co,extended-matching
-DOMAIN-SUFFIX,scdn.co,extended-matching
-DOMAIN-SUFFIX,spoti.fi,extended-matching
-DOMAIN-SUFFIX,spotify.com,extended-matching
-DOMAIN-SUFFIX,spotilocal.com,extended-matching
-DOMAIN-KEYWORD,spotify,extended-matching
+DOMAIN,cdn.branch.io
+DOMAIN,api2.branch.io
+DOMAIN,sb.scorecardresearch.com
+DOMAIN-SUFFIX,pscdn.co
+DOMAIN-SUFFIX,scdn.co
+DOMAIN-SUFFIX,spoti.fi
+DOMAIN-SUFFIX,spotify.com
+DOMAIN-SUFFIX,spotilocal.com
+DOMAIN-KEYWORD,spotify
 IP-CIDR,35.186.224.47/32,no-resolve
 IP-CIDR,104.154.127.126/32,no-resolve
 IP-ASN,8403,no-resolve
