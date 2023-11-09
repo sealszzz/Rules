@@ -2,9 +2,6 @@
 DOMAIN-SUFFIX,billdesk.com,extended-matching
 IP-CIDR,8.8.8.8/32,no-resolve
 IP-CIDR,8.8.4.4/32,no-resolve
-DOMAIN,stun.l.google.com,extended-matching
-DOMAIN,stun1.l.google.com,extended-matching
-DOMAIN,stun2.l.google.com,extended-matching
 DOMAIN,lens.l.google.com,extended-matching
 DOMAIN,voice.telephony.goog,extended-matching
 DOMAIN-SUFFIX,ggpht.com,extended-matching
