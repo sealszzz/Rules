@@ -50,3 +50,4 @@ DOMAIN-SUFFIX,grammarly.com,extended-matching
 # Others
 DOMAIN,ocsp.digicert.com,extended-matching
 DOMAIN,ocsp.usertrust.com,extended-matching
+DOMAIN-SUFFIX,v2ex.com,extended-matching
