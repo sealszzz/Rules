@@ -1,14 +1,14 @@
 # Telegram
-DOMAIN-SUFFIX,comments.app
-DOMAIN-SUFFIX,t.me
-DOMAIN-SUFFIX,tdesktop.com
-DOMAIN-SUFFIX,telegra.ph
-DOMAIN-SUFFIX,telegram.me
-DOMAIN-SUFFIX,telegram.org
-DOMAIN-SUFFIX,telegram-cdn.org
-DOMAIN-SUFFIX,telesco.pe
-DOMAIN-KEYWORD,nicegram
-DOMAIN-KEYWORD,telegram
+DOMAIN-SUFFIX,comments.app,extended-matching
+DOMAIN-SUFFIX,t.me,extended-matching
+DOMAIN-SUFFIX,tdesktop.com,extended-matching
+DOMAIN-SUFFIX,telegra.ph,extended-matching
+DOMAIN-SUFFIX,telegram.me,extended-matching
+DOMAIN-SUFFIX,telegram.org,extended-matching
+DOMAIN-SUFFIX,telegram-cdn.org,extended-matching
+DOMAIN-SUFFIX,telesco.pe,extended-matching
+DOMAIN-KEYWORD,nicegram,extended-matching
+DOMAIN-KEYWORD,telegram,extended-matching
 IP-ASN,44907,no-resolve
 IP-ASN,59930,no-resolve
 IP-ASN,62014,no-resolve
