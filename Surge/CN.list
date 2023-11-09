@@ -53,3 +53,8 @@ DOMAIN-SUFFIX,vfzgvm.sbs,extended-matching
 DOMAIN-SUFFIX,api.immtel.co,extended-matching
 DOMAIN-SUFFIX,api.flowercloud.xyz,extended-matching
 DOMAIN-SUFFIX,api.prprcloud.life,extended-matching
+DOMAIN-SUFFIX,snapdrop.net,extended-matching
+# Google
+DOMAIN,stun.l.google.com,extended-matching
+DOMAIN,stun1.l.google.com,extended-matching
+DOMAIN,stun2.l.google.com,extended-matching
