@@ -1,55 +1,55 @@
 # Apple
-DOMAIN,time.apple.com,extended-matching
-DOMAIN,time.asia.apple.com,extended-matching
-DOMAIN-SUFFIX,push.apple.com,extended-matching
-DOMAIN-SUFFIX,push-apple.com.akadns.net,extended-matching
-DOMAIN-KEYWORD,mailws.icloud.com,extended-matching
-DOMAIN-KEYWORD,imap.mail.me.com,extended-matching
-# DOMAIN,captive.apple.com,extended-matching
-# DOMAIN-SUFFIX,swcdn.apple.com,extended-matching
-# DOMAIN-SUFFIX,cdn-apple.com,extended-matching
-# DOMAIN,commnat-main-gc.ess.apple.com,extended-matching
-# DOMAIN,commnat-cohort-gc.ess.apple.com,extended-matching
+DOMAIN,time.apple.com
+DOMAIN,time.asia.apple.com
+DOMAIN-SUFFIX,push.apple.com
+DOMAIN-SUFFIX,push-apple.com.akadns.net
+DOMAIN-KEYWORD,mailws.icloud.com
+DOMAIN-KEYWORD,imap.mail.me.com
+# DOMAIN,captive.apple.com
+# DOMAIN-SUFFIX,swcdn.apple.com
+# DOMAIN-SUFFIX,cdn-apple.com
+# DOMAIN,commnat-main-gc.ess.apple.com
+# DOMAIN,commnat-cohort-gc.ess.apple.com
 # BitTorrent
-DOMAIN-KEYWORD,announce,extended-matching
-DOMAIN-KEYWORD,protocol,extended-matching
-DOMAIN-KEYWORD,BitTorrent,extended-matching
-DOMAIN-KEYWORD,torrent,extended-matching
-DOMAIN-KEYWORD,tracker,extended-matching
-DOMAIN-KEYWORD,xunlei,extended-matching
-DOMAIN-KEYWORD,sandai,extended-matching
-DOMAIN-KEYWORD,Thunder,extended-matching
-DOMAIN-KEYWORD,XLLiveUD,extended-matching
+DOMAIN-KEYWORD,announce
+DOMAIN-KEYWORD,protocol
+DOMAIN-KEYWORD,BitTorrent
+DOMAIN-KEYWORD,torrent
+DOMAIN-KEYWORD,tracker
+DOMAIN-KEYWORD,xunlei
+DOMAIN-KEYWORD,sandai
+DOMAIN-KEYWORD,Thunder
+DOMAIN-KEYWORD,XLLiveUD
 # Tencent
-DOMAIN-SUFFIX,gtimg.com,extended-matching
-DOMAIN-SUFFIX,qq.com,extended-matching
-DOMAIN-SUFFIX,wechat.com,extended-matching
-DOMAIN-SUFFIX,wechatpay.cn,extended-matching
-DOMAIN-SUFFIX,servicewechat.com,extended-matching
+DOMAIN-SUFFIX,gtimg.com
+DOMAIN-SUFFIX,qq.com
+DOMAIN-SUFFIX,wechat.com
+DOMAIN-SUFFIX,wechatpay.cn
+DOMAIN-SUFFIX,servicewechat.com
 # Email
-DOMAIN,outlook.live.com,extended-matching
-DOMAIN-SUFFIX,hotmail.com,extended-matching
-DOMAIN-SUFFIX,outlook.com,extended-matching
+DOMAIN,outlook.live.com
+DOMAIN-SUFFIX,hotmail.com
+DOMAIN-SUFFIX,outlook.com
 # Others
-DOMAIN-SUFFIX,1888.com.mo,extended-matching
-DOMAIN-SUFFIX,ctcmo.com,extended-matching
-DOMAIN-SUFFIX,jd.com,extended-matching
-DOMAIN-SUFFIX,jddebug.com,extended-matching
-DOMAIN-SUFFIX,360.cn,extended-matching
-DOMAIN-SUFFIX,360.com,extended-matching
-DOMAIN-SUFFIX,so.cn,extended-matching
-DOMAIN-SUFFIX,so.com,extended-matching
-DOMAIN-SUFFIX,163.com,extended-matching
-DOMAIN-SUFFIX,nvidia.com,extended-matching
-DOMAIN-SUFFIX,baidu.com,extended-matching
-DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.co,extended-matchingm
-DOMAIN-SUFFIX,jegotrip.com.cn,extended-matching
-DOMAIN-SUFFIX,accelerate.taiyulink.com,extended-matching
+DOMAIN-SUFFIX,1888.com.mo
+DOMAIN-SUFFIX,ctcmo.com
+DOMAIN-SUFFIX,jd.com
+DOMAIN-SUFFIX,jddebug.com
+DOMAIN-SUFFIX,360.cn
+DOMAIN-SUFFIX,360.com
+DOMAIN-SUFFIX,so.cn
+DOMAIN-SUFFIX,so.com
+DOMAIN-SUFFIX,163.com
+DOMAIN-SUFFIX,nvidia.com
+DOMAIN-SUFFIX,baidu.com
+DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
+DOMAIN-SUFFIX,jegotrip.com.cn
+DOMAIN-SUFFIX,accelerate.taiyulink.com
 # DNS
 IP-CIDR,223.5.5.5/32,no-resolve
 # Others
-DOMAIN-SUFFIX,vfuiov.sbs,extended-matching
-DOMAIN-SUFFIX,vfzgvm.sbs,extended-matching
-DOMAIN-SUFFIX,api.immtel.co,extended-matching
-DOMAIN-SUFFIX,api.flowercloud.xyz,extended-matching
-DOMAIN-SUFFIX,api.prprcloud.life,extended-matching
+DOMAIN-SUFFIX,vfuiov.sbs
+DOMAIN-SUFFIX,vfzgvm.sbs
+DOMAIN-SUFFIX,api.immtel.co
+DOMAIN-SUFFIX,api.flowercloud.xyz
+DOMAIN-SUFFIX,api.prprcloud.life
