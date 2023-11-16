@@ -42,6 +42,8 @@ DOMAIN-SUFFIX,openai.com,extended-matching
 DOMAIN-SUFFIX,livekit.cloud,extended-matching
 DOMAIN-SUFFIX,stripe.com,extended-matching
 DOMAIN-SUFFIX,sentry.io,extended-matching
+DOMAIN-SUFFIX,oaistatic.com,extended-matching
+DOMAIN-SUFFIX,oaiusercontent.com,extended-matching
 DOMAIN-KEYWORD,datadog,extended-matching
 DOMAIN-KEYWORD,openai,extended-matching
 DOMAIN-KEYWORD,chatgpt,extended-matching
