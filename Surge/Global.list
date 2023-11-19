@@ -6,6 +6,7 @@ DOMAIN-KEYWORD,.tw
 # Github
 DOMAIN-SUFFIX,git.io
 DOMAIN-SUFFIX,github.com
+DOMAIN-SUFFIX,gitlab.com
 DOMAIN-SUFFIX,githubusercontent.com
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
