@@ -12,6 +12,9 @@ DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-KEYWORD,github
 IP-ASN,36459,no-resolve
+# Gitlab
+DOMAIN-SUFFIX,gitlab.com
+DOMAIN-KEYWORD,gitlab
 # Twitter
 DOMAIN-SUFFIX,ads-twitter.com
 DOMAIN-SUFFIX,periscope.tv
