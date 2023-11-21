@@ -27,7 +27,9 @@ DOMAIN-SUFFIX,qq.com
 DOMAIN-SUFFIX,wechat.com
 DOMAIN-SUFFIX,wechatpay.cn
 DOMAIN-SUFFIX,servicewechat.com
+DOMAIN-SUFFIX,weixinbridge.com
 DOMAIN-KEYWORD,wechat
+DOMAIN-KEYWORD,weixin
 # Email
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
