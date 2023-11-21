@@ -60,3 +60,8 @@ DOMAIN,ocsp.digicert.com
 DOMAIN,ocsp.usertrust.com
 DOMAIN-SUFFIX,v2ex.com
 DOMAIN-SUFFIX,amazonaws.com
+DOMAIN-SUFFIX,pelmorex.com
+DOMAIN-SUFFIX,theweathernetwork.com
+DOMAIN,secure.globalsign.com
+DOMAIN,bgp.he.net
+DOMAIN,apps.mzstatic.com
