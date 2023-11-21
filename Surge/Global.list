@@ -4,6 +4,7 @@ IP-CIDR,1.1.1.0/24,no-resolve
 IP-CIDR,1.0.0.0/24,no-resolve
 # TW
 DOMAIN-SUFFIX,tw
+DOMAIN-SUFFIX,taipei
 # Github
 DOMAIN-SUFFIX,git.io
 DOMAIN-SUFFIX,github.com
@@ -66,3 +67,4 @@ DOMAIN-SUFFIX,theweathernetwork.com
 DOMAIN,secure.globalsign.com
 DOMAIN,bgp.he.net
 DOMAIN-SUFFIX,mzstatic.com
+DOMAIN-SUFFIX,alexametrics.com
