@@ -3,7 +3,7 @@ DOMAIN-SUFFIX,cloudflare-dns.com
 IP-CIDR,1.1.1.0/24,no-resolve
 IP-CIDR,1.0.0.0/24,no-resolve
 # TW
-DOMAIN-KEYWORD,.tw
+DOMAIN-SUFFIX,tw
 # Github
 DOMAIN-SUFFIX,git.io
 DOMAIN-SUFFIX,github.com
