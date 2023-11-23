@@ -4,7 +4,7 @@ DOMAIN,time.asia.apple.com
 DOMAIN-SUFFIX,push.apple.com
 DOMAIN-SUFFIX,push-apple.com.akadns.net
 DOMAIN-SUFFIX,mailws.icloud.com
-DOMAIN-SUFFIX,imap.mail.me.com
+DOMAIN-SUFFIX,mail.me.com
 # DOMAIN,captive.apple.com
 # DOMAIN-SUFFIX,swcdn.apple.com
 # DOMAIN-SUFFIX,cdn-apple.com
