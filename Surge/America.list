@@ -47,3 +47,5 @@ DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,chatgpt
+# Yahoo
+DOMAIN-SUFFIX,yahoo.com
