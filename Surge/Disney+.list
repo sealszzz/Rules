@@ -1,9 +1,15 @@
 # Disney+
 DOMAIN,assets.adobedtm.com
+DOMAIN,geolocation.onetrust.com
+DOMAIN,cdn.cookielaw.org
+DOMAIN,crt.comodoca.com
+DOMAIN,service.force.com
 DOMAIN,cdn.registerdisney.go.com
 DOMAIN,disney.demdex.net
 DOMAIN,disney.my.sentry.io
 DOMAIN,sdk.iad-03.braze.com
+DOMAIN,hulu.my.salesforce-sites.com
+DOMAIN-SUFFIX,salesforceliveagent.com
 DOMAIN-SUFFIX,braze-images.com
 DOMAIN-SUFFIX,adoceans.com
 DOMAIN-SUFFIX,bamgrid.com
@@ -16,6 +22,8 @@ DOMAIN-SUFFIX,media.dssott.com
 DOMAIN-SUFFIX,media.starott.com
 DOMAIN-SUFFIX,thewaltdisneycompany.com
 DOMAIN-KEYWORD,disney
+DOMAIN-KEYWORD,hulu
+
 IP-ASN,11251,no-resolve
 IP-ASN,22604,no-resolve
 IP-ASN,398849,no-resolve
