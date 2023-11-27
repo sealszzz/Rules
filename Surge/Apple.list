@@ -1,5 +1,7 @@
 # Apple
 DOMAIN,stocks-data-service.apple.com
+DOMAIN,stocks-analytics-events.apple.com
+DOMAIN,stocks-edge.apple.com
 DOMAIN,iosapps.itunes.apple.com
 DOMAIN,configuration.apple.com
 DOMAIN,configuration.ls.apple.com
