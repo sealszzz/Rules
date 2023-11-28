@@ -9,6 +9,7 @@ DOMAIN,testflight.apple.com
 DOMAIN,uts-api.itunes.apple.com
 DOMAIN,weather-data.apple.com
 DOMAIN,weather-analytics-events.apple.com
+DOMAIN,gdmf.apple.com
 # DOMAIN-SUFFIX,apple.com
 DOMAIN-SUFFIX,icloud.com
 DOMAIN-SUFFIX,icloud-content.com
