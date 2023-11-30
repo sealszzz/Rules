@@ -32,6 +32,7 @@ DOMAIN-SUFFIX,twitter.com
 DOMAIN-SUFFIX,twtrdns.net
 DOMAIN-SUFFIX,twttr.com
 DOMAIN-SUFFIX,vine.co
+DOMAIN-SUFFIX,x.com
 DOMAIN-KEYWORD,twitter
 # Twitter
 IP-ASN,13414,no-resolve
