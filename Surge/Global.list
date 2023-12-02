@@ -60,12 +60,11 @@ DOMAIN-SUFFIX,grammarly.com
 # Others
 DOMAIN,ocsp.digicert.com
 DOMAIN,ocsp.usertrust.com
+DOMAIN,secure.globalsign.com
+DOMAIN,bgp.he.net
 DOMAIN-SUFFIX,v2ex.com
 DOMAIN-SUFFIX,amazonaws.com
 DOMAIN-KEYWORD,amazon
 DOMAIN-SUFFIX,pelmorex.com
 DOMAIN-SUFFIX,theweathernetwork.com
-DOMAIN,secure.globalsign.com
-DOMAIN,bgp.he.net
-DOMAIN-SUFFIX,mzstatic.com
 DOMAIN-SUFFIX,alexametrics.com
