@@ -5,9 +5,11 @@ DOMAIN-SUFFIX,push.apple.com
 DOMAIN-SUFFIX,push-apple.com.akadns.net
 DOMAIN-SUFFIX,mailws.icloud.com
 DOMAIN-SUFFIX,mail.me.com
-# DOMAIN,captive.apple.com
+DOMAIN-SUFFIX,apzones.com
+DOMAIN-SUFFIX,digicert.cn
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
+# DOMAIN,captive.apple.com
 # DOMAIN,commnat-main-gc.ess.apple.com
 # DOMAIN,commnat-cohort-gc.ess.apple.com
 # BitTorrent
