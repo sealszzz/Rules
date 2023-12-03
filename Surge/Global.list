@@ -8,7 +8,6 @@ DOMAIN-SUFFIX,taipei
 # Github
 DOMAIN-SUFFIX,git.io
 DOMAIN-SUFFIX,github.com
-DOMAIN-SUFFIX,gitlab.com
 DOMAIN-SUFFIX,githubusercontent.com
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
@@ -34,7 +33,6 @@ DOMAIN-SUFFIX,twttr.com
 DOMAIN-SUFFIX,vine.co
 DOMAIN-SUFFIX,x.com
 DOMAIN-KEYWORD,twitter
-# Twitter
 IP-ASN,13414,no-resolve
 IP-ASN,35995,no-resolve
 IP-ASN,54888,no-resolve
@@ -58,8 +56,6 @@ DOMAIN-KEYWORD,discord
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
 # Others
-DOMAIN,ocsp.digicert.com
-DOMAIN,ocsp.usertrust.com
 DOMAIN,secure.globalsign.com
 DOMAIN,bgp.he.net
 DOMAIN-SUFFIX,v2ex.com
