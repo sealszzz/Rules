@@ -56,6 +56,7 @@ DOMAIN-KEYWORD,discord
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
 # Others
+DOMAIN,ocsp.usertrust.com
 DOMAIN,secure.globalsign.com
 DOMAIN,bgp.he.net
 DOMAIN-SUFFIX,v2ex.com
