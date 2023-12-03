@@ -2,18 +2,7 @@
 DOMAIN,upload.appleschoolcontent.com
 DOMAIN,icons.axm-usercontent-apple.com
 DOMAIN,appldnld.apple.com.edgesuite.net
-DOMAIN,stocks-data-service.apple.com
-DOMAIN,stocks-analytics-events.apple.com
-DOMAIN,stocks-edge.apple.com
 DOMAIN,api.apple-cloudkit.com
-DOMAIN,iosapps.itunes.apple.com
-DOMAIN,configuration.apple.com
-DOMAIN,configuration.ls.apple.com
-DOMAIN,testflight.apple.com
-DOMAIN,uts-api.itunes.apple.com
-DOMAIN,weather-data.apple.com
-DOMAIN,weather-analytics-events.apple.com
-DOMAIN,gdmf.apple.com
 DOMAIN-SUFFIX,entrust.net
 DOMAIN-SUFFIX,digicert.com
 DOMAIN-SUFFIX,vertexsmb.com
@@ -24,15 +13,9 @@ DOMAIN-SUFFIX,apple.com
 DOMAIN-SUFFIX,itunes.com
 DOMAIN-SUFFIX,icloud.com
 DOMAIN-SUFFIX,icloud-content.com
-DOMAIN-SUFFIX,safebrowsing.apple
+DOMAIN-SUFFIX,mzstatic.com
 # DOMAIN-SUFFIX,swcdn.apple.com
 # DOMAIN-SUFFIX,cdn-apple.com
-DOMAIN-SUFFIX,itunes.apple.com
-DOMAIN-SUFFIX,smoot.apple.com
-DOMAIN-SUFFIX,captive.apple.com
-DOMAIN-SUFFIX,mzstatic.com
-# DOMAIN-KEYWORD,weather-map
-# DOMAIN-KEYWORD,-ssl.ls.apple.com
 IP-CIDR,17.0.0.0/8,no-resolve
 IP-ASN,714,no-resolve
 IP-ASN,1036,no-resolve
