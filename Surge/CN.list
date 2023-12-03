@@ -9,9 +9,6 @@ DOMAIN-SUFFIX,apzones.com
 DOMAIN-SUFFIX,digicert.cn
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
-# DOMAIN,captive.apple.com
-# DOMAIN,commnat-main-gc.ess.apple.com
-# DOMAIN,commnat-cohort-gc.ess.apple.com
 # BitTorrent
 DOMAIN-KEYWORD,announce
 DOMAIN-KEYWORD,protocol
@@ -49,7 +46,6 @@ DOMAIN-SUFFIX,360.com
 DOMAIN-SUFFIX,so.cn
 DOMAIN-SUFFIX,so.com
 DOMAIN-SUFFIX,163.com
-DOMAIN-SUFFIX,nvidia.com
 DOMAIN-SUFFIX,baidu.com
 DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
 DOMAIN-SUFFIX,jegotrip.com.cn
