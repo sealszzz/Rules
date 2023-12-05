@@ -36,7 +36,7 @@ DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
 # Others
-DOMAIN-SUFFIX,cn
+# DOMAIN-SUFFIX,cn
 DOMAIN-SUFFIX,1888.com.mo
 DOMAIN-SUFFIX,ctcmo.com
 DOMAIN-SUFFIX,jd.com
