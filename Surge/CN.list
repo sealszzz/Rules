@@ -9,6 +9,10 @@ DOMAIN-SUFFIX,apzones.com
 DOMAIN-SUFFIX,digicert.cn
 DOMAIN-SUFFIX,swcdn.apple.com
 DOMAIN-SUFFIX,cdn-apple.com
+DOMAIN-SUFFIX,weather-data.apple.com
+DOMAIN-SUFFIX,weather-map2.apple.com
+DOMAIN-SUFFIX,weather-widget-events.apple.com
+DOMAIN-SUFFIX,weather-analytics-events.apple.com
 # BitTorrent
 DOMAIN-KEYWORD,announce
 DOMAIN-KEYWORD,protocol
