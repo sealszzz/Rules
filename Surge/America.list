@@ -76,3 +76,5 @@ DOMAIN-SUFFIX,vaicore.site
 DOMAIN-SUFFIX,v.fwmrm.net
 DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
+# Others
+IP-ASN,400618,no-resolve
