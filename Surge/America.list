@@ -54,9 +54,8 @@ DOMAIN-SUFFIX,observeit.net
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,chatgpt
-IP-ASN,14061,no-resolve
-IP-ASN,20473,no-resolve
 # DigitalOcean
+IP-ASN,14061,no-resolve
 # IP-ASN,62567,no-resolve
 # IP-ASN,200130,no-resolve
 # IP-ASN,201229,no-resolve
@@ -64,5 +63,14 @@ IP-ASN,20473,no-resolve
 # IP-ASN,202109,no-resolve
 # IP-ASN,393406,no-resolve
 # IP-ASN,394362,no-resolve
+# TYO_VULTR_CUST
+IP-CIDR,66.42.32.0/20,no-resolve
+IP-CIDR,139.180.192.0/20,no-resolve
+IP-CIDR,202.182.96.0/20,no-resolve
+IP-CIDR,202.182.112.0/20,no-resolve
+IP-CIDR,207.148.88.0/21,no-resolve
+IP-CIDR,207.148.96.0/20,no-resolve
+IP-CIDR,207.148.112.0/22,no-resolve
+IP-ASN,20473,no-resolve
 # Yahoo
 DOMAIN-SUFFIX,yahoo.com
