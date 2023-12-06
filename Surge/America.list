@@ -54,14 +54,15 @@ DOMAIN-SUFFIX,observeit.net
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,chatgpt
-# DigitalOcean
 IP-ASN,14061,no-resolve
-IP-ASN,62567,no-resolve
-IP-ASN,200130,no-resolve
-IP-ASN,201229,no-resolve
-IP-ASN,202018,no-resolve
-IP-ASN,202109,no-resolve
-IP-ASN,393406,no-resolve
-IP-ASN,394362,no-resolve
+IP-ASN,20473,no-resolve
+# DigitalOcean
+# IP-ASN,62567,no-resolve
+# IP-ASN,200130,no-resolve
+# IP-ASN,201229,no-resolve
+# IP-ASN,202018,no-resolve
+# IP-ASN,202109,no-resolve
+# IP-ASN,393406,no-resolve
+# IP-ASN,394362,no-resolve
 # Yahoo
 DOMAIN-SUFFIX,yahoo.com
