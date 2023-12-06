@@ -54,6 +54,7 @@ DOMAIN-SUFFIX,observeit.net
 DOMAIN-KEYWORD,datadog
 DOMAIN-KEYWORD,openai
 DOMAIN-KEYWORD,chatgpt
+# DigitalOcean
 IP-ASN,14061,no-resolve
 IP-ASN,62567,no-resolve
 IP-ASN,200130,no-resolve
