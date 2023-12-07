@@ -65,3 +65,5 @@ DOMAIN-KEYWORD,amazon
 DOMAIN-SUFFIX,pelmorex.com
 DOMAIN-SUFFIX,theweathernetwork.com
 DOMAIN-SUFFIX,alexametrics.com
+IP-ASN,174,no-resolve
+IP-ASN,400618,no-resolve
