@@ -7,8 +7,8 @@ DOMAIN,cdn.auth0.com
 DOMAIN,cdn.cloudflare.net
 DOMAIN,challenges.cloudflare.com
 DOMAIN,client-api.arkoselabs.com
-DOMAIN,events.statsigapi.net
 DOMAIN,openai-api.arkoselabs.com
+DOMAIN,events.statsigapi.net
 DOMAIN,openaiapi-site.azureedge.net
 DOMAIN,s.gravatar.com
 DOMAIN,static.cloudflareinsights.com
@@ -40,6 +40,8 @@ DOMAIN-KEYWORD,openai-api
 DOMAIN-KEYWORD,openaicom
 DOMAIN-KEYWORD,openai.com
 DOMAIN-KEYWORD,openai
+# The Constant Company, LLC
+IP-ASN,20473,no-resolve
 # DigitalOcean
 IP-ASN,14061,no-resolve
 # IP-ASN,62567,no-resolve
@@ -49,17 +51,6 @@ IP-ASN,14061,no-resolve
 # IP-ASN,202109,no-resolve
 # IP-ASN,393406,no-resolve
 # IP-ASN,394362,no-resolve
-# TYO_VULTR_CUST
-IP-CIDR,66.42.32.0/20,no-resolve
-IP-CIDR,139.180.192.0/20,no-resolve
-IP-CIDR,202.182.96.0/20,no-resolve
-IP-CIDR,202.182.112.0/20,no-resolve
-IP-CIDR,207.148.88.0/21,no-resolve
-IP-CIDR,207.148.96.0/20,no-resolve
-IP-CIDR,207.148.112.0/22,no-resolve
-IP-ASN,20473,no-resolve
-IP-CIDR6,2001:19f0:7001:55b3:5400:4ff:feab:ba8f/128,no-resolve
-IP-CIDR6,2001:19f0:7001:8e6:5400:4ff:feab:b953/128,no-resolve
 # Yahoo
 DOMAIN-SUFFIX,yahoo.com
 # CBS
