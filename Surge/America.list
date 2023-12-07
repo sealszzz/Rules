@@ -8,9 +8,6 @@ DOMAIN,cdn.cloudflare.net
 DOMAIN,challenges.cloudflare.com
 DOMAIN,client-api.arkoselabs.com
 DOMAIN,events.statsigapi.net
-DOMAIN,chatgpt.livekit.cloud
-DOMAIN,host.livekit.cloud
-DOMAIN,turn.livekit.cloud
 DOMAIN,openai-api.arkoselabs.com
 DOMAIN,openaiapi-site.azureedge.net
 DOMAIN,s.gravatar.com
@@ -24,6 +21,9 @@ DOMAIN-SUFFIX,in-addr.arpa
 DOMAIN-SUFFIX,intercom.io
 DOMAIN-SUFFIX,intercomcdn.com
 DOMAIN-SUFFIX,launchdarkly.com
+DOMAIN-SUFFIX,chatgpt.livekit.cloud
+DOMAIN-SUFFIX,host.livekit.cloud
+DOMAIN-SUFFIX,turn.livekit.cloud
 DOMAIN-SUFFIX,oaistatic.com
 DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-SUFFIX,observeit.net
