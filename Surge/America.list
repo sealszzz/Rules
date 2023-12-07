@@ -21,9 +21,6 @@ DOMAIN-SUFFIX,in-addr.arpa
 DOMAIN-SUFFIX,intercom.io
 DOMAIN-SUFFIX,intercomcdn.com
 DOMAIN-SUFFIX,launchdarkly.com
-DOMAIN-SUFFIX,chatgpt.livekit.cloud
-DOMAIN-SUFFIX,host.livekit.cloud
-DOMAIN-SUFFIX,turn.livekit.cloud
 DOMAIN-SUFFIX,oaistatic.com
 DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-SUFFIX,observeit.net
@@ -40,9 +37,13 @@ DOMAIN-KEYWORD,openai-api
 DOMAIN-KEYWORD,openaicom
 DOMAIN-KEYWORD,openai.com
 DOMAIN-KEYWORD,openai
-# The Constant Company, LLC
+# OpenAI Voice
+DOMAIN-SUFFIX,chatgpt.livekit.cloud
+DOMAIN-SUFFIX,host.livekit.cloud
+DOMAIN-SUFFIX,turn.livekit.cloud
+## The Constant Company, LLC
 IP-ASN,20473,no-resolve
-# DigitalOcean
+## DigitalOcean
 IP-ASN,14061,no-resolve
 # IP-ASN,62567,no-resolve
 # IP-ASN,200130,no-resolve
