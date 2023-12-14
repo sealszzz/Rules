@@ -1,0 +1,15 @@
+# ChatGPT Voice
+DOMAIN-SUFFIX,chatgpt.livekit.cloud
+DOMAIN-SUFFIX,host.livekit.cloud
+DOMAIN-SUFFIX,turn.livekit.cloud
+## The Constant Company, LLC
+IP-ASN,20473,no-resolve
+## DigitalOcean
+IP-ASN,14061,no-resolve
+# IP-ASN,62567,no-resolve
+# IP-ASN,200130,no-resolve
+# IP-ASN,201229,no-resolve
+# IP-ASN,202018,no-resolve
+# IP-ASN,202109,no-resolve
+# IP-ASN,393406,no-resolve
+# IP-ASN,394362,no-resolve
