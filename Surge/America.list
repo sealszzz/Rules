@@ -1,5 +1,7 @@
 # Yahoo
 DOMAIN-SUFFIX,yahoo.com
+DOMAIN-SUFFIX,yahoo.co.jp
+DOMAIN-SUFFIX,yahoo.jp
 # CBS
 DOMAIN,ceres.iad-03.braze.com
 DOMAIN,cbs.hb-api.omtrdc.net
