@@ -51,6 +51,7 @@ DOMAIN-KEYWORD,instagram
 # Discord
 DOMAIN,cdn.discordapp.com
 DOMAIN-SUFFIX,discord.com
+DOMAIN-SUFFIX,discord.gg
 DOMAIN-SUFFIX,discord.media
 DOMAIN-KEYWORD,discord
 # grammarly
