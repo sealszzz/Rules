@@ -13,8 +13,8 @@ DOMAIN-SUFFIX,mailws.icloud.com
 DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,apzones.com
 DOMAIN-SUFFIX,digicert.cn
-DOMAIN-SUFFIX,swcdn.apple.com
-DOMAIN-SUFFIX,cdn-apple.com
+# DOMAIN-SUFFIX,swcdn.apple.com
+# DOMAIN-SUFFIX,cdn-apple.com
 # BitTorrent
 DOMAIN-KEYWORD,announce
 DOMAIN-KEYWORD,protocol
