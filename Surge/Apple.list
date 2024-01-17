@@ -15,8 +15,8 @@ DOMAIN-SUFFIX,icloud.com
 DOMAIN-SUFFIX,icloud-content.com
 DOMAIN-SUFFIX,apple-dns.net
 DOMAIN-SUFFIX,mzstatic.com
-# DOMAIN-SUFFIX,swcdn.apple.com
-# DOMAIN-SUFFIX,cdn-apple.com
+DOMAIN-SUFFIX,swcdn.apple.com
+DOMAIN-SUFFIX,cdn-apple.com
 IP-CIDR,17.0.0.0/8,no-resolve
 IP-ASN,714,no-resolve
 IP-ASN,1036,no-resolve
