@@ -13,6 +13,7 @@ DOMAIN,openaiapi-site.azureedge.net
 DOMAIN,s.gravatar.com
 DOMAIN,static.cloudflareinsights.com
 DOMAIN,zerossl.ocsp.sectigo.com
+DOMAIN,share.hsforms.com
 DOMAIN-SUFFIX,ai.com
 DOMAIN-SUFFIX,algolia.net
 DOMAIN-SUFFIX,featuregates.org
