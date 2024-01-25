@@ -1,5 +1,5 @@
 #!name=Panels
-#!desc=一个Luca自用的信息面板模块
+#!desc=自用的信息面板模块
 [Panel]
 #节点检测
 ipcheck = script-name=ipcheck, title="节点详情", content="请刷新", style=info, update-interval=1
