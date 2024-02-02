@@ -1,5 +1,5 @@
 # Speedtest
 DOMAIN-SUFFIX,speedtest.net
 DOMAIN-SUFFIX,ooklaserver.net
-# DOMAIN-KEYWORD,speedtest
+DOMAIN-KEYWORD,speedtest
 IP-ASN,136625,no-resolve
