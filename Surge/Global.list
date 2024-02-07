@@ -72,3 +72,6 @@ DOMAIN-SUFFIX,inf.news
 DOMAIN-SUFFIX,reddit.com
 DOMAIN,sub-store.vercel.app
 DOMAIN-SUFFIX,duyaoss.com
+# Spotify Max
+DOMAIN,cdn.branch.io
+DOMAIN,api2.branch.io
