@@ -67,6 +67,7 @@ DOMAIN-SUFFIX,api.immtel.co
 DOMAIN-SUFFIX,api.flowercloud.xyz
 DOMAIN-SUFFIX,api.prprcloud.life
 DOMAIN-SUFFIX,snapdrop.net
+DOMAIN,ifconfig.me
 # Google
 DOMAIN,stun.l.google.com
 DOMAIN,stun1.l.google.com
