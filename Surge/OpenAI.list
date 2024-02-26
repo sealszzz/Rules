@@ -28,7 +28,7 @@ DOMAIN-SUFFIX,observeit.net
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,poe.com
 DOMAIN-SUFFIX,segment.io
-DOMAIN-SUFFIX,sentry.io
+DOMAIN-SUFFIX,ingest.sentry.io
 DOMAIN-SUFFIX,stripe.com
 DOMAIN-SUFFIX,wp.com
 DOMAIN-KEYWORD,chatgpt
