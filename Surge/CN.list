@@ -57,6 +57,8 @@ DOMAIN-SUFFIX,baidu.com
 DOMAIN-SUFFIX,cn-hongkong.log.aliyuncs.com
 DOMAIN-SUFFIX,jegotrip.com.cn
 DOMAIN-SUFFIX,accelerate.taiyulink.com
+DOMAIN-SUFFIX,douyinvod.com
+DOMAIN-KEYWORD,douyin
 # DNS
 IP-CIDR,223.5.5.5/32,no-resolve
 IP-CIDR,223.6.6.6/32,no-resolve
