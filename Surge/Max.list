@@ -1,5 +1,4 @@
 # Max
-DOMAIN,cf.prd.media.h264.io
 DOMAIN,sdk.iad-01.braze.com
 DOMAIN,services.brightline.tv
 DOMAIN,hbo-max-gtm.wn.r.appspot.com
@@ -11,6 +10,7 @@ DOMAIN-SUFFIX,hbomax.com
 DOMAIN-SUFFIX,hbomaxcdn.com
 DOMAIN-SUFFIX,hbonow.com
 DOMAIN-SUFFIX,litix.io
+DOMAIN-SUFFIX,media.h264.io
 DOMAIN-SUFFIX,maxgo.com
 DOMAIN-SUFFIX,wmcdp.io
 DOMAIN-SUFFIX,warnermediacdn.com
