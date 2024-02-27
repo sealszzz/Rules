@@ -57,22 +57,18 @@ DOMAIN-KEYWORD,discord
 # grammarly
 DOMAIN-SUFFIX,grammarly.com
 # Others
+DOMAIN-KEYWORD,amazon
+DOMAIN,sub-store.vercel.app
 DOMAIN,ocsp.usertrust.com
 DOMAIN,secure.globalsign.com
 DOMAIN,bgp.he.net
 DOMAIN-SUFFIX,v2ex.com
-DOMAIN-SUFFIX,amazonaws.com
-DOMAIN-KEYWORD,amazon
 DOMAIN-SUFFIX,pelmorex.com
 DOMAIN-SUFFIX,theweathernetwork.com
 DOMAIN-SUFFIX,alexametrics.com
-IP-ASN,174,no-resolve
-IP-ASN,400618,no-resolve
 DOMAIN-SUFFIX,inf.news
 DOMAIN-SUFFIX,reddit.com
-DOMAIN,sub-store.vercel.app
 DOMAIN-SUFFIX,duyaoss.com
 DOMAIN-SUFFIX,naver.com
-# Spotify Max
-DOMAIN,cdn.branch.io
-DOMAIN,api2.branch.io
+IP-ASN,174,no-resolve
+IP-ASN,400618,no-resolve
