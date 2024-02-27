@@ -23,3 +23,8 @@ DOMAIN-SUFFIX,vaicore.site
 DOMAIN-SUFFIX,v.fwmrm.net
 DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
+# Spotify Max
+DOMAIN,cdn.branch.io
+DOMAIN,api2.branch.io
+# Amazonws
+DOMAIN-SUFFIX,amazonaws.com
