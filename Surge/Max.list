@@ -9,21 +9,5 @@ DOMAIN-SUFFIX,hbo.com
 DOMAIN-SUFFIX,litix.io
 DOMAIN-SUFFIX,max.com
 DOMAIN-SUFFIX,media.h264.io
-# HBO Max
-DOMAIN,hbo-max-gtm.wn.r.appspot.com
-DOMAIN-SUFFIX,amazontrust.com
-DOMAIN-SUFFIX,appsflyer.com
-DOMAIN-SUFFIX,cinemax.com
-DOMAIN-SUFFIX,hbomax.com
-DOMAIN-SUFFIX,hbomaxcdn.com
-DOMAIN-SUFFIX,maxgo.com
-DOMAIN-SUFFIX,warnermediacdn.com
-DOMAIN-SUFFIX,wmcdp.io
-DOMAIN-KEYWORD,hbomax
-DOMAIN-KEYWORD,hbo
-IP-ASN,43500,no-resolve
-IP-ASN,49142,no-resolve
-IP-ASN,50651,no-resolve
-IP-ASN,201568,no-resolve
-IP-ASN,207067,no-resolve
-IP-ASN,393808,no-resolve
+DOMAIN-SUFFIX,warnermedia.com
+DOMAIN-SUFFIX,wbd.com
