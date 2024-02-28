@@ -25,7 +25,7 @@ DOMAIN-SUFFIX,akisinn.info
 DOMAIN-SUFFIX,fastly.net
 # Spotify Max
 DOMAIN,cdn.branch.io
-DOMAIN,api2.branch.io
+DOMAIN,api*.branch.io
 # Amazonws
 DOMAIN-SUFFIX,amazonaws.com
 DOMAIN-SUFFIX,amazon-adsystem.com
