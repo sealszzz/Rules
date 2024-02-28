@@ -3,6 +3,11 @@ DOMAIN,cdn.speedcurve.com
 DOMAIN,relaycdn.anchor.fm
 DOMAIN,fastly-insights.com
 DOMAIN,sb.scorecardresearch.com
+DOMAIN,pdst.fm
+DOMAIN,chrt.fm
+DOMAIN,pfx.vpixl.com
+DOMAIN,dts.podtrac.com:443
+DOMAIN-SUFFIX,simplecastaudio.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
 DOMAIN-SUFFIX,spoti.fi
