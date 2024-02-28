@@ -28,3 +28,4 @@ DOMAIN,cdn.branch.io
 DOMAIN,api2.branch.io
 # Amazonws
 DOMAIN-SUFFIX,amazonaws.com
+DOMAIN-SUFFIX,amazon-adsystem.com
