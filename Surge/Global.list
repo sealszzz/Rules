@@ -72,3 +72,5 @@ DOMAIN-SUFFIX,duyaoss.com
 DOMAIN-SUFFIX,naver.com
 IP-ASN,174,no-resolve
 IP-ASN,400618,no-resolve
+DOMAIN,geolocation.onetrust.com
+DOMAIN,cdn.cookielaw.org
