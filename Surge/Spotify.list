@@ -1,5 +1,6 @@
 # Spotify
 DOMAIN,cdn.speedcurve.com
+DOMAIN,relaycdn.anchor.fm
 DOMAIN,fastly-insights.com
 DOMAIN,sb.scorecardresearch.com
 DOMAIN-SUFFIX,pscdn.co
