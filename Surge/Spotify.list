@@ -6,7 +6,8 @@ DOMAIN,sb.scorecardresearch.com
 DOMAIN,pdst.fm
 DOMAIN,chrt.fm
 DOMAIN,pfx.vpixl.com
-DOMAIN,dts.podtrac.com:443
+DOMAIN,dts.podtrac.com
+DOMAIN-SUFFIX,libsyn.com
 DOMAIN-SUFFIX,simplecastaudio.com
 DOMAIN-SUFFIX,pscdn.co
 DOMAIN-SUFFIX,scdn.co
