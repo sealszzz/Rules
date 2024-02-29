@@ -1,8 +1,7 @@
 # BBC
-# DOMAIN,as-hls-uk-live.akamaized.net
-# DOMAIN,aod-hls-uk-live.akamaized.net
-# DOMAIN,aod-pod-uk-live.akamaized.net
-DOMAIN,.*-uk-live.akamaized.net
+DOMAIN,as-hls-uk-live.akamaized.net
+DOMAIN,aod-hls-uk-live.akamaized.net
+DOMAIN,aod-pod-uk-live.akamaized.net
 DOMAIN,uk-script.dotmetrics.net
 DOMAIN,stream.live.vc.bbcmedia.co.uk
 DOMAIN-SUFFIX,urbanairship.com
