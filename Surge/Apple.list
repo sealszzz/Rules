@@ -6,6 +6,7 @@ DOMAIN,testflight.apple.com
 DOMAIN,icons.axm-usercontent-apple.com
 DOMAIN,appldnld.apple.com.edgesuite.net
 DOMAIN,api.apple-cloudkit.com
+DOMAIN,api.smoot.apple.com
 DOMAIN-SUFFIX,entrust.net
 DOMAIN-SUFFIX,digicert.com
 DOMAIN-SUFFIX,vertexsmb.com
