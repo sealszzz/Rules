@@ -41,6 +41,9 @@ IP-ASN,132203,no-resolve
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
 DOMAIN-SUFFIX,outlook.com
+# Cloudflare
+DOMAIN-KEYWORD,cloudflare-cn
+DOMAIN-KEYWORD,cloudflarecn
 # Others
 DOMAIN-SUFFIX,cn
 DOMAIN-SUFFIX,1888.com.mo
