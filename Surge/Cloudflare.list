@@ -1,5 +1,4 @@
 # Cloudflare
-IP-CIDR,1.1.1.1/32,no-resolve
 DOMAIN-KEYWORD,cloudflare
 DOMAIN-SUFFIX,argotunnel.com
 DOMAIN-SUFFIX,cf-ipfs.com
