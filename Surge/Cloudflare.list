@@ -1,21 +1,6 @@
 # Cloudflare
 DOMAIN-KEYWORD,cloudflare
-DOMAIN-SUFFIX,argotunnel.com
-DOMAIN-SUFFIX,cf-ipfs.com
-DOMAIN-SUFFIX,cf-ns.com
-DOMAIN-SUFFIX,cf-ns.net
-DOMAIN-SUFFIX,cf-ns.site
-DOMAIN-SUFFIX,cf-ns.tech
-DOMAIN-SUFFIX,cftest5.cn
-DOMAIN-SUFFIX,cftest6.cn
-DOMAIN-SUFFIX,cftest7.com
-DOMAIN-SUFFIX,cftest8.com
-DOMAIN-SUFFIX,every1dns.net
-DOMAIN-SUFFIX,one.one.one
-DOMAIN-SUFFIX,pages.dev
-DOMAIN-SUFFIX,videodelivery.net
 DOMAIN-SUFFIX,warp.plus
-DOMAIN-SUFFIX,workers.dev
 IP-ASN,13335,no-resolve
 IP-ASN,14789,no-resolve
 IP-ASN,132892,no-resolve
