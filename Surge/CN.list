@@ -66,10 +66,10 @@ DOMAIN-KEYWORD,douyin
 IP-CIDR,223.5.5.5/32,no-resolve
 IP-CIDR,223.6.6.6/32,no-resolve
 # Others
-# DOMAIN-SUFFIX,vfuiov.sbs
+DOMAIN,vfuiov.sbs
 # DOMAIN-SUFFIX,vfzgvm.sbs
 # DOMAIN-SUFFIX,api.immtel.co
-# DOMAIN-SUFFIX,api.flowercloud.xyz
+DOMAIN,api.flowercloud.xyz
 # DOMAIN-SUFFIX,api.prprcloud.life
 DOMAIN-SUFFIX,snapdrop.net
 DOMAIN,ifconfig.me
