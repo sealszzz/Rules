@@ -2,10 +2,10 @@
 DOMAIN,api.apptentive.com
 DOMAIN,prod.video.anymanager.io
 DOMAIN,sdk.iad-01.braze.com
-DOMAIN,services.brightline.tv
 DOMAIN,wbd-api.arkoselabs.com
 DOMAIN-SUFFIX,discomax.com
 DOMAIN-SUFFIX,appsflyersdk.com
+DOMAIN-SUFFIX,brightline.tv
 DOMAIN-SUFFIX,hbo.com
 DOMAIN-SUFFIX,litix.io
 DOMAIN-SUFFIX,max.com
