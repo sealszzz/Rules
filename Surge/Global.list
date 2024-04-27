@@ -50,11 +50,17 @@ DOMAIN-KEYWORD,facebook
 DOMAIN-KEYWORD,instagram
 # Discord
 DOMAIN,cdn.discordapp.com
+DOMAIN-SUFFIX,airhorn.solutions
+DOMAIN-SUFFIX,airhornbot.com
+DOMAIN-SUFFIX,bigbeans.solutions
+DOMAIN-SUFFIX,dis.gd
 DOMAIN-SUFFIX,discord.com
 DOMAIN-SUFFIX,discord.gg
 DOMAIN-SUFFIX,discord.media
+DOMAIN-SUFFIX,hammerandchisel.ssl.zendesk.com
+DOMAIN-SUFFIX,watchanimeattheoffice.com
 DOMAIN-KEYWORD,discord
-# grammarly
+# Grammarly
 DOMAIN-SUFFIX,grammarly.com
 DOMAIN-SUFFIX,grammarly.io
 # Others
