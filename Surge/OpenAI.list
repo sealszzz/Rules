@@ -25,6 +25,7 @@ DOMAIN-SUFFIX,launchdarkly.com
 DOMAIN-SUFFIX,oaistatic.com
 DOMAIN-SUFFIX,oaiusercontent.com
 DOMAIN-SUFFIX,observeit.net
+DOMAIN-SUFFIX,chatgpt.com
 DOMAIN-SUFFIX,openai.com
 DOMAIN-SUFFIX,poe.com
 DOMAIN-SUFFIX,segment.io
@@ -36,5 +37,4 @@ DOMAIN-KEYWORD,datadoghq
 DOMAIN-KEYWORD,openaiapi
 DOMAIN-KEYWORD,openai-api
 DOMAIN-KEYWORD,openaicom
-DOMAIN-KEYWORD,openai.com
 DOMAIN-KEYWORD,openai
