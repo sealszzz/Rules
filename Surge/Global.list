@@ -82,6 +82,8 @@ IP-ASN,400618,no-resolve
 DOMAIN,geolocation.onetrust.com
 DOMAIN,cdn.cookielaw.org
 DOMAIN,skadsdkless.appsflyer.com
+DOMAIN-SUFFIX,wikimedia.org
+DOMAIN-SUFFIX,wikipedia.org
 # App
 DOMAIN-SUFFIX,adjust.com
 DOMAIN-SUFFIX,appsflyer.com
