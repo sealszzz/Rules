@@ -90,3 +90,9 @@ DOMAIN-SUFFIX,adjust.com
 DOMAIN-SUFFIX,appsflyer.com
 DOMAIN-SUFFIX,appsflyersdk.com
 DOMAIN-SUFFIX,branch.io
+# Claude
+DOMAIN-SUFFIX,claude.ai
+DOMAIN-SUFFIX,anthropic.com
+DOMAIN,static.intercomassets.com
+DOMAIN,vvfgfg.stripocdn.email
+DOMAIN,image.nvgaming.nvidia.com
