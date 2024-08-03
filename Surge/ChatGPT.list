@@ -38,6 +38,8 @@ DOMAIN-KEYWORD,openai
 DOMAIN-SUFFIX,chatgpt.livekit.cloud
 DOMAIN-SUFFIX,host.livekit.cloud
 DOMAIN-SUFFIX,turn.livekit.cloud
+# Oracle
+IP-ASN,31898,no-resolve
 ## The Constant Company, LLC
 IP-ASN,20473,no-resolve
 ## DigitalOcean
