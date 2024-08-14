@@ -75,6 +75,10 @@ DOMAIN,api.flowercloud.xyz
 # DOMAIN-SUFFIX,api.prprcloud.life
 DOMAIN-SUFFIX,snapdrop.net
 DOMAIN,ifconfig.me
+# Flyert
+DOMAIN-SUFFIX,flyert.com
+DOMAIN-SUFFIX,flyert.com.cn
+DOMAIN-SUFFIX,flyertrip.com
 # Google
 DOMAIN,stun.l.google.com
 DOMAIN,stun1.l.google.com
