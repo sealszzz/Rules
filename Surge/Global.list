@@ -72,6 +72,7 @@ DOMAIN,sub-store.vercel.app
 DOMAIN,ocsp.usertrust.com
 DOMAIN,secure.globalsign.com
 DOMAIN,bgp.he.net
+DOMAIN,api-huacloud.dev
 DOMAIN-SUFFIX,v2ex.com
 DOMAIN-SUFFIX,pelmorex.com
 DOMAIN-SUFFIX,theweathernetwork.com
