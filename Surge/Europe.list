@@ -3,8 +3,8 @@ DOMAIN,launches.appsflyer.com
 DOMAIN,as-hls-uk-live.akamaized.net
 DOMAIN,aod-hls-uk-live.akamaized.net
 DOMAIN,aod-pod-uk-live.akamaized.net
-DOMAIN,uk-script.dotmetrics.net
 DOMAIN,stream.live.vc.bbcmedia.co.uk
+DOMAIN-SUFFIX,dotmetrics.net
 DOMAIN-SUFFIX,urbanairship.com
 DOMAIN-SUFFIX,bbc.com
 DOMAIN-SUFFIX,bbc.co.uk
