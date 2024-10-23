@@ -30,3 +30,5 @@ DOMAIN-SUFFIX,amazon-adsystem.com
 DOMAIN-SUFFIX,cnn.com
 DOMAIN-SUFFIX,cnn.io
 DOMAIN-SUFFIX,warnermediacdn.com
+# Apple
+DOMAIN,apple-relay.apple.com
