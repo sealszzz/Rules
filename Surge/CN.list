@@ -70,12 +70,12 @@ IP-CIDR,223.6.6.6/32,no-resolve
 # Others
 DOMAIN-SUFFIX,txrjy.com
 DOMAIN-SUFFIX,cainiao.com
-DOMAIN,vfuiov.sbs
-DOMAIN,xtxnxk.sbs
+# DOMAIN,vfuiov.sbs
+# DOMAIN,xtxnxk.sbs
 # DOMAIN-SUFFIX,vfzgvm.sbs
-DOMAIN-SUFFIX,api.immtel.co
-DOMAIN-SUFFIX,immconvert.com
-DOMAIN-SUFFIX,api.flowercloud.xyz
+# DOMAIN-SUFFIX,api.immtel.co
+# DOMAIN-SUFFIX,immconvert.com
+# DOMAIN-SUFFIX,api.flowercloud.xyz
 # DOMAIN-SUFFIX,api.prprcloud.life
 DOMAIN-SUFFIX,snapdrop.net
 DOMAIN,ifconfig.me
