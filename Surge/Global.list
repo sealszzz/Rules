@@ -89,6 +89,8 @@ DOMAIN-SUFFIX,wikimedia.org
 DOMAIN-SUFFIX,wikipedia.org
 DOMAIN-SUFFIX,linkedin.com
 DOMAIN-SUFFIX,line.me
+DOMAIN-SUFFIX,immconvert.com
+DOMAIN-SUFFIX,api-huacloud.dev
 # App
 DOMAIN-SUFFIX,adjust.com
 DOMAIN-SUFFIX,appsflyer.com
