@@ -68,6 +68,7 @@ DOMAIN-SUFFIX,grammarly.io
 # Others
 DOMAIN-KEYWORD,amazon
 DOMAIN-KEYWORD,yahoo
+DOMAIN-KEYWORD,time
 DOMAIN,sub-store.vercel.app
 DOMAIN,ocsp.usertrust.com
 DOMAIN,secure.globalsign.com
