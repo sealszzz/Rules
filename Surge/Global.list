@@ -7,61 +7,6 @@ IP-CIDR,8.8.4.4/32,no-resolve
 # TW
 DOMAIN-SUFFIX,tw
 DOMAIN-SUFFIX,taipei
-# Github
-DOMAIN-SUFFIX,git.io
-DOMAIN-SUFFIX,github.com
-DOMAIN-SUFFIX,githubusercontent.com
-DOMAIN-SUFFIX,rawgit.com
-DOMAIN-SUFFIX,rawgithub.com
-DOMAIN-KEYWORD,github
-IP-ASN,36459,no-resolve
-# Gitlab
-DOMAIN-SUFFIX,gitlab.com
-DOMAIN-KEYWORD,gitlab
-# Twitter
-DOMAIN-SUFFIX,ads-twitter.com
-DOMAIN-SUFFIX,periscope.tv
-DOMAIN-SUFFIX,pscp.tv
-DOMAIN-SUFFIX,t.co
-DOMAIN-SUFFIX,tellapart.com
-DOMAIN-SUFFIX,tweetdeck.com
-DOMAIN-SUFFIX,twimg.co
-DOMAIN-SUFFIX,twimg.com
-DOMAIN-SUFFIX,twimg.org
-DOMAIN-SUFFIX,twitpic.com
-DOMAIN-SUFFIX,twitter.com
-DOMAIN-SUFFIX,twtrdns.net
-DOMAIN-SUFFIX,twttr.com
-DOMAIN-SUFFIX,vine.co
-DOMAIN-SUFFIX,x.com
-DOMAIN-KEYWORD,twitter
-IP-ASN,13414,no-resolve
-IP-ASN,35995,no-resolve
-IP-ASN,54888,no-resolve
-IP-ASN,63179,no-resolve
-# Facebook
-IP-ASN,32934,no-resolve
-IP-ASN,54115,no-resolve
-IP-ASN,63293,no-resolve
-# Instagram
-DOMAIN-SUFFIX,facebook.com
-DOMAIN-SUFFIX,fbcdn.net
-DOMAIN-SUFFIX,instagram.com
-DOMAIN-SUFFIX,cdninstagram.com
-DOMAIN-KEYWORD,facebook
-DOMAIN-KEYWORD,instagram
-# Discord
-DOMAIN,cdn.discordapp.com
-DOMAIN-SUFFIX,airhorn.solutions
-DOMAIN-SUFFIX,airhornbot.com
-DOMAIN-SUFFIX,bigbeans.solutions
-DOMAIN-SUFFIX,dis.gd
-DOMAIN-SUFFIX,discord.com
-DOMAIN-SUFFIX,discord.gg
-DOMAIN-SUFFIX,discord.media
-DOMAIN-SUFFIX,hammerandchisel.ssl.zendesk.com
-DOMAIN-SUFFIX,watchanimeattheoffice.com
-DOMAIN-KEYWORD,discord
 # Grammarly
 DOMAIN-SUFFIX,grammarly.com
 DOMAIN-SUFFIX,grammarly.io
