@@ -25,6 +25,8 @@ DOMAIN-SUFFIX,twtrdns.net
 DOMAIN-SUFFIX,twttr.com
 DOMAIN-SUFFIX,vine.co
 DOMAIN-SUFFIX,x.com
+DOMAIN-SUFFIX,x.ai
+DOMAIN-KEYWORD,grok
 DOMAIN-KEYWORD,twitter
 IP-ASN,13414,no-resolve
 IP-ASN,35995,no-resolve
