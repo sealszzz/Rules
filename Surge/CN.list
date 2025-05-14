@@ -65,6 +65,7 @@ DOMAIN-SUFFIX,accelerate.taiyulink.com
 DOMAIN-SUFFIX,douyinvod.com
 DOMAIN-KEYWORD,douyin
 # DNS
+DOMAIN-SUFFIX,dot.pub
 IP-CIDR,223.5.5.5/32,no-resolve
 IP-CIDR,223.6.6.6/32,no-resolve
 # Others
