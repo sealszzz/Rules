@@ -2,7 +2,6 @@
 DOMAIN-WILDCARD,*-launches.appsflyersdk.com
 DOMAIN,api3.branch.io
 DOMAIN,cdn.branch.io
-DOMAIN,app-analytics-services.com
 DOMAIN,api.apptentive.com
 DOMAIN,events.brightline.tv
 DOMAIN,prod.video.anymanager.io
