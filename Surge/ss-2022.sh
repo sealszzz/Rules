@@ -1,6 +1,13 @@
 #!/usr/bin/env bash
 set -e
 
+# =========================================
+# 作者: 
+# 日期: 2025年3月
+# 网站： 
+# 描述: Shadowsocks Rust 管理脚本
+# =========================================
+
 # 版本信息
 SCRIPT_VERSION="1.6"
 SS_VERSION=""
@@ -375,7 +382,8 @@ install_dependencies() {
         apt-get update
         apt-get install -y jq gzip wget curl unzip xz-utils openssl qrencode tar
     fi
-    
+
+    }
     # 设置时区
     # echo -e "${CYAN}正在设置时区...${RESET}"
     # if [ -f "/usr/share/zoneinfo/Asia/Shanghai" ]; then
@@ -385,7 +393,6 @@ install_dependencies() {
     #     echo -e "${RED}时区文件不存在，跳过设置${RESET}"
     # fi
     # echo -e "${SUCCESS} 系统依赖安装完成！"
-# }
 
 # 写入配置文件
 write_config() {
