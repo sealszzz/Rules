@@ -404,8 +404,8 @@ show_menu() {
     echo -e "${CYAN}============================================${RESET}"
     echo -e "${CYAN}          Snell 多用户管理${RESET}"
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${GREEN}作者: jinqian${RESET}"
-    echo -e "${GREEN}网站：https://jinqians.com${RESET}"
+    echo -e "${GREEN}           作者: ${RESET}"
+    echo -e "${GREEN}           网站: ${RESET}"
     echo -e "${CYAN}============================================${RESET}"
     
     echo -e "${YELLOW}=== 用户管理 ===${RESET}"
