@@ -1097,6 +1097,32 @@ Update_Shell() {
     fi
 }
 
+# 安装 Snell
+install_snell() {
+    echo -e "${Info} 开始下载 Snell 安装脚本..."
+    
+    # 下载 Snell 脚本
+    wget -N --no-check-certificate https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh
+    
+    if [ $? -ne 0 ]; then
+        echo -e "${Error} Snell 脚本下载失败！"
+        return 1
+    fi
+    
+    # 添加执行权限
+    chmod +x snell.sh
+    
+    echo -e "${Info} 开始安装 Snell..."
+    
+    # 执行 Snell 安装脚本
+    bash snell.sh
+    
+    # 清理下载的脚本
+    rm -f snell.sh
+    
+    Before_Start_Menu
+}
+
 # 安装 ShadowTLS
 install_shadowtls() {
     echo -e "${Info} 开始下载 ShadowTLS 安装脚本..."
@@ -1138,8 +1164,8 @@ Start_Menu() {
     echo -e "${GREEN}============================================${RESET}"
     echo -e "${GREEN}          SS - 2022 管理脚本 ${RESET}"
     echo -e "${GREEN}============================================${RESET}"
-    echo -e "${GREEN} 
-    echo -e "${GREEN} 
+    echo -e "${GREEN}                 作者: ${RESET}"
+    echo -e "${GREEN}                 网站：${RESET}"
     echo -e "${GREEN}============================================${RESET}"
         echo && echo -e "  
  ${Green_font_prefix}0.${Font_color_suffix} 更新脚本
@@ -1156,8 +1182,9 @@ Start_Menu() {
  ${Green_font_prefix}8.${Font_color_suffix} 查看 配置信息
  ${Green_font_prefix}9.${Font_color_suffix} 查看 运行状态
 ——————————————————————————————————
- ${Green_font_prefix}10.${Font_color_suffix} 安装 ShadowTLS
- ${Green_font_prefix}11.${Font_color_suffix} 退出脚本
+ ${Green_font_prefix}10.${Font_color_suffix} 安装 Snell
+ ${Green_font_prefix}11.${Font_color_suffix} 安装 ShadowTLS
+ ${Green_font_prefix}12.${Font_color_suffix} 退出脚本
 ——————————————————————————————————
 ==================================" && echo
         if [[ -e ${BINARY_PATH} ]]; then
@@ -1209,14 +1236,17 @@ Start_Menu() {
                 Status
                 ;;
             10)
-                install_shadowtls
+                install_snell
                 ;;
             11)
+                install_shadowtls
+                ;;
+            12)
                 echo -e "${Info} 退出脚本..."
                 exit 0
                 ;;
             *)
-                echo -e "${Error} 请输入正确数字 [0-10]"
+                echo -e "${Error} 请输入正确数字 [0-12]"
                 sleep 2
                 ;;
         esac
