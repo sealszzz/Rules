@@ -316,7 +316,7 @@ auto_update_script() {
     TMP_SCRIPT=$(mktemp)
     
     # 下载最新版本
-    if curl -sL https://raw.githubusercontent.com/jinqians/snell.sh/main/snell.sh -o "$TMP_SCRIPT"; then
+    if curl -sL https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh -o "$TMP_SCRIPT"; then
         # 获取新版本号
         new_version=$(grep "current_version=" "$TMP_SCRIPT" | cut -d'"' -f2)
         
@@ -660,7 +660,7 @@ fi
 # 下载并执行最新版本的脚本
 echo -e "${CYAN}正在获取最新版本的管理脚本...${RESET}"
 TMP_SCRIPT=$(mktemp)
-if curl -sL https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/bbr.sh -o "$TMP_SCRIPT"; then
+if curl -sL https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh -o "$TMP_SCRIPT"; then
     bash "$TMP_SCRIPT"
     rm -f "$TMP_SCRIPT"
 else
@@ -1343,8 +1343,8 @@ show_menu() {
     echo -e "${CYAN}============================================${RESET}"
     echo -e "${CYAN}          Snell 管理脚本 v${current_version}${RESET}"
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${GREEN}作者: jinqian${RESET}"
-    echo -e "${GREEN}网站：https://jinqians.com${RESET}"
+    echo -e "${GREEN} ${RESET}"
+    echo -e "${GREEN} ${RESET}"
     echo -e "${CYAN}============================================${RESET}"
     
     # 显示服务状态
