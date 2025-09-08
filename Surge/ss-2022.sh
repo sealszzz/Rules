@@ -851,7 +851,7 @@ Update() {
 # 卸载
 Uninstall() {
     check_installed_status || return 1
-    echo "确定要卸载 Shadowsocks Rust ? (y/N)"
+    echo "确定要卸载 Shadowsocks Rust ? (y/n)"
     echo
     read -e -p "(默认：n)：" unyn
     [[ -z ${unyn} ]] && unyn="n"
