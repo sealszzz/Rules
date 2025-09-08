@@ -608,16 +608,16 @@ set_method() {
 set_tfo() {
     echo -e "是否启用 TFO ？
 ==================================
- ${Green_font_prefix}1.${Font_color_suffix} 禁用
- ${Green_font_prefix}2.${Font_color_suffix} 启用
+ ${Green_font_prefix}1.${Font_color_suffix} 启用
+ ${Green_font_prefix}2.${Font_color_suffix} 禁用
 =================================="
     read -e -p "(默认：1)：" tfo_choice
     [[ -z "${tfo_choice}" ]] && tfo_choice="1"
     
     if [[ ${tfo_choice} == "1" ]]; then
-        SS_TFO="false"
-    else
         SS_TFO="true"
+    else
+        SS_TFO="false"
     fi
     
     echo && echo "=================================="
