@@ -489,12 +489,14 @@ open_port() {
     if command -v ufw &> /dev/null; then
         echo -e "${CYAN}在 UFW 中开放端口 $PORT${RESET}"
         ufw allow "$PORT"/tcp
+        ufw allow "$PORT"/udp
     fi
 
     # 检查 iptables 是否已安装
     if command -v iptables &> /dev/null; then
         echo -e "${CYAN}在 iptables 中开放端口 $PORT${RESET}"
         iptables -I INPUT -p tcp --dport "$PORT" -j ACCEPT
+        iptables -I INPUT -p udp --dport "$PORT" -j ACCEPT
         
         # 创建 iptables 规则保存目录（如果不存在）
         if [ ! -d "/etc/iptables" ]; then
