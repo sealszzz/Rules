@@ -1,9 +1,5 @@
 # Claude
 DOMAIN-SUFFIX,claude.ai
 DOMAIN-SUFFIX,anthropic.com
-DOMAIN,api3.siftscience.com
-DOMAIN,static.intercomassets.com
-DOMAIN,vvfgfg.stripocdn.email
-DOMAIN,image.nvgaming.nvidia.com
 IP-CIDR,160.79.104.0/23,no-resolve
 IP-CIDR6,2607:6bc0::/48,no-resolve
