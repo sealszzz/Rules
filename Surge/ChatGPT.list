@@ -1,54 +1,53 @@
-# ChatGPT
-DOMAIN,api.mixpanel.com
-DOMAIN,api.revenuecat.com
-DOMAIN,api.statsig.com
-DOMAIN,cdn.auth0.com
-DOMAIN,challenges.cloudflare.com
-DOMAIN,client-api.arkoselabs.com
-DOMAIN,openai-api.arkoselabs.com
-DOMAIN,events.statsigapi.net
-DOMAIN,o33249.ingest.sentry.io
-DOMAIN,s.gravatar.com
-DOMAIN,static.cloudflareinsights.com
-DOMAIN,zerossl.ocsp.sectigo.com
-DOMAIN,share.hsforms.com
+# OpenAI
+DOMAIN-SUFFIX,openai.com
+DOMAIN-SUFFIX,chatgpt.com
 DOMAIN-SUFFIX,ai.com
-DOMAIN-SUFFIX,algolia.net
-DOMAIN-SUFFIX,featuregates.org
-DOMAIN-SUFFIX,identrust.com
-DOMAIN-SUFFIX,intercom.io
-DOMAIN-SUFFIX,intercomcdn.com
-DOMAIN-SUFFIX,launchdarkly.com
 DOMAIN-SUFFIX,oaistatic.com
 DOMAIN-SUFFIX,oaiusercontent.com
-DOMAIN-SUFFIX,observeit.net
-DOMAIN-SUFFIX,chat.com
-DOMAIN-SUFFIX,chatgpt.com
-DOMAIN-SUFFIX,openai.com
-DOMAIN-SUFFIX,poe.com
-DOMAIN-SUFFIX,segment.io
-DOMAIN-SUFFIX,stripe.com
-DOMAIN-SUFFIX,wp.com
 DOMAIN-KEYWORD,chatgpt
 DOMAIN-KEYWORD,datadoghq
+DOMAIN-KEYWORD,openai
+DOMAIN-KEYWORD,openaicom
 DOMAIN-KEYWORD,openaiapi
 DOMAIN-KEYWORD,openai-api
-DOMAIN-KEYWORD,openaicom
-DOMAIN-KEYWORD,openai
 # ChatGPT Voice
 DOMAIN-SUFFIX,chatgpt.livekit.cloud
 DOMAIN-SUFFIX,host.livekit.cloud
 DOMAIN-SUFFIX,turn.livekit.cloud
-# Oracle
-IP-ASN,31898,no-resolve
-## The Constant Company, LLC
-IP-ASN,20473,no-resolve
-## DigitalOcean
-IP-ASN,14061,no-resolve
-# IP-ASN,62567,no-resolve
-# IP-ASN,200130,no-resolve
-# IP-ASN,201229,no-resolve
-# IP-ASN,202018,no-resolve
-# IP-ASN,202109,no-resolve
-# IP-ASN,393406,no-resolve
-# IP-ASN,394362,no-resolve
+# Ohers
+# 安全 / 验证码
+DOMAIN,client-api.arkoselabs.com
+DOMAIN,openai-api.arkoselabs.com
+DOMAIN,challenges.cloudflare.com
+# 监控 / 埋点
+DOMAIN,api.mixpanel.com
+DOMAIN,api.revenuecat.com
+DOMAIN,api.statsig.com
+DOMAIN,events.statsigapi.net
+DOMAIN,o33249.ingest.sentry.io
+DOMAIN-KEYWORD,datadoghq
+# 客服 / 通知
+DOMAIN-SUFFIX,intercom.io
+DOMAIN-SUFFIX,intercomcdn.com
+# 实验 / 功能开关
+DOMAIN-SUFFIX,featuregates.org
+DOMAIN-SUFFIX,launchdarkly.com
+# 支付
+DOMAIN-SUFFIX,stripe.com
+# 静态资源 / 托管
+DOMAIN-SUFFIX,algolia.net
+DOMAIN-SUFFIX,wp.com
+DOMAIN-SUFFIX,segment.io
+DOMAIN,cdn.auth0.com
+DOMAIN,static.cloudflareinsights.com
+DOMAIN,s.gravatar.com
+# 证书 / CA
+DOMAIN-SUFFIX,identrust.com
+DOMAIN,zerossl.ocsp.sectigo.com
+# 其它
+DOMAIN-SUFFIX,poe.com     # Quora AI 聊天，依赖 OpenAI 模型
+DOMAIN-SUFFIX,chat.com    # Premium 域名，部分被接入
+# OpenAI 托管 ASN
+IP-ASN,31898,no-resolve     # Oracle Cloud - OpenAI 主托管
+IP-ASN,20473,no-resolve     # Vultr / The Constant Company
+IP-ASN,14061,no-resolve     # DigitalOcean (实验/辅助)
