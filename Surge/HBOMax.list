@@ -1,4 +1,10 @@
 # HBO Max
+DOMAIN-SUFFIX,discomax.com
+DOMAIN-SUFFIX,max.com
+DOMAIN-SUFFIX,hbo.com
+DOMAIN-SUFFIX,hbomax.com
+DOMAIN-SUFFIX,warnermedia.com
+DOMAIN-SUFFIX,wbd.com
 DOMAIN-WILDCARD,*-launches.appsflyersdk.com
 DOMAIN,api3.branch.io
 DOMAIN,cdn.branch.io
@@ -7,10 +13,5 @@ DOMAIN,events.brightline.tv
 DOMAIN,prod.video.anymanager.io
 DOMAIN,sdk.iad-01.braze.com
 DOMAIN,wbd-api.arkoselabs.com
-DOMAIN-SUFFIX,discomax.com
-DOMAIN-SUFFIX,hbo.com
 DOMAIN-SUFFIX,litix.io
-DOMAIN-SUFFIX,max.com
 DOMAIN-SUFFIX,h264.io
-DOMAIN-SUFFIX,warnermedia.com
-DOMAIN-SUFFIX,wbd.com
