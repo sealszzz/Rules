@@ -1,24 +1,39 @@
-# Spotify
-DOMAIN,cdn.speedcurve.com
-DOMAIN,relaycdn.anchor.fm
-DOMAIN,fastly-insights.com
-DOMAIN,sb.scorecardresearch.com
-DOMAIN,pdst.fm
-DOMAIN,chrt.fm
-DOMAIN,parking.parklogic.com
-DOMAIN,pfx.vpixl.com
-DOMAIN,dts.podtrac.com
-DOMAIN-SUFFIX,firim.pro
-DOMAIN-SUFFIX,cloudfront.net
-DOMAIN-SUFFIX,libsyn.com
-DOMAIN-SUFFIX,simplecastaudio.com
-DOMAIN-SUFFIX,pscdn.co
-DOMAIN-SUFFIX,scdn.co
-DOMAIN-SUFFIX,spoti.fi
+# Spotify 主域
 DOMAIN-SUFFIX,spotify.com
+
+# Spotify 短链
+DOMAIN-SUFFIX,spoti.fi
+
+# Spotify CDN
 DOMAIN-SUFFIX,spotifycdn.com
 DOMAIN-SUFFIX,spotifycdn.net
-DOMAIN-SUFFIX,spotilocal.com
-DOMAIN-SUFFIX,spotilocal.com
+DOMAIN-SUFFIX,scdn.co
+DOMAIN-SUFFIX,pscdn.co
+
+# Spotify 注册域名（备用）
 DOMAIN-SUFFIX,tospotify.com
+
+# 泛匹配关键词
 DOMAIN-KEYWORD,spotify
+
+# Anchor.fm （Spotify 收购的播客平台）
+DOMAIN,relaycdn.anchor.fm
+DOMAIN,pdst.fm
+DOMAIN,chrt.fm
+
+# Megaphone 主域（Spotify 所有）
+DOMAIN-SUFFIX,megaphone.fm
+DOMAIN-SUFFIX,megaphone.spotify.com
+
+# 常用子域（播客内容/播放器）
+DOMAIN,assets.megaphone.fm
+DOMAIN,dcs.megaphone.fm
+DOMAIN,dcs-spotify.megaphone.fm
+DOMAIN,feeds.megaphone.fm
+DOMAIN,images.megaphone.fm
+DOMAIN,player.megaphone.fm
+DOMAIN,playlist.megaphone.fm
+
+# 广告/追踪（可能用于动态插播广告）
+DOMAIN,traffic.megaphone.fm
+DOMAIN,adserver.va3.megaphone.cloud
