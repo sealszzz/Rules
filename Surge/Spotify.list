@@ -17,23 +17,11 @@ DOMAIN-SUFFIX,tospotify.com
 DOMAIN-KEYWORD,spotify
 
 # Anchor.fm （Spotify 收购的播客平台）
-DOMAIN,relaycdn.anchor.fm
-DOMAIN,pdst.fm
-DOMAIN,chrt.fm
+DOMAIN-SUFFIX,anchor.fm
+DOMAIN-SUFFIX,pdst.fm
+DOMAIN-SUFFIX,pscrb.fm
+DOMAIN-SUFFIX,chrt.fm
 
 # Megaphone 主域（Spotify 所有）
 DOMAIN-SUFFIX,megaphone.fm
-DOMAIN-SUFFIX,megaphone.spotify.com
-
-# 常用子域（播客内容/播放器）
-DOMAIN,assets.megaphone.fm
-DOMAIN,dcs.megaphone.fm
-DOMAIN,dcs-spotify.megaphone.fm
-DOMAIN,feeds.megaphone.fm
-DOMAIN,images.megaphone.fm
-DOMAIN,player.megaphone.fm
-DOMAIN,playlist.megaphone.fm
-
-# 广告/追踪（可能用于动态插播广告）
-DOMAIN,traffic.megaphone.fm
-DOMAIN,adserver.va3.megaphone.cloud
+DOMAIN-SUFFIX,megaphone.cloud
