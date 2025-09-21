@@ -445,9 +445,7 @@ check_firewall() {
 
 # 生成随机端口
 generate_random_port() {
-    local min_port=10000
-    local max_port=65535
-    echo $(shuf -i ${min_port}-${max_port} -n 1)
+    echo $(shuf -i 49152-65535 -n 1)
 }
 
 # 设置端口
