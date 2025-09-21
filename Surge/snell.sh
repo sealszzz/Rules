@@ -1313,12 +1313,9 @@ setup_multi_user() {
 show_menu() {
     clear
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${CYAN}          Snell 管理脚本 v${current_version}${RESET}"
+    echo -e "${CYAN}            Snell 管理脚本 v${current_version}${RESET}"
     echo -e "${CYAN}============================================${RESET}"
-    echo -e "${GREEN} ${RESET}"
-    echo -e "${GREEN} ${RESET}"
-    echo -e "${CYAN}============================================${RESET}"
-    
+     
     # 显示服务状态
     check_and_show_status
     
