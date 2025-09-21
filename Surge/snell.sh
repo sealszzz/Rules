@@ -447,7 +447,7 @@ get_user_port() {
     while true; do
         read -rp "请输入要使用的端口号 (1-65535，直接回车随机): " PORT
         if [[ -z "$PORT" ]]; then
-            PORT=$((RANDOM % 64512 + 1024))  # 生成 1024–65535 随机端口
+            PORT=$(shuf -i 49152-65535 -n 1)  # 生成 49152–65535 随机端口
             echo -e "${GREEN}已随机选择端口: $PORT${RESET}"
             break
         elif [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then
