@@ -2,7 +2,7 @@
 set -e
 
 # 版本信息
-SCRIPT_VERSION="1.8"
+SCRIPT_VERSION="1.9"
 SS_VERSION=""
 
 # 系统路径
