@@ -758,7 +758,7 @@ uninstall_snell() {
     fi
 
     # 删除服务文件
-    rm -f /lib/systemd/system/snell.service
+    rm -f /etc/systemd/system/snell.service
 
     # 删除可执行文件和配置目录
     rm -f /usr/local/bin/snell-server
