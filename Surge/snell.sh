@@ -459,33 +459,6 @@ get_user_port() {
     done
 }
 
-# 获取系统DNS
-get_system_dns() {
-    # 尝试从resolv.conf获取系统DNS
-    if [ -f "/etc/resolv.conf" ]; then
-        system_dns=$(grep -E '^nameserver' /etc/resolv.conf | awk '{print $2}' | tr '\n' ',' | sed 's/,$//')
-        if [ ! -z "$system_dns" ]; then
-            echo "$system_dns"
-            return 0
-        fi
-    fi
-    
-    # 如果无法从resolv.conf获取，尝试使用公共DNS
-    echo "1.1.1.1,8.8.8.8"
-}
-
-# 获取用户输入的 DNS 服务器
-get_dns() {
-    read -rp "请输入 DNS 服务器地址 (直接回车使用系统DNS): " custom_dns
-    if [ -z "$custom_dns" ]; then
-        DNS=$(get_system_dns)
-        echo -e "${GREEN}使用系统 DNS 服务器: $DNS${RESET}"
-    else
-        DNS=$custom_dns
-        echo -e "${GREEN}使用自定义 DNS 服务器: $DNS${RESET}"
-    fi
-}
-
 # 开放端口 (ufw 和 iptables)
 open_port() {
     local PORT=$1
