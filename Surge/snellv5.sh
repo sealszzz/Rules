@@ -1,4 +1,7 @@
 #!/bin/bash
+# Snell 一键管理脚本（默认 v5，支持任意版本输入 + 链接校验）
+# by Vincent collab, 2025-09
+
 set -Eeuo pipefail
 trap 'echo -e "\033[0;31m发生错误，退出于行号 $LINENO\033[0m"' ERR
 
@@ -87,6 +90,19 @@ check_jq() {
   fi
 }
 
+# ===== systemd/组名辅助 =====
+has_systemd() {
+  [[ -d /run/systemd/system ]] && command -v systemctl >/dev/null 2>&1
+}
+
+pick_service_group() {
+  if getent group nogroup >/dev/null 2>&1; then
+    echo "nogroup"
+  else
+    echo "nobody"
+  fi
+}
+
 # ===== 迁移旧配置 =====
 check_and_migrate_config() {
   local old_files_exist=false
@@ -100,7 +116,7 @@ check_and_migrate_config() {
 
     if [ ! -d "${SNELL_CONF_DIR}/users" ]; then
       mkdir -p "${SNELL_CONF_DIR}/users"
-      chown -R nobody:nogroup "${SNELL_CONF_DIR}" || true
+      chown -R nobody:$(pick_service_group) "${SNELL_CONF_DIR}" || true
       chmod -R 755 "${SNELL_CONF_DIR}"
     fi
   fi
@@ -113,7 +129,7 @@ check_and_migrate_config() {
       systemctl stop snell 2>/dev/null || true
       if [ -f "$OLD_SNELL_CONF_FILE" ]; then
         cp "$OLD_SNELL_CONF_FILE" "${SNELL_CONF_FILE}"
-        chown nobody:nogroup "${SNELL_CONF_FILE}" || true
+        chown nobody:$(pick_service_group) "${SNELL_CONF_FILE}" || true
         chmod 644 "${SNELL_CONF_FILE}"
         echo -e "${GREEN}已迁移配置文件${RESET}"
       fi
@@ -129,13 +145,12 @@ check_and_migrate_config() {
         [ -f "$OLD_SYSTEMD_SERVICE_FILE" ] && rm -f "$OLD_SYSTEMD_SERVICE_FILE"
         echo -e "${GREEN}已删除旧的配置文件${RESET}"
       fi
-      systemctl daemon-reload
-      systemctl start snell || true
-      if systemctl is-active --quiet snell; then
-        echo -e "${GREEN}配置迁移完成，服务已成功启动${RESET}"
-      else
-        echo -e "${RED}警告：服务启动失败，请检查配置文件和权限${RESET}"
-        systemctl status snell || true
+      if has_systemd; then
+        systemctl daemon-reload || true
+        systemctl start snell || true
+        systemctl is-active --quiet snell && \
+          echo -e "${GREEN}配置迁移完成，服务已成功启动${RESET}" || \
+          echo -e "${RED}警告：服务启动失败，请检查配置文件和权限${RESET}"
       fi
     else
       echo -e "${YELLOW}跳过配置迁移${RESET}"
@@ -161,6 +176,7 @@ build_snell_url() {
   echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-${arch}.zip"
 }
 
+# 只将 URL 输出到 stdout；提示全部走 stderr，确保调用处捕获的是纯 URL
 prompt_snell_version() {
   local arch url
   arch=$(detect_cpu_arch) || exit 1
@@ -170,17 +186,13 @@ prompt_snell_version() {
       SNELL_VERSION="$DEFAULT_SNELL_VERSION"
     fi
     [[ "$SNELL_VERSION" =~ ^v ]] || SNELL_VERSION="v${SNELL_VERSION}"
-
     url=$(build_snell_url "$SNELL_VERSION" "$arch")
-
-    # ↓↓↓ 状态信息改走 stderr ↓↓↓
     echo -e "${CYAN}校验下载地址：${url}${RESET}" >&2
     if curl -sfI "$url" >/dev/null 2>&1; then
       echo -e "${GREEN}版本有效，准备下载。${RESET}" >&2
-      echo "$url"   # ← 只把 URL 打到 stdout
+      echo "$url"
       return 0
     fi
-
     echo -e "${RED}无法下载该版本：${SNELL_VERSION}${RESET}" >&2
     read -rp "是否改为安装默认版本 ${DEFAULT_SNELL_VERSION}？[Y/n]: " yn
     yn=${yn:-Y}
@@ -289,8 +301,8 @@ get_snell_port() {
 # ===== 安装 =====
 install_snell() {
   echo -e "${CYAN}正在安装 Snell${RESET}"
-  wait_for_apt
   if command -v apt &>/dev/null; then
+    wait_for_apt
     apt update && apt install -y wget unzip
   elif command -v yum &>/dev/null; then
     yum install -y wget unzip
@@ -316,7 +328,11 @@ listen = ::0:${PORT}
 psk = ${PSK}
 ipv6 = true
 EOF
+  chmod 644 "${SNELL_CONF_FILE}"
+  chown nobody:$(pick_service_group) "${SNELL_CONF_FILE}" || true
 
+  # 写 systemd 服务文件（自动选择组；非 systemd 环境降级为后台 nohup）
+  SERVICE_GROUP="$(pick_service_group)"
   cat > ${SYSTEMD_SERVICE_FILE} << EOF
 [Unit]
 Description=Snell Proxy Service (Main)
@@ -325,24 +341,44 @@ After=network.target
 [Service]
 Type=simple
 User=nobody
-Group=nogroup
+Group=${SERVICE_GROUP}
 LimitNOFILE=32768
 ExecStart=${INSTALL_DIR}/snell-server -c ${SNELL_CONF_FILE}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
-StandardOutput=syslog
-StandardError=syslog
+StandardOutput=journal
+StandardError=journal
 SyslogIdentifier=snell-server
 
 [Install]
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable snell
-  systemctl start snell
+  echo -e "${CYAN}写入 systemd 单元完成，准备加载/启动...${RESET}"
 
+  if has_systemd; then
+    if ! systemctl daemon-reload; then
+      echo -e "${RED}daemon-reload 失败（疑似非 systemd 环境或权限问题）。${RESET}"
+    fi
+    if ! systemctl enable snell; then
+      echo -e "${YELLOW}enable 失败（可能非 systemd 或单元无效），继续。${RESET}"
+    fi
+    if ! systemctl start snell; then
+      echo -e "${RED}启动 Snell 失败，最近日志如下：${RESET}"
+      journalctl -u snell --no-pager -n 80 || true
+    else
+      echo -e "${GREEN}Snell 已通过 systemd 启动。${RESET}"
+    fi
+  else
+    echo -e "${YELLOW}检测到非 systemd 环境，使用前台进程方式后台启动。${RESET}"
+    nohup ${INSTALL_DIR}/snell-server -c ${SNELL_CONF_FILE} \
+          >/var/log/snell-server.log 2>&1 &
+    echo -e "${GREEN}已以后台方式启动，日志：/var/log/snell-server.log${RESET}"
+  fi
+
+  # 开放端口
   open_port "$PORT"
 
+  # 安装完成信息
   echo -e "\n${GREEN}安装完成！以下是您的配置信息：${RESET}"
   echo -e "${CYAN}--------------------------------${RESET}"
   echo -e "${YELLOW}监听端口: ${PORT}${RESET}"
@@ -350,6 +386,7 @@ EOF
   echo -e "${YELLOW}IPv6: true${RESET}"
   echo -e "${CYAN}--------------------------------${RESET}"
 
+  # 地址与 Surge 配
   echo -e "\n${GREEN}服务器地址信息：${RESET}"
   IPV4_ADDR=$(curl -s4 https://api.ipify.org || true)
   if [ -n "${IPV4_ADDR:-}" ]; then
@@ -363,14 +400,10 @@ EOF
   fi
 
   echo -e "\n${GREEN}Surge 配置格式：${RESET}"
-  if [ -n "${IPV4_ADDR:-}" ]; then
-    generate_surge_config "$IPV4_ADDR" "$PORT" "$PSK" "$IP_COUNTRY_IPV4"
-  fi
-  if [ -n "${IPV6_ADDR:-}" ]; then
-    generate_surge_config "$IPV6_ADDR" "$PORT" "$PSK" "$IP_COUNTRY_IPV6"
-  fi
+  [ -n "${IPV4_ADDR:-}" ] && generate_surge_config "$IPV4_ADDR" "$PORT" "$PSK" "${IP_COUNTRY_IPV4:-Unknown}"
+  [ -n "${IPV6_ADDR:-}" ] && generate_surge_config "$IPV6_ADDR" "$PORT" "$PSK" "${IP_COUNTRY_IPV6:-Unknown}"
 
-  # 管理脚本（保留）
+  # 管理脚本（便捷入口）
   echo -e "${CYAN}正在安装管理脚本...${RESET}"
   mkdir -p /usr/local/bin
   cat > /usr/local/bin/snell << 'EOFSCRIPT'
@@ -407,8 +440,11 @@ update_snell_binary_internal() {
   rm -f snell-server.zip
   chmod +x ${INSTALL_DIR}/snell-server
 
-  systemctl restart snell || { echo -e "${RED}主服务重启失败，尝试恢复配置...${RESET}"; restore_snell_config "$backup_dir"; systemctl restart snell || true; }
+  if has_systemd; then
+    systemctl restart snell || { echo -e "${RED}主服务重启失败，尝试恢复配置...${RESET}"; restore_snell_config "$backup_dir"; systemctl restart snell || true; }
+  fi
 
+  # 重启多用户实例（如存在）
   if [ -d "${SNELL_CONF_DIR}/users" ]; then
     for user_conf in "${SNELL_CONF_DIR}/users"/*; do
       if [ -f "$user_conf" ] && [[ "$user_conf" != *"snell-main.conf" ]]; then
@@ -446,8 +482,8 @@ check_snell_update() {
 # ===== 卸载 / 重启 =====
 uninstall_snell() {
   echo -e "${CYAN}正在卸载 Snell${RESET}"
-  systemctl stop snell || true
-  systemctl disable snell || true
+  systemctl stop snell 2>/dev/null || true
+  systemctl disable snell 2>/dev/null || true
 
   if [ -d "${SNELL_CONF_DIR}/users" ]; then
     for user_conf in "${SNELL_CONF_DIR}/users"/*; do
@@ -468,13 +504,13 @@ uninstall_snell() {
   rm -f /usr/local/bin/snell-server
   rm -rf ${SNELL_CONF_DIR}
   rm -f /usr/local/bin/snell
-  systemctl daemon-reload
+  systemctl daemon-reload 2>/dev/null || true
   echo -e "${GREEN}Snell 及其所有多用户配置已成功卸载${RESET}"
 }
 
 restart_snell() {
   echo -e "${YELLOW}正在重启所有 Snell 服务...${RESET}"
-  systemctl restart snell && echo -e "${GREEN}主服务已重启${RESET}" || echo -e "${RED}主服务重启失败${RESET}"
+  systemctl restart snell 2>/dev/null && echo -e "${GREEN}主服务已重启${RESET}" || echo -e "${RED}主服务重启失败${RESET}"
   if [ -d "${SNELL_CONF_DIR}/users" ]; then
     for user_conf in "${SNELL_CONF_DIR}/users"/*; do
       if [ -f "$user_conf" ] && [[ "$user_conf" != *"snell-main.conf" ]]; then
@@ -639,8 +675,7 @@ view_snell_config() {
     done
   fi
 
-  local snell_version
-  snell_version=$(detect_installed_snell_version)
+  # ShadowTLS 组合配置（如安装）
   local snell_services
   snell_services=$(find /etc/systemd/system -name "shadowtls-snell-*.service" 2>/dev/null | sort -u || true)
   if [ -n "${snell_services:-}" ]; then
@@ -675,12 +710,12 @@ view_snell_config() {
       echo -e "  - 版本：3"
       echo -e "\n${GREEN}Surge 配置格式：${RESET}"
       if [ -n "${IPV4_ADDR:-}" ]; then
-        echo -e "${GREEN}${IP_COUNTRY_IPV4} = snell, ${IPV4_ADDR}, ${stls_port}, psk = ${psk}, version = 4, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
-        echo -e "${GREEN}${IP_COUNTRY_IPV4} = snell, ${IPV4_ADDR}, ${stls_port}, psk = ${psk}, version = 5, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
+        echo -e "${GREEN}${IP_COUNTRY_IPV4:-Unknown} = snell, ${IPV4_ADDR}, ${stls_port}, psk = ${psk}, version = 4, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
+        echo -e "${GREEN}${IP_COUNTRY_IPV4:-Unknown} = snell, ${IPV4_ADDR}, ${stls_port}, psk = ${psk}, version = 5, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
       fi
       if [ -n "${IPV6_ADDR:-}" ]; then
-        echo -e "${GREEN}${IP_COUNTRY_IPV6} = snell, ${IPV6_ADDR}, ${stls_port}, psk = ${psk}, version = 4, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
-        echo -e "${GREEN}${IP_COUNTRY_IPV6} = snell, ${IPV6_ADDR}, ${stls_port}, psk = ${psk}, version = 5, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
+        echo -e "${GREEN}${IP_COUNTRY_IPV6:-Unknown} = snell, ${IPV6_ADDR}, ${stls_port}, psk = ${psk}, version = 4, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
+        echo -e "${GREEN}${IP_COUNTRY_IPV6:-Unknown} = snell, ${IPV6_ADDR}, ${stls_port}, psk = ${psk}, version = 5, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
       fi
     done <<< "$snell_services"
   fi
