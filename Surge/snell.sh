@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 RESET='\033[0m'
 
 # 当前版本号
-current_version="4.7"
+current_version="4.8"
 
 # 全局变量：选择的 Snell 版本
 SNELL_VERSION_CHOICE=""
