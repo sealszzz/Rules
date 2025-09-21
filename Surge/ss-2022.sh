@@ -1164,9 +1164,6 @@ Start_Menu() {
     echo -e "${GREEN}============================================${RESET}"
     echo -e "${GREEN}          SS - 2022 管理脚本 ${RESET}"
     echo -e "${GREEN}============================================${RESET}"
-    echo -e "${GREEN}                 作者: ${RESET}"
-    echo -e "${GREEN}                 网站：${RESET}"
-    echo -e "${GREEN}============================================${RESET}"
         echo && echo -e "  
  ${Green_font_prefix}0.${Font_color_suffix} 更新脚本
 ——————————————————————————————————
