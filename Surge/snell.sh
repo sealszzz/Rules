@@ -519,7 +519,6 @@ install_snell() {
     chmod +x ${INSTALL_DIR}/snell-server
 
     get_user_port  # 获取用户输入的端口
-    get_dns # 获取用户输入的 DNS 服务器
     PSK=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)
 
     # 创建用户配置目录
@@ -531,7 +530,6 @@ install_snell() {
 listen = ::0:${PORT}
 psk = ${PSK}
 ipv6 = true
-dns = ${DNS}
 EOF
 
     cat > ${SYSTEMD_SERVICE_FILE} << EOF
@@ -581,7 +579,6 @@ EOF
     echo -e "${YELLOW}监听端口: ${PORT}${RESET}"
     echo -e "${YELLOW}PSK 密钥: ${PSK}${RESET}"
     echo -e "${YELLOW}IPv6: true${RESET}"
-    echo -e "${YELLOW}DNS 服务器: ${DNS}${RESET}"
     echo -e "${CYAN}--------------------------------${RESET}"
 
     # 获取并显示服务器IP地址
@@ -965,12 +962,10 @@ view_snell_config() {
         local main_port=$(grep -E '^listen' "$main_conf" | sed -n 's/.*::0:\([0-9]*\)/\1/p')
         local main_psk=$(grep -E '^psk' "$main_conf" | awk -F'=' '{print $2}' | tr -d ' ')
         local main_ipv6=$(grep -E '^ipv6' "$main_conf" | awk -F'=' '{print $2}' | tr -d ' ')
-        local main_dns=$(grep -E '^dns' "$main_conf" | awk -F'=' '{print $2}' | tr -d ' ')
         
         echo -e "${YELLOW}端口: ${main_port}${RESET}"
         echo -e "${YELLOW}PSK: ${main_psk}${RESET}"
         echo -e "${YELLOW}IPv6: ${main_ipv6}${RESET}"
-        echo -e "${YELLOW}DNS: ${main_dns}${RESET}"
         
         echo -e "\n${GREEN}Surge 配置格式：${RESET}"
         if [ ! -z "$IPV4_ADDR" ]; then
@@ -988,12 +983,10 @@ view_snell_config() {
                 local user_port=$(grep -E '^listen' "$user_conf" | sed -n 's/.*::0:\([0-9]*\)/\1/p')
                 local user_psk=$(grep -E '^psk' "$user_conf" | awk -F'=' '{print $2}' | tr -d ' ')
                 local user_ipv6=$(grep -E '^ipv6' "$user_conf" | awk -F'=' '{print $2}' | tr -d ' ')
-                local user_dns=$(grep -E '^dns' "$user_conf" | awk -F'=' '{print $2}' | tr -d ' ')
                 
                 echo -e "\n${GREEN}用户配置 (端口: ${user_port}):${RESET}"
                 echo -e "${YELLOW}PSK: ${user_psk}${RESET}"
                 echo -e "${YELLOW}IPv6: ${user_ipv6}${RESET}"
-                echo -e "${YELLOW}DNS: ${user_dns}${RESET}"
                 
                 echo -e "\n${GREEN}Surge 配置格式：${RESET}"
                 if [ ! -z "$IPV4_ADDR" ]; then
