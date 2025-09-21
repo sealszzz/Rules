@@ -170,29 +170,34 @@ prompt_snell_version() {
       SNELL_VERSION="$DEFAULT_SNELL_VERSION"
     fi
     [[ "$SNELL_VERSION" =~ ^v ]] || SNELL_VERSION="v${SNELL_VERSION}"
+
     url=$(build_snell_url "$SNELL_VERSION" "$arch")
-    echo -e "${CYAN}校验下载地址：${url}${RESET}"
+
+    # ↓↓↓ 状态信息改走 stderr ↓↓↓
+    echo -e "${CYAN}校验下载地址：${url}${RESET}" >&2
     if curl -sfI "$url" >/dev/null 2>&1; then
-      echo -e "${GREEN}版本有效，准备下载。${RESET}"
-      echo "$url"
+      echo -e "${GREEN}版本有效，准备下载。${RESET}" >&2
+      echo "$url"   # ← 只把 URL 打到 stdout
       return 0
     fi
-    echo -e "${RED}无法下载该版本：${SNELL_VERSION}${RESET}"
+
+    echo -e "${RED}无法下载该版本：${SNELL_VERSION}${RESET}" >&2
     read -rp "是否改为安装默认版本 ${DEFAULT_SNELL_VERSION}？[Y/n]: " yn
     yn=${yn:-Y}
     if [[ "$yn" =~ ^[Yy]$ ]]; then
       SNELL_VERSION="$DEFAULT_SNELL_VERSION"
       url=$(build_snell_url "$SNELL_VERSION" "$arch")
+      echo -e "${CYAN}校验下载地址：${url}${RESET}" >&2
       if curl -sfI "$url" >/dev/null 2>&1; then
-        echo -e "${GREEN}默认版本可用，准备下载。${RESET}"
+        echo -e "${GREEN}默认版本可用，准备下载。${RESET}" >&2
         echo "$url"
         return 0
       else
-        echo -e "${RED}默认版本也不可用，请稍后重试。${RESET}"
+        echo -e "${RED}默认版本也不可用，请稍后重试。${RESET}" >&2
         exit 1
       fi
     fi
-    echo -e "${YELLOW}请重新输入一个可用的版本号。${RESET}"
+    echo -e "${YELLOW}请重新输入一个可用的版本号。${RESET}" >&2
   done
 }
 
