@@ -1,13 +1,6 @@
 #!/usr/bin/env bash
 set -e
 
-# =========================================
-# 作者: 
-# 日期: 2025年9月
-# 网站： 
-# 描述: Shadowsocks Rust 管理脚本
-# =========================================
-
 # 版本信息
 SCRIPT_VERSION="1.7"
 SS_VERSION=""
@@ -1162,7 +1155,7 @@ Start_Menu() {
         detect_os
         action=${1:-}
     echo -e "${GREEN}============================================${RESET}"
-    echo -e "${GREEN}          SS - 2022 管理脚本 ${RESET}"
+    echo -e "${GREEN}       SS - 2022 管理脚本 v${SCRIPT_VERSION} ${RESET}"
     echo -e "${GREEN}============================================${RESET}"
         echo && echo -e "  
  ${Green_font_prefix}0.${Font_color_suffix} 更新脚本
