@@ -442,15 +442,19 @@ version_greater_equal() {
     return 0
 }
 
-# 用户输入端口号，范围 1-65535
+# 用户输入端口号，范围 1-65535；直接回车则随机生成
 get_user_port() {
     while true; do
-        read -rp "请输入要使用的端口号 (1-65535): " PORT
-        if [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then
+        read -rp "请输入要使用的端口号 (1-65535，直接回车随机): " PORT
+        if [[ -z "$PORT" ]]; then
+            PORT=$((RANDOM % 64512 + 1024))  # 生成 1024–65535 随机端口
+            echo -e "${GREEN}已随机选择端口: $PORT${RESET}"
+            break
+        elif [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then
             echo -e "${GREEN}已选择端口: $PORT${RESET}"
             break
         else
-            echo -e "${RED}无效端口号，请输入 1 到 65535 之间的数字。${RESET}"
+            echo -e "${RED}无效端口号，请输入 1 到 65535 之间的数字，或直接回车随机。${RESET}"
         fi
     done
 }
