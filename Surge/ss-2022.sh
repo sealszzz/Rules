@@ -81,7 +81,7 @@ detect_os() {
 detect_arch() {
     local arch=$(uname -m)
     local os=$(uname -s)
-    
+
     case "${os}" in
         "Darwin")
             case "${arch}" in
@@ -124,7 +124,7 @@ detect_arch() {
             error_exit "不支持的操作系统: ${os}"
             ;;
     esac
-    
+
     echo -e "${INFO} 检测到系统架构为 [ ${OS_ARCH} ]"
 }
 
@@ -145,14 +145,14 @@ check_service_status() {
 get_latest_version() {
     SS_VERSION=$(wget -qO- https://api.github.com/repos/shadowsocks/shadowsocks-rust/releases | \
                  jq -r '[.[] | select(.prerelease == false) | select(.draft == false) | .tag_name] | .[0]')
-    
+
     if [[ -z ${SS_VERSION} ]]; then
         error_exit "获取 Shadowsocks Rust 最新版本失败！"
     fi
-    
+
     # 移除版本号中的 'v' 前缀
     SS_VERSION=${SS_VERSION#v}
-    
+
     echo -e "${INFO} 检测到 Shadowsocks Rust 最新版本为 [ ${SS_VERSION} ]"
 }
 
@@ -189,7 +189,7 @@ check_ver_comparison() {
         echo -e "${Info} 未找到版本文件，可能是首次安装"
         return 0
     fi
-    
+
     local now_ver=$(cat ${VERSION_FILE})
     if [[ "${now_ver}" != "${new_ver}" ]]; then
         echo -e "${Info} 发现 Shadowsocks Rust 新版本 [ ${new_ver} ]"
@@ -215,19 +215,19 @@ get_current_version() {
 version_compare() {
     local current=$1
     local latest=$2
-    
+
     # 移除版本号中的 'v' 前缀
     current=${current#v}
     latest=${latest#v}
-    
+
     if [[ "${current}" == "${latest}" ]]; then
         return 1  # 版本相同
     fi
-    
+
     # 将版本号分割为数组
     IFS='.' read -r -a current_parts <<< "${current}"
     IFS='.' read -r -a latest_parts <<< "${latest}"
-    
+
     # 比较每个部分
     for i in "${!current_parts[@]}"; do
         if [[ "${current_parts[$i]}" -lt "${latest_parts[$i]}" ]]; then
@@ -236,7 +236,7 @@ version_compare() {
             return 1  # 当前版本高于最新版本
         fi
     done
-    
+
     return 1
 }
 
@@ -252,32 +252,26 @@ download_ss() {
         "aarch64-apple-darwin"|"x86_64-apple-darwin")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Linux x86_64 系统
         "x86_64-unknown-linux-gnu"|"x86_64-unknown-linux-musl")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Linux ARM 64位
         "aarch64-unknown-linux-gnu"|"aarch64-unknown-linux-musl")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Linux ARM 32位
         "arm-unknown-linux-gnueabi"|"arm-unknown-linux-gnueabihf"|"arm-unknown-linux-musleabi"|"arm-unknown-linux-musleabihf")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Linux ARMv7
         "armv7-unknown-linux-gnueabihf"|"armv7-unknown-linux-musleabihf")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Linux i686
         "i686-unknown-linux-musl")
             filename="shadowsocks-v${version}.${arch}.tar.xz"
             ;;
-        
         # Windows
         "x86_64-pc-windows-gnu")
             filename="shadowsocks-v${version}.${arch}.zip"
@@ -285,20 +279,19 @@ download_ss() {
         "x86_64-pc-windows-msvc")
             filename="shadowsocks-v${version}.${arch}.zip"
             ;;
-            
         *)
             error_exit "不支持的系统架构: ${arch}"
             ;;
     esac
-    
+
     echo -e "${INFO} 开始下载 Shadowsocks Rust ${version}..."
     echo -e "${INFO} 下载地址：${url}/${filename}"
     wget --no-check-certificate -N "${url}/${filename}"
-    
+
     if [[ ! -e "${filename}" ]]; then
         error_exit "Shadowsocks Rust 下载失败！"
     fi
-    
+
     # 根据文件扩展名选择解压方式
     if [[ "${filename}" == *.tar.xz ]]; then
         if ! tar -xf "${filename}"; then
@@ -309,16 +302,16 @@ download_ss() {
             error_exit "Shadowsocks Rust 解压失败！"
         fi
     fi
-    
+
     if [[ ! -e "ssserver" ]]; then
         error_exit "Shadowsocks Rust 解压后未找到主程序！"
     fi
-    
+
     rm -f "${filename}"
     chmod +x ssserver
     mv -f ssserver "${BINARY_PATH}"
     rm -f sslocal ssmanager ssservice ssurl
-    
+
     echo "${version}" > "${VERSION_FILE}"
     echo -e "${SUCCESS} Shadowsocks Rust ${version} 下载安装完成！"
 }
@@ -328,7 +321,7 @@ download() {
     if [[ ! -e "${INSTALL_DIR}" ]]; then
         mkdir -p "${INSTALL_DIR}"
     fi
-    
+
     local version=${SS_VERSION}
     local arch=${OS_ARCH}
     download_ss "${version}" "${arch}"
@@ -357,17 +350,17 @@ EOF
 
     echo -e "${INFO} 重新加载 systemd 配置..."
     systemctl daemon-reload
-    
+
     echo -e "${INFO} 启用 ss-rust 服务..."
     systemctl enable ss-rust
-    
+
     echo -e "${SUCCESS} Shadowsocks Rust 服务配置完成！"
 }
 
 # 安装依赖
 install_dependencies() {
     echo -e "${INFO} 开始安装系统依赖..."
-    
+
     if [[ ${OS_TYPE} == "centos" ]]; then
         yum update -y
         yum install -y jq gzip wget curl unzip xz openssl qrencode tar
@@ -376,8 +369,7 @@ install_dependencies() {
         apt-get install -y jq gzip wget curl unzip xz-utils openssl qrencode tar
     fi
 
-    }
-    # 设置时区
+    # 设置时区（已注释）
     # echo -e "${CYAN}正在设置时区...${RESET}"
     # if [ -f "/usr/share/zoneinfo/Asia/Shanghai" ]; then
     #     ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
@@ -386,6 +378,7 @@ install_dependencies() {
     #     echo -e "${RED}时区文件不存在，跳过设置${RESET}"
     # fi
     # echo -e "${SUCCESS} 系统依赖安装完成！"
+}
 
 # 写入配置文件
 write_config() {
@@ -409,7 +402,7 @@ read_config() {
     if [[ ! -e ${CONFIG_PATH} ]]; then
         error_exit "Shadowsocks Rust 配置文件不存在！"
     fi
-    
+
     SS_PORT=$(jq -r '.server_port' ${CONFIG_PATH})
     SS_PASSWORD=$(jq -r '.password' ${CONFIG_PATH})
     SS_METHOD=$(jq -r '.method' ${CONFIG_PATH})
@@ -421,7 +414,7 @@ read_config() {
 check_firewall() {
     local port=$1
     echo -e "${INFO} 检查防火墙配置..."
-    
+
     # 检查 UFW
     if command -v ufw >/dev/null 2>&1; then
         echo -e "${INFO} 检测到 UFW 防火墙..."
@@ -432,7 +425,7 @@ check_firewall() {
             echo -e "${SUCCESS} UFW 端口开放完成！"
         fi
     fi
-    
+
     # 检查 iptables
     if command -v iptables >/dev/null 2>&1; then
         echo -e "${INFO} 检测到 iptables 防火墙..."
@@ -440,7 +433,7 @@ check_firewall() {
         iptables -I INPUT -p tcp --dport ${port} -j ACCEPT
         iptables -I INPUT -p udp --dport ${port} -j ACCEPT
         echo -e "${SUCCESS} iptables 端口开放完成！"
-        
+
         # 保存 iptables 规则
         if [[ ${OS_TYPE} == "centos" ]]; then
             service iptables save
@@ -466,16 +459,16 @@ set_port() {
     echo -e " ${Green_font_prefix}1.${Font_color_suffix} 是"
     echo -e " ${Green_font_prefix}2.${Font_color_suffix} 否，我要自定义端口"
     echo "=================================="
-    
+
     read -e -p "(默认: 1. 使用随机端口)：" port_choice
     [[ -z "${port_choice}" ]] && port_choice="1"
-    
+
     if [[ ${port_choice} == "2" ]]; then
         while true; do
             echo -e "请输入 Shadowsocks Rust 端口 [1-65535]"
             read -e -p "(默认：2525)：" SS_PORT
             [[ -z "${SS_PORT}" ]] && SS_PORT="2525"
-            
+
             if [[ ${SS_PORT} =~ ^[0-9]+$ ]]; then
                 if (( SS_PORT >= 1 && SS_PORT <= 65535 )); then
                     break
@@ -487,11 +480,11 @@ set_port() {
             fi
         done
     fi
-    
+
     echo && echo "=================================="
     echo -e "端口：${Red_background_prefix} ${SS_PORT} ${Font_color_suffix}"
     echo "=================================="
-    
+
     # 检查并配置防火墙
     check_firewall "${SS_PORT}"
     echo
@@ -524,7 +517,7 @@ set_password() {
                 ;;
         esac
     fi
-    
+
     # 验证密码长度
     if [[ "${SS_METHOD}" == "2022-blake3-aes-256-gcm" || "${SS_METHOD}" == "2022-blake3-chacha20-poly1305" || "${SS_METHOD}" == "2022-blake3-chacha8-poly1305" ]]; then
         # 解码base64并检查字节长度
@@ -538,7 +531,7 @@ set_password() {
             return
         fi
     fi
-    
+
     echo && echo "=================================="
     echo -e "密码：${Red_background_prefix} ${SS_PASSWORD} ${Font_color_suffix}"
     echo "==================================" && echo
@@ -568,10 +561,10 @@ set_method() {
  ${Green_font_prefix}15.${Font_color_suffix} 2022-blake3-chacha20-poly1305
  ${Green_font_prefix}16.${Font_color_suffix} 2022-blake3-chacha8-poly1305
 =================================="
-    
+
     read -e -p "(默认: 13. 2022-blake3-aes-128-gcm)：" method_choice
     [[ -z "${method_choice}" ]] && method_choice="13"
-    
+
     case ${method_choice} in
         1) SS_METHOD="aes-128-gcm" ;;
         2) SS_METHOD="aes-256-gcm" ;;
@@ -591,7 +584,7 @@ set_method() {
         16) SS_METHOD="2022-blake3-chacha8-poly1305" ;;
         *) SS_METHOD="2022-blake3-aes-128-gcm" ;;
     esac
-    
+
     echo && echo "=================================="
     echo -e "加密：${Red_background_prefix} ${SS_METHOD} ${Font_color_suffix}"
     echo "==================================" && echo
@@ -606,13 +599,13 @@ set_tfo() {
 =================================="
     read -e -p "(默认：1)：" tfo_choice
     [[ -z "${tfo_choice}" ]] && tfo_choice="1"
-    
+
     if [[ ${tfo_choice} == "1" ]]; then
         SS_TFO="true"
     else
         SS_TFO="false"
     fi
-    
+
     echo && echo "=================================="
     echo -e "TFO：${Red_background_prefix} ${SS_TFO} ${Font_color_suffix}"
     echo "==================================" && echo
@@ -627,7 +620,7 @@ set_dns() {
 =================================="
     read -e -p "(默认：1)：" dns_choice
     [[ -z "${dns_choice}" ]] && dns_choice="1"
-    
+
     if [[ ${dns_choice} == "2" ]]; then
         echo -e "请输入自定义 DNS 服务器地址（多个 DNS 用逗号分隔，如：1.1.1.1,8.8.8.8）"
         read -e -p "(默认：8.8.8.8)：" SS_DNS
@@ -654,10 +647,10 @@ modify_config() {
  ${Green_font_prefix}4.${Font_color_suffix}  修改 TFO 配置
  ${Green_font_prefix}5.${Font_color_suffix}  修改 DNS 配置
  ${Green_font_prefix}6.${Font_color_suffix}  修改 全部配置" && echo
-    
+
     read -e -p "(默认：取消)：" modify
     [[ -z "${modify}" ]] && echo "已取消..." && Start_Menu
-    
+
     case "${modify}" in
         1)
             read_config
@@ -710,28 +703,28 @@ modify_config() {
 # 安装
 Install() {
     [[ -e ${BINARY_PATH} ]] && echo -e "${Error} 检测到 Shadowsocks Rust 已安装！" && exit 1
-    
+
     echo -e "${Info} 检测系统信息..."
     detect_os
-    
+
     echo -e "${Info} 开始设置配置..."
     set_port
     set_method
     set_password
     set_tfo
     set_dns
-    
+
     echo -e "${Info} 开始安装/配置依赖..."
     install_dependencies
-    
+
     echo -e "${Info} 开始下载/安装..."
     detect_arch
     get_latest_version
     download
-    
+
     echo -e "${Info} 开始写入配置文件..."
     write_config
-    
+
     echo -e "${Info} 开始安装系统服务..."
     install_service
 
@@ -742,10 +735,10 @@ Install() {
         rm -f "/usr/local/bin/ssrust"
     fi
     ln -s "/usr/local/bin/ss-2022.sh" "/usr/local/bin/ssrust"
-    
+
     echo -e "${Info} 所有步骤安装完毕，开始启动服务..."
     start_service
-    
+
     if [[ "$?" == "0" ]]; then
         echo -e "${Success} Shadowsocks Rust 安装并启动成功！"
         View
@@ -763,20 +756,20 @@ Install() {
 # 启动服务
 start_service() {
     check_installed_status || return 1
-    
+
     echo -e "${INFO} 检查服务状态..."
     check_status
     if [[ "$status" == "running" ]]; then
         echo -e "${INFO} Shadowsocks Rust 已在运行！"
         return 1
     fi
-    
+
     echo -e "${INFO} 正在启动 Shadowsocks Rust..."
     systemctl start ss-rust
-    
+
     # 等待服务启动
     sleep 2
-    
+
     # 检查服务状态和日志
     if ! systemctl is-active ss-rust >/dev/null 2>&1; then
         echo -e "${ERROR} Shadowsocks Rust 启动失败！"
@@ -784,7 +777,7 @@ start_service() {
         journalctl -xe --unit ss-rust
         return 1
     fi
-    
+
     echo -e "${SUCCESS} Shadowsocks Rust 启动成功！"
 }
 
@@ -810,14 +803,14 @@ Restart() {
 # 更新
 Update() {
     check_installed_status
-    
+
     # 获取当前版本
     current_ver=$(get_current_version)
     echo -e "${Info} 当前版本: [ ${current_ver} ]"
-    
+
     # 获取最新版本
     check_new_ver
-    
+
     # 比较版本
     if version_compare "${current_ver}" "${new_ver}"; then
         echo -e "${Info} 发现新版本 [ ${new_ver} ]"
@@ -836,7 +829,7 @@ Update() {
     else
         echo -e "${Info} 当前已是最新版本 [ ${new_ver} ]，无需更新"
     fi
-    
+
     sleep 3s
     Start_Menu
 }
@@ -884,7 +877,7 @@ getipv6() {
 
 # 生成安全的Base64编码
 urlsafe_base64() {
-    date=$(echo -n "$1"|base64|sed ':a;N;s/\n/ /g;ta'|sed 's/ //g;s/=//g;s/+/-/g;s/\//_/g')
+    date=$(echo -n "$1" | base64 | sed ':a;N;s/\n/ /g;ta' | sed 's/ //g;s/=//g;s/+/-/g;s/\//_/g')
     echo -e "${date}"
 }
 
@@ -911,13 +904,13 @@ View() {
     check_installed_status
     getipv4
     getipv6
-    
+
     # 新增：如果 IPv4 和 IPv6 都获取失败，直接报错退出
     if [[ "${ipv4}" == "IPv4_Error" && "${ipv6}" == "IPv6_Error" ]]; then
         echo -e "${Error} 无法获取 IPv4 或 IPv6 地址，无法输出配置信息！"
         return 1
     fi
-    
+
     # 从配置文件读取信息
     if [[ -f "${CONFIG_PATH}" ]]; then
         local config_port=$(jq -r '.server_port' "${CONFIG_PATH}")
@@ -952,7 +945,7 @@ View() {
     local userinfo=$(echo -n "${config_method}:${config_password}" | base64 -w 0)
     local ss_url_ipv4=""
     local ss_url_ipv6=""
-    
+
     if [[ "${ipv4}" != "IPv4_Error" ]]; then
         ss_url_ipv4="ss://${userinfo}@${ipv4}:${config_port}#SS-${ipv4}"
     fi
@@ -1038,7 +1031,7 @@ Status() {
 Update_Shell() {
     echo -e "${Info} 当前脚本版本为 [ ${SCRIPT_VERSION} ]"
     echo -e "${Info} 开始检测脚本更新..."
-    
+
     # 下载最新版本进行版本对比
     local temp_file="/tmp/ss-2022.sh"
     if ! wget --no-check-certificate -O ${temp_file} "https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ss-2022.sh"; then
@@ -1046,14 +1039,14 @@ Update_Shell() {
         rm -f ${temp_file}
         return 1
     fi
-    
+
     # 检查下载的文件是否存在且有内容
     if [[ ! -s ${temp_file} ]]; then
         echo -e "${Error} 下载的脚本文件为空！"
         rm -f ${temp_file}
         return 1
     fi
-    
+
     # 获取最新版本号（修复版本号提取）
     sh_new_ver=$(grep -m1 '^SCRIPT_VERSION=' ${temp_file} | cut -d'"' -f2)
     if [[ -z ${sh_new_ver} ]]; then
@@ -1061,7 +1054,7 @@ Update_Shell() {
         rm -f ${temp_file}
         return 1
     fi
-    
+
     # 比较版本号
     if [[ ${sh_new_ver} != ${SCRIPT_VERSION} ]]; then
         echo -e "${Info} 发现新版本 [ ${sh_new_ver} ]"
@@ -1072,7 +1065,7 @@ Update_Shell() {
             # 备份当前脚本
             cp "${SCRIPT_PATH}/${SCRIPT_NAME}" "${SCRIPT_PATH}/${SCRIPT_NAME}.bak.${SCRIPT_VERSION}"
             echo -e "${Info} 已备份当前版本到 ${SCRIPT_NAME}.bak.${SCRIPT_VERSION}"
-            
+
             # 更新脚本
             mv -f ${temp_file} "${SCRIPT_PATH}/${SCRIPT_NAME}"
             chmod +x "${SCRIPT_PATH}/${SCRIPT_NAME}"
@@ -1093,52 +1086,52 @@ Update_Shell() {
 # 安装 Snell
 install_snell() {
     echo -e "${Info} 开始下载 Snell 安装脚本..."
-    
+
     # 下载 Snell 脚本
     wget -N --no-check-certificate https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh
-    
+
     if [ $? -ne 0 ]; then
         echo -e "${Error} Snell 脚本下载失败！"
         return 1
     fi
-    
+
     # 添加执行权限
     chmod +x snell.sh
-    
+
     echo -e "${Info} 开始安装 Snell..."
-    
+
     # 执行 Snell 安装脚本
     bash snell.sh
-    
+
     # 清理下载的脚本
     rm -f snell.sh
-    
+
     Before_Start_Menu
 }
 
 # 安装 ShadowTLS
 install_shadowtls() {
     echo -e "${Info} 开始下载 ShadowTLS 安装脚本..."
-    
+
     # 下载 ShadowTLS 脚本
     wget -N --no-check-certificate https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/shadowtls.sh
-    
+
     if [ $? -ne 0 ]; then
         echo -e "${Error} ShadowTLS 脚本下载失败！"
         return 1
     fi
-    
+
     # 添加执行权限
     chmod +x shadowtls.sh
-    
+
     echo -e "${Info} 开始安装 ShadowTLS..."
-    
+
     # 执行 ShadowTLS 安装脚本
     bash shadowtls.sh
-    
+
     # 清理下载的脚本
     rm -f shadowtls.sh
-    
+
     Before_Start_Menu
 }
 
@@ -1154,9 +1147,9 @@ Start_Menu() {
         check_root
         detect_os
         action=${1:-}
-    echo -e "${GREEN}============================================${RESET}"
-    echo -e "${GREEN}       SS - 2022 管理脚本 v${SCRIPT_VERSION} ${RESET}"
-    echo -e "${GREEN}============================================${RESET}"
+        echo -e "${GREEN}============================================${RESET}"
+        echo -e "${GREEN}       SS - 2022 管理脚本 v${SCRIPT_VERSION} ${RESET}"
+        echo -e "${GREEN}============================================${RESET}"
         echo && echo -e "  
  ${Green_font_prefix}0.${Font_color_suffix} 更新脚本
 ——————————————————————————————————
@@ -1177,6 +1170,7 @@ Start_Menu() {
  ${Green_font_prefix}12.${Font_color_suffix} 退出脚本
 ——————————————————————————————————
 ==================================" && echo
+
         if [[ -e ${BINARY_PATH} ]]; then
             check_status
             if [[ "$status" == "running" ]]; then
