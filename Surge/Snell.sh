@@ -120,7 +120,7 @@ install_snell() {
     VERSION="v5.0.0"
     SNELL_URL=""
     INSTALL_DIR="/usr/local/bin"
-    SYSTEMD_SERVICE_FILE="/lib/systemd/system/snell.service"
+    SYSTEMD_SERVICE_FILE="/etc/systemd/system/snell.service"
     CONF_DIR="/etc/snell"
     CONF_FILE="${CONF_DIR}/snell-server.conf"
 
@@ -153,7 +153,7 @@ install_snell() {
     chmod +x ${INSTALL_DIR}/snell-server
 
     # 生成随机端口和密码
-    RANDOM_PORT=$(shuf -i 30000-65000 -n 1)
+    RANDOM_PORT=$(shuf -i 49152-65535 -n 1)
     RANDOM_PSK=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)
 
     # 检查 snell 用户是否已存在
@@ -329,7 +329,7 @@ uninstall_snell() {
     fi
 
     # 删除 Systemd 服务文件
-    rm /lib/systemd/system/snell.service
+    rm /etc/systemd/system/snell.service
     if [ $? -ne 0 ]; then
         echo -e "${RED}删除 Systemd 服务文件失败。${RESET}"
         echo "$(date '+%Y-%m-%d %H:%M:%S') - 删除 Systemd 服务文件失败" >> "$LOG_FILE"
