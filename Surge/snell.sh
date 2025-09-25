@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 RESET='\033[0m'
 
 # 当前版本号
-current_version="4.8"
+current_version="4.9"
 
 # 全局变量：选择的 Snell 版本
 SNELL_VERSION_CHOICE=""
@@ -447,7 +447,7 @@ get_user_port() {
     while true; do
         read -rp "请输入要使用的端口号 (1-65535，直接回车随机): " PORT
         if [[ -z "$PORT" ]]; then
-            PORT=$(shuf -i 50000-60000 -n 1)  # 生成 50000-60000 随机端口
+            PORT=$(shuf -i 30000-39999 -n 1)  # 生成 50000-60000 随机端口
             echo -e "${GREEN}已随机选择端口: $PORT${RESET}"
             break
         elif [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then
