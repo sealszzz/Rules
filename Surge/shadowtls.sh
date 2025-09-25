@@ -206,8 +206,8 @@ urlsafe_base64() {
 
 # 生成随机端口
 generate_random_port() {
-    local min_port=10000
-    local max_port=65535
+    local min_port=30000
+    local max_port=39999
     shuf -i "${min_port}-${max_port}" -n 1
 }
 
