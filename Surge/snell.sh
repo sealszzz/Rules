@@ -8,7 +8,7 @@ CYAN='\033[0;36m'
 RESET='\033[0m'
 
 # 脚本版本
-current_version="5.1"
+current_version="5.2"
 
 # ========================= 全局/路径 =========================
 SNELL_VERSION=""  # 形如 v6.0.1b3 或 v6.0.1
@@ -178,7 +178,7 @@ generate_surge_config() {
     local psk=$3
     local country=$4
     local installed_version=$5
-    echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${installed_version}, reuse = true, tfo = true${RESET}"
+    echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${installed_version#v}, reuse = true, tfo = true${RESET}"
 }
 
 # ========================= ShadowTLS Surge 配置 =========================
@@ -191,7 +191,7 @@ generate_shadowtls_config() {
     local stls_password=$6
     local stls_domain=$7
 
-    echo -e "${GREEN}${country} = snell, ${ip_addr}, ${stls_port}, psk = ${psk}, version = ${installed_version}, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
+    echo -e "${GREEN}${country} = snell, ${ip_addr}, ${stls_port}, psk = ${psk}, version = ${installed_version#v}, reuse = true, tfo = true, shadow-tls-password = ${stls_password}, shadow-tls-sni = ${stls_domain}, shadow-tls-version = 3${RESET}"
 }
 
 # ========================= 版本比较（支持 beta：bN 当作 .999N） =========================
