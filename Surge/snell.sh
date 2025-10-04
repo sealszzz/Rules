@@ -148,10 +148,12 @@ detect_installed_snell_version() {
     if command -v snell-server &> /dev/null; then
         local version_output
         version_output=$(snell-server --v 2>&1)
-        if echo "$version_output" | grep -q "v5"; then
-            echo "v5"
+        # 提取 v+数字
+        local main_version=$(echo "$version_output" | grep -oP 'v[0-9]+' | head -n 1)
+        if [ -n "$main_version" ]; then
+            echo "$main_version"
         else
-            echo "v4"
+            echo "unknown"
         fi
     else
         echo "unknown"
@@ -159,23 +161,15 @@ detect_installed_snell_version() {
 }
 
 get_current_snell_version() {
-    local current_installed_version
-    current_installed_version=$(detect_installed_snell_version)
+    if ! command -v snell-server &> /dev/null; then
+        echo -e "${RED}Snell 未安装${RESET}"
+        exit 1
+    fi
 
-    if [ "$current_installed_version" = "v5" ]; then
-        CURRENT_VERSION=$(snell-server --v 2>&1 | grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+[a-z0-9]*')
-        if [ -z "$CURRENT_VERSION" ]; then
-            echo -e "${YELLOW}警告：无法读取 v5 详细版本号${RESET}"
-            CURRENT_VERSION="v5.0.0b1"  # 仅用于比较的兜底显示（不用于安装）
-        fi
-    elif [ "$current_installed_version" = "v4" ]; then
-        CURRENT_VERSION=$(snell-server --v 2>&1 | grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+')
-        if [ -z "$CURRENT_VERSION" ]; then
-            echo -e "${RED}无法获取当前 Snell 版本。${RESET}"
-            return 1
-        fi
-    else
-        CURRENT_VERSION="unknown"
+    CURRENT_VERSION=$(snell-server --v 2>&1 | grep -oP 'v[0-9]+\.[0-9]+\.[0-9]+[a-z0-9]*')
+    if [ -z "$CURRENT_VERSION" ]; then
+        echo -e "${RED}无法获取当前 Snell 版本${RESET}"
+        exit 1
     fi
 }
 
@@ -432,15 +426,9 @@ generate_surge_config() {
     local ip_addr=$1
     local port=$2
     local psk=$3
-    local country=$4
-    local installed_version=$5
-
-    if [ "$installed_version" = "v5" ]; then
-        echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = 4, reuse = true, tfo = true${RESET}"
-        echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = 5, reuse = true, tfo = true${RESET}"
-    else
-        echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = 4, reuse = true, tfo = true${RESET}"
-    fi
+    local installed_version=$4
+    local country=$5
+    echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${installed_version}, reuse = true, tfo = true${RESET}"
 }
 
 # ========================= 卸载 =========================
