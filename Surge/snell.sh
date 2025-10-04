@@ -38,46 +38,18 @@ check_root() {
     fi
 }
 
-check_curl() {
-    if ! command -v curl &> /dev/null; then
-        echo -e "${YELLOW}未检测到 curl，正在安装...${RESET}"
+check_and_install() {
+    local tool=$1
+    local pkg=${2:-$1}  # 包名默认和命令名一致
+    if ! command -v "$tool" &> /dev/null; then
+        echo -e "${YELLOW}未检测到 $tool，正在安装...${RESET}"
         if [ -x "$(command -v apt)" ]; then
             wait_for_apt
-            apt update && apt install -y curl
+            apt update && apt install -y "$pkg"
         elif [ -x "$(command -v yum)" ]; then
-            yum install -y curl
+            yum install -y "$pkg"
         else
-            echo -e "${RED}未支持的包管理器，无法安装 curl。请手动安装 curl。${RESET}"
-            exit 1
-        fi
-    fi
-}
-
-check_bc() {
-    if ! command -v bc &> /dev/null; then
-        echo -e "${YELLOW}未检测到 bc，正在安装...${RESET}"
-        if [ -x "$(command -v apt)" ]; then
-            wait_for_apt
-            apt update && apt install -y bc
-        elif [ -x "$(command -v yum)" ]; then
-            yum install -y bc
-        else
-            echo -e "${RED}未支持的包管理器，无法安装 bc。请手动安装 bc。${RESET}"
-            exit 1
-        fi
-    fi
-}
-
-check_jq() {
-    if ! command -v jq &> /dev/null; then
-        echo -e "${YELLOW}未检测到 jq，正在安装...${RESET}"
-        if [ -x "$(command -v apt)" ]; then
-            wait_for_apt
-            apt update && apt install -y jq
-        elif [ -x "$(command -v yum)" ]; then
-            yum install -y jq
-        else
-            echo -e "${RED}未支持的包管理器，无法安装 jq。请手动安装 jq。${RESET}"
+            echo -e "${RED}未支持的包管理器，无法安装 $pkg。请手动安装。${RESET}"
             exit 1
         fi
     fi
@@ -970,8 +942,9 @@ get_shadowtls_config() {
 # ========================= 初始检查与菜单 =========================
 initial_check() {
     check_root
-    check_curl
-    check_bc
+    for tool in curl bc jq; do
+        check_and_install "$tool"
+    done
     check_and_migrate_config
     check_and_show_status
 }
