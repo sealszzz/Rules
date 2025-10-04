@@ -12,9 +12,44 @@ RESET=’\033[0m’
 
 current_version=“4.9”
 
-# 全局变量：固定版本号（修改此处即可更新版本）
+# 全局变量：固定为 v5
 
-SNELL_VERSION=“v5.0.0”
+SNELL_VERSION_CHOICE=“v5”
+SNELL_VERSION=””
+
+# 获取 Snell v5 最新版本
+
+get_latest_snell_v5_version() {
+# 先抓 beta 版
+v5_beta=$(curl -s https://manual.nssurge.com/others/snell.html | grep -oP ‘snell-server-v\K5.[0-9]+.[0-9]+b[0-9]+’ | head -n 1)
+if [ -z “$v5_beta” ]; then
+v5_beta=$(curl -s https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell | grep -oP ‘snell-server-v\K5.[0-9]+.[0-9]+b[0-9]+’ | head -n 1)
+fi
+if [ -n “$v5_beta” ]; then
+echo “v${v5_beta}”
+return
+fi
+
+```
+# 再抓正式版，过滤掉带 b 的 beta 版本
+v5_release=$(curl -s https://manual.nssurge.com/others/snell.html | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+[a-z0-9]*' | grep -v b | head -n 1)
+if [ -z "$v5_release" ]; then
+    v5_release=$(curl -s https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+[a-z0-9]*' | grep -v b | head -n 1)
+fi
+if [ -n "$v5_release" ]; then
+    echo "v${v5_release}"
+else
+    echo "v5.0.0"
+fi
+```
+
+}
+
+# 获取 Snell 最新版本
+
+get_latest_snell_version() {
+SNELL_VERSION=$(get_latest_snell_v5_version)
+}
 
 # 获取 Snell 下载 URL
 
@@ -166,21 +201,22 @@ fi
 # 安装 Snell v5
 
 install_snell() {
-echo -e “${CYAN}正在安装 Snell ${SNELL_VERSION}${RESET}”
+echo -e “${CYAN}正在安装 Snell v5${RESET}”
 
 ```
 wait_for_apt
 apt update && apt install -y wget unzip
 
+get_latest_snell_version
 ARCH=$(uname -m)
 SNELL_URL=$(get_snell_download_url)
 
-echo -e "${CYAN}正在下载 Snell ${SNELL_VERSION}...${RESET}"
+echo -e "${CYAN}正在下载 Snell v5 (${SNELL_VERSION})...${RESET}"
 echo -e "${YELLOW}下载链接: ${SNELL_URL}${RESET}"
 
 wget ${SNELL_URL} -O snell-server.zip
 if [ $? -ne 0 ]; then
-    echo -e "${RED}下载 Snell ${SNELL_VERSION} 失败。${RESET}"
+    echo -e "${RED}下载 Snell v5 失败。${RESET}"
     exit 1
 fi
 
@@ -255,7 +291,7 @@ echo -e "\n${GREEN}安装完成！以下是您的配置信息：${RESET}"
 echo -e "${CYAN}--------------------------------${RESET}"
 echo -e "${YELLOW}监听端口: ${PORT}${RESET}"
 echo -e "${YELLOW}PSK 密钥: ${PSK}${RESET}"
-echo -e "${YELLOW}版本: ${SNELL_VERSION}${RESET}"
+echo -e "${YELLOW}版本: Snell v5${RESET}"
 echo -e "${YELLOW}IPv6: true${RESET}"
 echo -e "${CYAN}--------------------------------${RESET}"
 
@@ -273,7 +309,7 @@ if [ $? -eq 0 ] && [ ! -z "$IPV6_ADDR" ]; then
     echo -e "${GREEN}IPv6 地址: ${RESET}${IPV6_ADDR} ${GREEN}所在国家: ${RESET}${IP_COUNTRY_IPV6}"
 fi
 
-echo -e "\n${GREEN}Surge 配置格式：${RESET}"
+echo -e "\n${GREEN}Surge 配置格式（v5）：${RESET}"
 if [ ! -z "$IPV4_ADDR" ]; then
     generate_surge_config "$IPV4_ADDR" "$PORT" "$PSK" "$IP_COUNTRY_IPV4"
 fi
@@ -282,7 +318,7 @@ if [ ! -z "$IPV6_ADDR" ]; then
     generate_surge_config "$IPV6_ADDR" "$PORT" "$PSK" "$IP_COUNTRY_IPV6"
 fi
 
-echo -e "\n${CYAN}安装完成！Snell ${SNELL_VERSION} 服务已启动。${RESET}"
+echo -e "\n${CYAN}安装完成！Snell v5 服务已启动。${RESET}"
 ```
 
 }
