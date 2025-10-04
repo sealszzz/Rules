@@ -10,129 +10,49 @@ RESET='\033[0m'
 # 当前版本号
 current_version="4.9"
 
-# 全局变量：选择的 Snell 版本
-SNELL_VERSION_CHOICE=""
-SNELL_VERSION=""
-
-# === 新增：版本选择函数 ===
-# 选择 Snell 版本
-select_snell_version() {
-    echo -e "${CYAN}请选择要安装的 Snell 版本：${RESET}"
-    echo -e "${GREEN}1.${RESET} Snell v4"
-    echo -e "${GREEN}2.${RESET} Snell v5"
-
-    while true; do
-        read -rp "请输入选项 [1-2]: " version_choice
-        case "$version_choice" in
-            1)
-                SNELL_VERSION_CHOICE="v4"
-                echo -e "${GREEN}已选择 Snell v4${RESET}"
-                break
-                ;;
-            2)
-                SNELL_VERSION_CHOICE="v5"
-                echo -e "${GREEN}已选择 Snell v5${RESET}"
-                break
-                ;;
-            *)
-                echo -e "${RED}请输入正确的选项 [1-2]${RESET}"
-                ;;
-        esac
-    done
-}
-
-# 获取 Snell v4 最新版本
-get_latest_snell_v4_version() {
-    latest_version=$(curl -s https://manual.nssurge.com/others/snell.html | grep -oP 'snell-server-v\K4\.[0-9]+\.[0-9]+' | head -n 1)
-    if [ -z "$latest_version" ]; then
-        latest_version=$(curl -s https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell | grep -oP 'snell-server-v\K4\.[0-9]+\.[0-9]+' | head -n 1)
-    fi
-    if [ -n "$latest_version" ]; then
-        echo "v${latest_version}"
-    else
-        echo "v4.1.1"
-    fi
-}
-
-# 获取 Snell v5 最新版本
-get_latest_snell_v5_version() {
-    # 先抓 beta 版
-    v5_beta=$(curl -s https://manual.nssurge.com/others/snell.html | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+b[0-9]+' | head -n 1)
-    if [ -z "$v5_beta" ]; then
-        v5_beta=$(curl -s https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+b[0-9]+' | head -n 1)
-    fi
-    if [ -n "$v5_beta" ]; then
-        echo "v${v5_beta}"
-        return
-    fi
-
-    # 再抓正式版，过滤掉带 b 的 beta 版本
-    v5_release=$(curl -s https://manual.nssurge.com/others/snell.html | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+[a-z0-9]*' | grep -v b | head -n 1)
-    if [ -z "$v5_release" ]; then
-        v5_release=$(curl -s https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell | grep -oP 'snell-server-v\K5\.[0-9]+\.[0-9]+[a-z0-9]*' | grep -v b | head -n 1)
-    fi
-    if [ -n "$v5_release" ]; then
-        echo "v${v5_release}"
-    else
-        echo "v5.0.0"
-    fi
-}
-
-# 获取 Snell 最新版本（根据选择的版本）
+# 获取 Snell 最新版本（优先 beta，无兜底）
 get_latest_snell_version() {
-    if [ "$SNELL_VERSION_CHOICE" = "v5" ]; then
-        SNELL_VERSION=$(get_latest_snell_v5_version)
-    else
-        SNELL_VERSION=$(get_latest_snell_v4_version)
-    fi
+  local url="https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell"
+  local html v_beta v_stable
+
+  html=$(curl -fsSL --connect-timeout 5 -m 10 "$url") || return 1
+
+  # 先找 beta（5.0.0b1/b2…）
+  v_beta=$(printf '%s' "$html" \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+' \
+    | sed -E 's/^snell-server-v//' \
+    | sed -E 's/b([0-9]+)/-beta.\1/' \
+    | sort -V | tail -n1 \
+    | sed -E 's/-beta\.([0-9]+)/b\1/')
+
+  if [ -n "$v_beta" ]; then
+    echo "v${v_beta}"
+    return 0
+  fi
+
+  # 否则取稳定版（支持 x.y.z 或 x.y.z.w）
+  v_stable=$(printf '%s' "$html" \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+(\.[0-9]+)?' \
+    | sed -E 's/^snell-server-v//' \
+    | sort -V | tail -n1)
+
+  [ -n "$v_stable" ] && echo "v${v_stable}" && return 0
+
+  return 1
 }
 
 # 获取 Snell 下载 URL
 get_snell_download_url() {
-    local version=$1
-    local arch=$(uname -m)
+  local version="$1"
+  local arch=$(uname -m)
 
-    if [ "$version" = "v5" ]; then
-        # v5 版本自动拼接下载链接
-        case ${arch} in
-            "x86_64"|"amd64")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-amd64.zip"
-                ;;
-            "i386"|"i686")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-i386.zip"
-                ;;
-            "aarch64"|"arm64")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-aarch64.zip"
-                ;;
-            "armv7l"|"armv7")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-armv7l.zip"
-                ;;
-            *)
-                echo -e "${RED}不支持的架构: ${arch}${RESET}"
-                exit 1
-                ;;
-        esac
-    else
-        # v4 版本使用 zip 格式
-        case ${arch} in
-            "x86_64"|"amd64")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-amd64.zip"
-                ;;
-            "i386"|"i686")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-i386.zip"
-                ;;
-            "aarch64"|"arm64")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-aarch64.zip"
-                ;;
-            "armv7l"|"armv7")
-                echo "https://dl.nssurge.com/snell/snell-server-${SNELL_VERSION}-linux-armv7l.zip"
-                ;;
-            *)
-                echo -e "${RED}不支持的架构: ${arch}${RESET}"
-                exit 1
-                ;;
-        esac
-    fi
+  case "$arch" in
+    x86_64|amd64)  echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-amd64.zip" ;;
+    i386|i686)     echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-i386.zip" ;;
+    aarch64|arm64) echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-aarch64.zip" ;;
+    armv7l|armv7)  echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-armv7l.zip" ;;
+    *) echo -e "${RED}不支持的架构: $arch${RESET}" >&2; return 1 ;;
+  esac
 }
 
 # 生成 Surge 配置格式
