@@ -79,6 +79,4 @@ DOMAIN-SUFFIX,flyert.com
 DOMAIN-SUFFIX,flyert.com.cn
 DOMAIN-SUFFIX,flyertrip.com
 # Google
-DOMAIN,stun.l.google.com
-DOMAIN,stun1.l.google.com
-DOMAIN,stun2.l.google.com
+# DOMAIN,stun.l.google.com
