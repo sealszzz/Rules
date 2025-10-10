@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.4.4"
+SCRIPT_VERSION="1.4.5"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -111,7 +111,7 @@ prompt_method() {
 
   local sel choice
   while true; do
-    read -rp "输入编号 [1-4]（回车默认1）: " sel
+    read -rp "输入编号 [1-3]（回车默认1）: " sel
     sel="${sel:-1}"
     case "$sel" in
       1) choice="2022-blake3-aes-128-gcm" ;;
