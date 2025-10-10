@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.4.2"
+SCRIPT_VERSION="1.4.3"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -44,7 +44,7 @@ version_gt(){
   [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]
 }
 
-iis_active() {
+is_active() {
   if [ ! -x "$SS_BIN" ]; then
     echo "未安装"
   elif systemctl is-active --quiet "$SERVICE_NAME"; then
