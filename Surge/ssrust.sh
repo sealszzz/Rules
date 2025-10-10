@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.8"
+SCRIPT_VERSION="1.3.9"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -135,11 +135,11 @@ prompt_port() {
 gen_password_by_method() {
   local method="$1"
   case "$method" in
-    2022-blake3-aes-128-gcm) openssl rand -base64 16 ;;
-    2022-blake3-aes-256-gcm) openssl rand -base64 32 ;;
-    2022-blake3-chacha20-poly1305) openssl rand -base64 32 ;;
-    2022-blake3-chacha8-poly1305) openssl rand -base64 32 ;;
-    *) openssl rand -base64 16 ;;
+    2022-blake3-aes-128-gcm) openssl rand -hex 16 ;;
+    2022-blake3-aes-256-gcm) openssl rand -hex 32 ;;
+    2022-blake3-chacha20-poly1305) openssl rand -hex 32 ;;
+    2022-blake3-chacha8-poly1305) openssl rand -hex 32 ;;
+    *) openssl rand -hex 16 ;;
   esac
 }
 
@@ -237,7 +237,7 @@ install_action() {
   ensure_launcher
 
   if [ ! -f "$SS_CONFIG" ]; then
-    local PASS; PASS="$(openssl rand -base64 16)"
+    local PASS; PASS="$(openssl rand -hex 16)"
     # 默认端口 2048，如被占用则找一个空闲端口
     local def_port=2048
     if port_used_by_others "$def_port"; then
