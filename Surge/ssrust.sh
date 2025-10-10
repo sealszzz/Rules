@@ -156,10 +156,12 @@ restart_and_verify() {
   systemctl daemon-reload
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
   systemctl restart "$SERVICE_NAME" 2>/dev/null || systemctl start "$SERVICE_NAME" 2>/dev/null || true
+  sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo "服务已运行。"
   else
-    echo "⚠️ 服务未能启动，请执行：journalctl -u ${SERVICE_NAME} -e --no-pager 查看原因。"
+    echo "⚠️ 服务未能启动，请检查配置。"
+    echo "   查看日志: journalctl -u ${SERVICE_NAME} -e --no-pager"
     return 1
   fi
 }
@@ -277,7 +279,7 @@ EOF
 
   write_service
   systemctl daemon-reload
-  systemctl enable --now "$SERVICE_NAME"
+  restart_and_verify "$SERVICE_NAME"
 
   echo "安装完成，服务当前状态：$(is_active)"
   echo "现在起可直接输入：ssrust 进入管理菜单。"
@@ -355,6 +357,7 @@ edit_config_action() {
   elif [ -z "${new_pass:-}" ]; then new_pass="$cur_pass"; fi
 
   # 加密：编号菜单
+  echo "当前加密方式: $cur_method"
   local new_method; new_method="$(prompt_method)"
 
   # 写入配置
