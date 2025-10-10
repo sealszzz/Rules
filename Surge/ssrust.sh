@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.5"
+SCRIPT_VERSION="1.3.6"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -134,19 +134,21 @@ prompt_port() {
   # $1: 默认端口（显示用）；回车采用默认
   local def="$1" input
   while true; do
+    >&2 echo    # 打印换行到屏幕
     read -rp "新端口 (1024-65535，回车默认 $def): " input
     input="${input:-$def}"
     if ! [[ "$input" =~ ^[0-9]+$ ]]; then
-      echo "必须是数字。"; continue
+      >&2 echo "必须是数字。"; continue
     fi
     if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then
-      echo "仅允许 1024-65535。"; continue
+      >&2 echo "仅允许 1024-65535。"; continue
     fi
     if port_used_by_others "$input"; then
-      echo "端口 $input 已被其他进程占用，请重试。"
+      >&2 echo "端口 $input 已被其他进程占用，请重试。"
       continue
     fi
-    echo "$input"; return
+    echo "$input"   # 只把数字写到 stdout
+    return
   done
 }
 
