@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.4"
+SCRIPT_VERSION="1.3.5"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -107,22 +107,26 @@ port_used_by_others() {
 }
 
 prompt_method() {
-  echo "请选择加密方式："
-  echo "  1) 2022-blake3-aes-128-gcm    (默认)"
-  echo "  2) 2022-blake3-aes-256-gcm"
-  echo "  3) 2022-blake3-chacha20-poly1305"
-  echo "  4) 2022-blake3-chacha8-poly1305"
-  local sel
+  # 菜单打印到 stderr，避免被 $(...) 捕获
+  >&2 echo "请选择加密方式："
+  >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认)"
+  >&2 echo "  2) 2022-blake3-aes-256-gcm"
+  >&2 echo "  3) 2022-blake3-chacha20-poly1305"
+  >&2 echo "  4) 2022-blake3-chacha8-poly1305"
+
+  local sel choice
   while true; do
     read -rp "输入编号 [1-4]（回车默认1）: " sel
     sel="${sel:-1}"
     case "$sel" in
-      1) echo "2022-blake3-aes-128-gcm"; return ;;
-      2) echo "2022-blake3-aes-256-gcm"; return ;;
-      3) echo "2022-blake3-chacha20-poly1305"; return ;;
-      4) echo "2022-blake3-chacha8-poly1305"; return ;;
-      *) echo "无效编号，请重新输入 1-4。" ;;
+      1) choice="2022-blake3-aes-128-gcm" ;;
+      2) choice="2022-blake3-aes-256-gcm" ;;
+      3) choice="2022-blake3-chacha20-poly1305" ;;
+      4) choice="2022-blake3-chacha8-poly1305" ;;
+      *) >&2 echo "无效编号，请重新输入 1-4。"; continue ;;
     esac
+    echo "$choice"   # 只有这一行会进入 $(...)
+    return 0
   done
 }
 
