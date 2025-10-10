@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.2"
+SCRIPT_VERSION="1.3.3"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -264,7 +264,7 @@ install_action() {
     fi
     cat > "$SS_CONFIG" <<EOF
 {
-  "server": "[::]",
+  "server": "::",
   "server_port": $def_port,
   "password": "$PASS",
   "method": "2022-blake3-aes-128-gcm",
@@ -363,7 +363,7 @@ edit_config_action() {
   # 写入配置
   cat > "$SS_CONFIG" <<EOF
 {
-  "server": "[::]",
+  "server": "::",
   "server_port": $new_port,
   "password": "$new_pass",
   "method": "$new_method",
