@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.1"
+SCRIPT_VERSION="1.3.2"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -185,13 +185,13 @@ ensure_launcher() {
   self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
 
   if [[ "$self" == /proc/*/fd/* ]]; then
-    # 从 pipe 执行，直接 curl 写入脚本文件
     echo "检测到从 pipe 运行，直接拉取远端脚本写入 $SCRIPT_INSTALL"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   else
-    # 从本地文件运行，复制到安装位
-    cp -f "$self" "$SCRIPT_INSTALL"
+    if [ "$self" != "$SCRIPT_INSTALL" ]; then
+      cp -f "$self" "$SCRIPT_INSTALL"
+    fi
     chmod +x "$SCRIPT_INSTALL"
   fi
 
@@ -279,7 +279,7 @@ EOF
 
   write_service
   systemctl daemon-reload
-  restart_and_verify "$SERVICE_NAME"
+  restart_and_verify
 
   echo "安装完成，服务当前状态：$(is_active)"
   echo "现在起可直接输入：ssrust 进入管理菜单。"
@@ -388,8 +388,10 @@ uninstall_action() {
   rm -f "$SS_BIN" "$SERVICE_FILE"
   rm -rf "$SS_DIR"
   id -u "$SS_USER" >/dev/null 2>&1 && userdel -r "$SS_USER" || true
+  # 删除脚本和启动器
+  rm -f "$SCRIPT_INSTALL" "$SCRIPT_LAUNCHER"
   systemctl daemon-reload
-  echo "已卸载 ss-rust；保留启动器与脚本以便重新安装。"
+  echo "已卸载 ss-rust 和管理脚本。"
 }
 
 #---------------- main ----------------
