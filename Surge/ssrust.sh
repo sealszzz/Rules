@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.6"
+SCRIPT_VERSION="1.3.7"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -393,11 +393,14 @@ uninstall_action() {
   systemctl disable "$SERVICE_NAME" 2>/dev/null || true
   rm -f "$SS_BIN" "$SERVICE_FILE"
   rm -rf "$SS_DIR"
-  id -u "$SS_USER" >/dev/null 2>&1 && userdel -r "$SS_USER" || true
+  # 删除用户（忽略找不到 home/mail 的提示）
+  if id -u "$SS_USER" >/dev/null 2>&1; then
+    userdel "$SS_USER" 2>/dev/null || true
+  fi
   # 删除脚本和启动器
   rm -f "$SCRIPT_INSTALL" "$SCRIPT_LAUNCHER"
   systemctl daemon-reload
-  echo "已卸载 ss-rust 和管理脚本。"
+  echo "✅ 已卸载 ss-rust 和管理脚本。"
 }
 
 #---------------- main ----------------
