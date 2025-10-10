@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.3.7"
+SCRIPT_VERSION="1.3.8"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -35,7 +35,6 @@ get_latest_version() {
 
 get_current_version() {
   if [ -x "$SS_BIN" ]; then
-    # shadowsocks-rust --version 输出形如: ssserver 1.23.5 ...
     "$SS_BIN" --version 2>/dev/null | awk '{print $2}' || true
   fi
 }
@@ -85,34 +84,25 @@ get_main_pid() {
 }
 
 port_used_by_others() {
-  # 返回0表示端口被“非本服务”占用；返回1表示未被占用或仅被本服务占用
   local port="$1"
   local pid_self; pid_self="$(get_main_pid || echo 0)"
-  # ss 可能不在最小系统中
   if ! command -v ss >/dev/null 2>&1; then require_pkg iproute2; fi
-  # 列出占用该端口的所有 PID
   local pids
   pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
-  if [ -z "$pids" ]; then
-    return 1
-  fi
-  # 如果存在非自身 PID，占用则返回0
+  if [ -z "$pids" ]; then return 1; fi
   while read -r p; do
     [ -z "$p" ] && continue
-    if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then
-      return 0
-    fi
+    if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then return 0; fi
   done <<< "$pids"
   return 1
 }
 
 prompt_method() {
-  # 菜单打印到 stderr，避免被 $(...) 捕获
-  >&2 echo "请选择加密方式："
-  >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认)"
-  >&2 echo "  2) 2022-blake3-aes-256-gcm"
-  >&2 echo "  3) 2022-blake3-chacha20-poly1305"
-  >&2 echo "  4) 2022-blake3-chacha8-poly1305"
+  >&2 echo "请选择加密方式（将随机生成对应长度的密码）："
+  >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
+  >&2 echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
+  >&2 echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
+  >&2 echo "  4) 2022-blake3-chacha8-poly1305  (32字节密钥)"
 
   local sel choice
   while true; do
@@ -125,35 +115,35 @@ prompt_method() {
       4) choice="2022-blake3-chacha8-poly1305" ;;
       *) >&2 echo "无效编号，请重新输入 1-4。"; continue ;;
     esac
-    echo "$choice"   # 只有这一行会进入 $(...)
+    echo "$choice"
     return 0
   done
 }
 
 prompt_port() {
-  # $1: 默认端口（显示用）；回车采用默认
   local def="$1" input
   while true; do
-    >&2 echo    # 打印换行到屏幕
     read -rp "新端口 (1024-65535，回车默认 $def): " input
     input="${input:-$def}"
-    if ! [[ "$input" =~ ^[0-9]+$ ]]; then
-      >&2 echo "必须是数字。"; continue
-    fi
-    if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then
-      >&2 echo "仅允许 1024-65535。"; continue
-    fi
-    if port_used_by_others "$input"; then
-      >&2 echo "端口 $input 已被其他进程占用，请重试。"
-      continue
-    fi
-    echo "$input"   # 只把数字写到 stdout
-    return
+    if ! [[ "$input" =~ ^[0-9]+$ ]]; then >&2 echo "必须是数字。"; continue; fi
+    if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then >&2 echo "仅允许 1024-65535。"; continue; fi
+    if port_used_by_others "$input"; then >&2 echo "端口 $input 已被占用，请重试。"; continue; fi
+    echo "$input"; return
   done
 }
 
+gen_password_by_method() {
+  local method="$1"
+  case "$method" in
+    2022-blake3-aes-128-gcm) openssl rand -base64 16 ;;
+    2022-blake3-aes-256-gcm) openssl rand -base64 32 ;;
+    2022-blake3-chacha20-poly1305) openssl rand -base64 32 ;;
+    2022-blake3-chacha8-poly1305) openssl rand -base64 32 ;;
+    *) openssl rand -base64 16 ;;
+  esac
+}
+
 json_get() {
-  # 兼容单实例与 servers[0] 两种格式
   local key="$1"
   jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG"
 }
@@ -187,21 +177,14 @@ pause(){ echo; read -rp "按回车键返回菜单..." _; }
 
 ensure_launcher() {
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
-  local self
-  self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-
+  local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
   if [[ "$self" == /proc/*/fd/* ]]; then
-    echo "检测到从 pipe 运行，直接拉取远端脚本写入 $SCRIPT_INSTALL"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   else
-    if [ "$self" != "$SCRIPT_INSTALL" ]; then
-      cp -f "$self" "$SCRIPT_INSTALL"
-    fi
+    if [ "$self" != "$SCRIPT_INSTALL" ]; then cp -f "$self" "$SCRIPT_INSTALL"; fi
     chmod +x "$SCRIPT_INSTALL"
   fi
-
-  # 写入启动器
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
 exec bash /usr/local/sbin/ssrust.sh
@@ -210,29 +193,21 @@ LAUNCH
 }
 
 remote_script_version() {
-  # 读取远端脚本中的 SCRIPT_VERSION
   curl -fsSL "$SCRIPT_REMOTE_RAW" | grep -m1 '^SCRIPT_VERSION=' | sed 's/^SCRIPT_VERSION=//; s/"//g'
 }
 
 self_update() {
   require_pkg curl
-  local remote
-  remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then
-    echo "获取远端脚本版本失败。"; return 1
-  fi
+  local remote; remote="$(remote_script_version || true)"
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/ssrust.sh.$$"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$tmp"
-    # 简单校验
-    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常，放弃覆盖。"; rm -f "$tmp"; return 1; }
-    install -m 0755 "$tmp" "$SCRIPT_INSTALL"
-    rm -f "$tmp"
-    echo "脚本已更新到 $remote"
-    echo "重新进入菜单..."
+    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; return 1; }
+    install -m 0755 "$tmp" "$SCRIPT_INSTALL"; rm -f "$tmp"
     exec bash "$SCRIPT_INSTALL"
   else
     echo "脚本已是最新版本。"
@@ -272,8 +247,8 @@ install_action() {
 {
   "server": "::",
   "server_port": $def_port,
-  "password": "$PASS",
   "method": "2022-blake3-aes-128-gcm",
+  "password": "$PASS",
   "mode": "tcp_and_udp",
   "timeout": 300
 }
@@ -337,9 +312,7 @@ show_config_action() {
 }
 
 edit_config_action() {
-  if [ ! -f "$SS_CONFIG" ]; then
-    echo "未找到配置文件：$SS_CONFIG"; return
-  fi
+  if [ ! -f "$SS_CONFIG" ]; then echo "未找到配置文件：$SS_CONFIG"; return; fi
   require_pkg jq openssl iproute2
 
   local cur_port cur_pass cur_method
@@ -347,45 +320,32 @@ edit_config_action() {
   cur_pass=$(json_get "password")
   cur_method=$(json_get "method")
 
-  # 端口：仅允许 1024-65535；默认沿用已装默认 2048（若首次安装）
-  local def_for_prompt
-  if [ -n "$cur_port" ] && [[ "$cur_port" =~ ^[0-9]+$ ]]; then
-    def_for_prompt="$cur_port"
-  else
-    def_for_prompt="2048"
-  fi
+  local def_for_prompt="${cur_port:-2048}"
   local new_port; new_port="$(prompt_port "$def_for_prompt")"
 
-  # 密码：回车不变，输入空格生成随机
-  local new_pass
-  read -rp "新密码 (回车保持不变，输入空格生成随机): " new_pass
-  if [ "${new_pass:-}" = " " ]; then new_pass="$(openssl rand -base64 16)"
-  elif [ -z "${new_pass:-}" ]; then new_pass="$cur_pass"; fi
-
-  # 加密：编号菜单
   echo "当前加密方式: $cur_method"
-  new_method="$(prompt_method)"
+  local new_method; new_method="$(prompt_method)"
 
-  # 写入配置
+  local new_pass="$cur_pass"
+  if [ "$new_method" != "$cur_method" ]; then
+    new_pass="$(gen_password_by_method "$new_method")"
+    echo "已为新加密方式生成随机密码。"
+  fi
+
   cat > "$SS_CONFIG" <<EOF
 {
   "server": "::",
   "server_port": $new_port,
-  "password": "$new_pass",
   "method": "$new_method",
+  "password": "$new_pass",
   "mode": "tcp_and_udp",
   "timeout": 300
 }
 EOF
-  chown "$SS_USER:$SS_USER" "$SS_CONFIG"
-  chmod 640 "$SS_CONFIG"
+  chown "$SS_USER:$SS_USER" "$SS_CONFIG"; chmod 640 "$SS_CONFIG"
 
   echo "配置已更新，正在重启服务..."
-  if restart_and_verify; then
-    echo "✅ 已应用：端口 $new_port，加密 $new_method"
-  else
-    echo "❌ 重启失败，请检查日志：journalctl -u ${SERVICE_NAME} -e --no-pager"
-  fi
+  restart_and_verify
 }
 
 uninstall_action() {
