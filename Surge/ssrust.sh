@@ -178,18 +178,21 @@ show_header() {
 pause(){ echo; read -rp "按回车键返回菜单..." _; }
 
 ensure_launcher() {
-  # 标准安装位：SCRIPT_INSTALL；启动器：/usr/local/bin/ssrust
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
-  # 如果当前脚本不是安装位，则复制过去
   local self
-  # shellcheck disable=SC2296
-  self="$(readlink -f "$0" || echo "$0")"
-  if [ "$self" != "$SCRIPT_INSTALL" ]; then
-    cp -f "$self" "$SCRIPT_INSTALL"
+  self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+
+  if [[ "$self" == /proc/*/fd/* ]]; then
+    # 从 pipe 执行，直接 curl 写入脚本文件
+    echo "检测到从 pipe 运行，直接拉取远端脚本写入 $SCRIPT_INSTALL"
+    curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   else
+    # 从本地文件运行，复制到安装位
+    cp -f "$self" "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   fi
+
   # 写入启动器
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
