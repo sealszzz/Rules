@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.4.0"
+SCRIPT_VERSION="1.4.1"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -133,37 +133,13 @@ prompt_port() {
 }
 
 gen_password_by_method() {
-  local method="$1"
-  local key=""
+  local method="$1" n
   case "$method" in
-    "2022-blake3-aes-128-gcm")
-      # 16字节 → 32 hex字符
-      key=$(openssl rand -hex 16)
-      ;;
-    "2022-blake3-aes-256-gcm"|"2022-blake3-chacha20-poly1305"|"2022-blake3-chacha8-poly1305")
-      # 32字节 → 64 hex字符
-      key=$(openssl rand -hex 32)
-      ;;
-    *)
-      key=$(openssl rand -hex 16)
-      ;;
+    2022-blake3-aes-128-gcm) n=16 ;;   # 需要 16 字节
+    *) n=32 ;;                          # 其余 2022 算法需要 32 字节
   esac
-
-  # 验证长度（保险）
-  local expected_bytes
-  case "$method" in
-    2022-blake3-aes-128-gcm) expected_bytes=16 ;;
-    2022-blake3-aes-256-gcm|2022-blake3-chacha20-poly1305|2022-blake3-chacha8-poly1305) expected_bytes=32 ;;
-    *) expected_bytes=16 ;;
-  esac
-  local actual_bytes=$(( ${#key} / 2 ))
-  if [ "$actual_bytes" -ne "$expected_bytes" ]; then
-    echo "⚠️ 密钥生成异常，重新生成..." >&2
-    gen_password_by_method "$method"
-    return
-  fi
-
-  echo "$key"
+  # 生成 n 字节随机密钥，并用 Base64 表示（去掉换行）
+  openssl rand -base64 "$n" | tr -d '\n'
 }
 
 json_get() {
@@ -260,7 +236,7 @@ install_action() {
   ensure_launcher
 
   if [ ! -f "$SS_CONFIG" ]; then
-    local PASS; PASS="$(openssl rand -hex 16)"
+    local PASS; PASS="$(openssl rand -base64 16 | tr -d '\n')"
     # 默认端口 2048，如被占用则找一个空闲端口
     local def_port=2048
     if port_used_by_others "$def_port"; then
