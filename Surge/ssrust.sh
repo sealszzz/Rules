@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.4.3"
+SCRIPT_VERSION="1.4.4"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -108,7 +108,6 @@ prompt_method() {
   >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
   >&2 echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
   >&2 echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
-  >&2 echo "  4) 2022-blake3-chacha8-poly1305  (32字节密钥)"
 
   local sel choice
   while true; do
@@ -118,8 +117,7 @@ prompt_method() {
       1) choice="2022-blake3-aes-128-gcm" ;;
       2) choice="2022-blake3-aes-256-gcm" ;;
       3) choice="2022-blake3-chacha20-poly1305" ;;
-      4) choice="2022-blake3-chacha8-poly1305" ;;
-      *) >&2 echo "无效编号，请重新输入 1-4。"; continue ;;
+      *) >&2 echo "无效编号，请重新输入 1-3。"; continue ;;
     esac
     echo "$choice"
     return 0
