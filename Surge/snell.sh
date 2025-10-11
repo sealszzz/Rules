@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -Euo pipefail
 
 SCRIPT_VERSION="1.2.3"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
@@ -143,12 +143,18 @@ random_unused_port() {
 restart_and_verify() {
   systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-  systemctl restart "$SERVICE_NAME" >/dev/null 2>&1
+
+  # 不让重启失败把菜单杀掉
+  if ! systemctl restart "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️ Snell 重启失败，请查看日志： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
+    return 0
+  fi
+
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo -e "${GREEN}✅ Snell 已运行${RESET}"
   else
-    echo -e "${YELLOW}⚠️ Snell 启动失败，请执行： journalctl -u snell -e --no-pager${RESET}"
+    echo -e "${YELLOW}⚠️ Snell 未在运行，请查看日志： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
   fi
 }
 
@@ -288,9 +294,16 @@ install_or_update_action() {
       local URL; URL="$(get_download_url "$latest")"
       wget -O /tmp/snell.zip "$URL"
       unzip -o /tmp/snell.zip -d /tmp >/dev/null
-      mv /tmp/snell-server "$SN_BIN"
-      chmod +x "$SN_BIN"
-      echo "✅ 升级完成 → $(detect_installed_version)"
+
+      # 和 install_snell 一样，稳妥地找出二进制
+      local SN_SRC
+      SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+      if [ -z "$SN_SRC" ]; then
+        echo -e "${RED}❌ 解压后未找到 snell-server，可用 unzip -l /tmp/snell.zip 查看内容${RESET}"
+      else
+        install -m 0755 "$SN_SRC" "$SN_BIN"
+        echo "✅ 升级完成 → $(detect_installed_version)"
+      fi
     else
       echo "已是最新版本，无需升级。"
     fi
