@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.1.9"
+SCRIPT_VERSION="1.1.10"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -10,7 +10,7 @@ SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/m
 #================= snell 基本配置 =================
 SN_USER="snell"
 SN_DIR="/etc/snell"
-SN_CONFIG="$SN_DIR/config.yaml"   # ✅ 改为新版路径
+SN_CONFIG="$SN_DIR/snell.conf"
 SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
@@ -22,7 +22,6 @@ YELLOW="\033[33m"
 CYAN="\033[36m"
 RESET="\033[0m"
 
-#–––––––– helpers ––––––––
 need_root() {
     if [ "${EUID:-$(id -u)}" -ne 0 ]; then
         echo -e "${RED}请用 root 运行：sudo $0${RESET}"
@@ -41,7 +40,6 @@ require_pkg() {
     fi
 }
 
-#–––––––– Snell 版本与下载 ––––––––
 get_latest_version() {
     local url="https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell"
     local html v_beta v_stable
@@ -90,7 +88,6 @@ version_gt(){
     [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]
 }
 
-#–––––––– systemd 相关 ––––––––
 is_active() {
     if [ ! -x "$SN_BIN" ]; then
         echo "未安装"
@@ -209,7 +206,6 @@ self_update() {
     fi
 }
 
-#–––––––– actions ––––––––
 install_snell() {
     set +e
     require_pkg wget unzip curl iproute2
@@ -240,8 +236,7 @@ install_snell() {
     ensure_user_and_dirs
     ensure_launcher
 
-    # ––––– 生成 Snell v5 YAML 配置 –––––
-
+    # ——生成 Snell v3/v4/v5 通用 INI 配置——
     rm -rf "$SN_DIR"
     mkdir -p "$SN_DIR"
     chown "$SN_USER:$SN_USER" "$SN_DIR"
@@ -251,10 +246,11 @@ install_snell() {
     local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
     cat > "$SN_CONFIG" <<EOF
-listen: ::0:${def_port}
-psk: ${PASS}
-ipv6: true
-obfs: off
+[snell-server]
+listen = ::0:${def_port}
+psk = ${PASS}
+ipv6 = true
+obfs = off
 EOF
     chown "$SN_USER:$SN_USER" "$SN_CONFIG"
     chmod 640 "$SN_CONFIG"
@@ -315,7 +311,6 @@ uninstall_action() {
     echo -e "${GREEN}✅ 已卸载 Snell 和管理脚本。${RESET}"
 }
 
-#–––––––– main ––––––––
 need_root
 ensure_launcher
 
