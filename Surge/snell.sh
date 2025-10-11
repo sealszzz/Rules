@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.6"
+SCRIPT_VERSION="1.0.7"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -240,6 +240,11 @@ install_snell() {
   ensure_user_and_dirs
   ensure_launcher
 
+  # ---------- 清理旧配置目录并重新创建 ----------
+  rm -rf "$SN_DIR"
+  mkdir -p "$SN_DIR"
+  chown "$SN_USER:$SN_USER" "$SN_DIR"
+  
   # ---------- 生成配置文件 ----------
   local def_port=2048
   if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
@@ -308,6 +313,8 @@ uninstall_action() {
   if id -u "$SN_USER" >/dev/null 2>&1; then userdel "$SN_USER" 2>/dev/null || true; fi
   rm -f "$SCRIPT_INSTALL" "$SCRIPT_LAUNCHER"
   systemctl daemon-reload
+  systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
+  hash -r 2>/dev/null || true
   echo -e "${GREEN}✅ 已卸载 Snell 和管理脚本。${RESET}"
 }
 
