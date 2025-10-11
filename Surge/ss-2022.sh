@@ -1086,7 +1086,7 @@ install_snell() {
     echo -e "${Info} 开始下载 Snell 安装脚本..."
 
     # 下载 Snell 脚本
-    wget -N --no-check-certificate https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh
+    wget -N --no-check-certificate https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snellv5.sh
 
     if [ $? -ne 0 ]; then
         echo -e "${Error} Snell 脚本下载失败！"
