@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.4"
+SCRIPT_VERSION="1.0.5"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -241,8 +241,22 @@ mv "$SN_SRC" "$SN_BIN"
 chmod +x "$SN_BIN"
 echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
-  ensure_user_and_dirs
-  ensure_launcher
+# ---------- 创建配置目录和用户 ----------
+ensure_user_and_dirs
+ensure_launcher
+
+# ---------- 生成配置文件 ----------
+local def_port=2048
+if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
+local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
+cat > "$SN_CONFIG" <<EOF
+[snell-server]
+listen = ::0:${def_port}
+psk = ${PASS}
+ipv6 = true
+EOF
+chown "$SN_USER:$SN_USER" "$SN_CONFIG"
+chmod 640 "$SN_CONFIG"
 
   local def_port=2048
   if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
