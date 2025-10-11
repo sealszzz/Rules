@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION=“1.0.11”
+SCRIPT_VERSION=“1.0.12”
 SCRIPT_INSTALL=”/usr/local/sbin/snell.sh”
 SCRIPT_LAUNCHER=”/usr/local/bin/snell”
 SCRIPT_REMOTE_RAW=“https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh”
@@ -214,7 +214,7 @@ fi
 chmod +x “$SCRIPT_INSTALL”
 fi
 
-cat > “$SCRIPT_LAUNCHER” <<‘LAUNCH’
+cat > “$SCRIPT_LAUNCHER” << ‘LAUNCH’
 #!/usr/bin/env bash
 exec bash /usr/local/sbin/snell.sh “$@”
 LAUNCH
