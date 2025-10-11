@@ -1,13 +1,11 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-#================= 脚本元信息 =================
-SCRIPT_VERSION="1.1.15"
+SCRIPT_VERSION="1.1.13"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
 
-#================= snell 基本配置 =================
 SN_USER="snell"
 SN_DIR="/etc/snell"
 SN_CONFIG="$SN_DIR/snell-server.conf"
@@ -15,7 +13,6 @@ SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
-#================= 颜色 =================
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -111,7 +108,7 @@ After=network-online.target nss-lookup.target
 
 [Service]
 Type=simple
-ExecStart=$SN_BIN
+ExecStart=$SN_BIN -c $SN_CONFIG
 WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
@@ -216,19 +213,18 @@ self_update() {
   fi
 }
 
-#———【安装或更新 Snell】———
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
 
+  # 如果未装，走安装
   if [ ! -x "$SN_BIN" ]; then
-    # 走安装
     echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
     LATEST="$(get_latest_version || true)"
-    [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
+    [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; pause; return 1; }
     echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
 
     local URL; URL="$(get_download_url "$LATEST")"
-    [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
+    [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; pause; return 1; }
 
     echo -e "${CYAN}下载 Snell 中...${RESET}"
     wget -O /tmp/snell.zip "$URL"
@@ -238,7 +234,7 @@ install_or_update_action() {
     if [ -z "$SN_SRC" ]; then
       echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
       unzip -l /tmp/snell.zip || true
-      return 1
+      pause; return 1
     fi
 
     mv "$SN_SRC" "$SN_BIN"
@@ -267,37 +263,58 @@ EOF
 
     write_service
     restart_and_verify
-    echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
-  else
-    # 走更新
-    local current latest
-    current="$(detect_installed_version || echo '')"
-    latest="$(get_latest_version || true)"
-    [ -z "$latest" ] && { echo "无法获取最新版本。"; pause; return 1; }
 
-    echo "当前版本：$current"
-    echo "最新版本：$latest"
-    if version_gt "$latest" "$current"; then
-      echo "发现新版本，开始升级..."
-      local URL; URL="$(get_download_url "$latest")"
-      wget -O /tmp/snell.zip "$URL"
-      unzip -o /tmp/snell.zip -d /tmp >/dev/null
-      mv /tmp/snell-server "$SN_BIN"
-      chmod +x "$SN_BIN"
-      restart_and_verify
-      echo "✅ 升级完成 → $(detect_installed_version)"
-    else
-      echo "已是最新版本，无需升级。"
-    fi
+    echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
+    echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
+
+    local IP4=$(curl -s4 https://api.ipify.org || true)
+    local COUNTRY4=$(curl -s http://ipinfo.io/${IP4}/country 2>/dev/null || echo "-")
+    echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
+    [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
+    echo -e "${CYAN}——————————${RESET}"
+
+    pause
+    return
   fi
-  # 显示配置
-  echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
-  cat "$SN_CONFIG"
-  echo
+
+  # 已装则走“升级”逻辑，升级后显示配置
+  local current latest
+  current="$(detect_installed_version || echo '')"
+  latest="$(get_latest_version || true)"
+  [ -z "$latest" ] && { echo "无法获取最新版本。"; pause; return 1; }
+
+  echo "当前版本：$current"
+  echo "最新版本：$latest"
+  if version_gt "$latest" "$current"; then
+    echo "发现新版本，开始升级..."
+    local URL; URL="$(get_download_url "$latest")"
+    wget -O /tmp/snell.zip "$URL"
+    unzip -o /tmp/snell.zip -d /tmp >/dev/null
+    mv /tmp/snell-server "$SN_BIN"
+    chmod +x "$SN_BIN"
+    restart_and_verify
+    echo "✅ 升级完成 → $(detect_installed_version)"
+  else
+    echo "已是最新版本，无需升级。"
+  fi
+
+  # 升级后显示配置
+  if [ -f "$SN_CONFIG" ]; then
+    echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
+    cat "$SN_CONFIG"
+    echo
+  fi
   pause
 }
 
-#———【修改配置功能】———
+show_config_action() {
+  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
+  echo "———————————————–"
+  cat "$SN_CONFIG"
+  echo "———————————————–"
+  pause
+}
+
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
   local old_port new_port psk ok=0
@@ -322,9 +339,8 @@ modify_config_action() {
     fi
   fi
 
-  [ "$ok" = 1 ] || return 1
+  [ "$ok" = 1 ] || { pause; return 1; }
 
-  # 新密码随机
   psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -344,14 +360,6 @@ EOF
   pause
 }
 
-show_config_action() {
-  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
-  echo "———————————————–"
-  cat "$SN_CONFIG"
-  echo "———————————————–"
-  pause
-}
-
 uninstall_action() {
   systemctl stop "$SERVICE_NAME" 2>/dev/null || true
   systemctl disable "$SERVICE_NAME" 2>/dev/null || true
@@ -366,7 +374,6 @@ uninstall_action() {
   pause
 }
 
-#================= 主菜单 =================
 need_root
 ensure_launcher
 
@@ -375,9 +382,9 @@ while true; do
   show_header
   echo "1) 安装或更新 Snell"
   echo "2) 查看配置文件"
-  echo "3) 修改配置（仅端口，密码自动变）"
+  echo "3) 修改配置"
   echo "4) 卸载 Snell"
-  echo "5) 升级脚本（从 GitHub 拉取最新）"
+  echo "5) 升级脚本"
   echo "0) 退出"
   echo "———————————————–"
   read -rp "请选择 [0-5]: " choice
@@ -387,7 +394,7 @@ while true; do
     2) show_config_action ;;
     3) modify_config_action ;;
     4) uninstall_action ;;
-    5) self_update ;;
+    5) self_update; pause ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
