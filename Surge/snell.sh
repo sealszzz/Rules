@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.5"
+SCRIPT_VERSION="1.0.6"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -222,42 +222,25 @@ install_snell() {
   [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
 
   echo -e "${CYAN}下载 Snell 中...${RESET}"
-  # ---------- 下载 ----------
   wget -O /tmp/snell.zip "$URL"
-
-  # ---------- 解压 ----------
   unzip -o /tmp/snell.zip -d /tmp >/dev/null
 
-# ---------- 查找 snell-server 文件（兼容不同层级结构） ----------
-SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
-if [ -z "$SN_SRC" ]; then
-  echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
-  unzip -l /tmp/snell.zip || true
-  return 1
-fi
+  SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+  if [ -z "$SN_SRC" ]; then
+    echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
+    unzip -l /tmp/snell.zip || true
+    return 1
+  fi
 
-# ---------- 移动并赋权 ----------
-mv "$SN_SRC" "$SN_BIN"
-chmod +x "$SN_BIN"
-echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
+  mv "$SN_SRC" "$SN_BIN"
+  chmod +x "$SN_BIN"
+  echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
-# ---------- 创建配置目录和用户 ----------
-ensure_user_and_dirs
-ensure_launcher
+  # ---------- 创建配置目录和用户 ----------
+  ensure_user_and_dirs
+  ensure_launcher
 
-# ---------- 生成配置文件 ----------
-local def_port=2048
-if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
-local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
-cat > "$SN_CONFIG" <<EOF
-[snell-server]
-listen = ::0:${def_port}
-psk = ${PASS}
-ipv6 = true
-EOF
-chown "$SN_USER:$SN_USER" "$SN_CONFIG"
-chmod 640 "$SN_CONFIG"
-
+  # ---------- 生成配置文件 ----------
   local def_port=2048
   if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
@@ -270,6 +253,7 @@ EOF
   chown "$SN_USER:$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
 
+  # ---------- 注册服务并启动 ----------
   write_service
   restart_and_verify || true
 
