@@ -198,19 +198,20 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; pause; return 1; fi
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/snell.sh.$$"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$tmp"
-    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; return 1; }
+    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; pause; return 1; }
     install -m 0755 "$tmp" "$SCRIPT_INSTALL"; rm -f "$tmp"
     exec bash "$SCRIPT_INSTALL"
   else
     echo "脚本已是最新版本。"
   fi
+  pause
 }
 
 # ------- "安装或更新"核心 -------
@@ -402,4 +403,36 @@ EOF
       chmod 640 "$SN_CONFIG"
     }
     [ -f "$SERVICE_FILE" ] || {
-      echo -
+      echo -e "${YELLOW}发现缺失 systemd 服务文件，自动补全...${RESET}"
+      write_service
+    }
+  fi
+}
+
+# ------------------- 入口主循环 ------------------
+need_root
+ensure_launcher
+
+while true; do
+  main_self_heal
+  clear
+  show_header
+  echo "1) 安装或更新 Snell"
+  echo "2) 查看配置文件"
+  echo "3) 修改配置"
+  echo "4) 卸载 Snell"
+  echo "5) 更新脚本"
+  echo "0) 退出"
+  echo "———————————————–"
+  read -rp "请选择 [0-5]: " choice
+  echo
+  case "${choice:-}" in
+    1) install_or_update_action ;;
+    2) show_config_action ;;
+    3) modify_config_action ;;
+    4) uninstall_action ;;
+    5) self_update ;;
+    0) echo "Bye"; exit 0 ;;
+    *) echo "无效选项"; pause ;;
+  esac
+done
