@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.2"
+SCRIPT_VERSION="1.0.3"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -110,7 +110,6 @@ write_service() {
 cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Snell Server
-Documentation=https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell
 After=network-online.target nss-lookup.target
 
 [Service]
@@ -120,7 +119,6 @@ WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
 UMask=0077
-
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=on-failure
@@ -137,29 +135,16 @@ port_used_by_others() {
   ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $0}' | grep -q .
 }
 
-prompt_port() {
-  local def="$1" input
-  while true; do
-    read -rp "新端口 (1024-65535，回车默认 $def): " input
-    input="${input:-$def}"
-    if ! [[ "$input" =~ ^[0-9]+$ ]]; then echo "必须是数字。"; continue; fi
-    if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then echo "仅允许 1024-65535。"; continue; fi
-    if port_used_by_others "$input"; then echo "端口 $input 已被占用，请重试。"; continue; fi
-    echo "$input"; return
-  done
-}
-
 restart_and_verify() {
-  systemctl daemon-reload
+  systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-  systemctl restart "$SERVICE_NAME" 2>/dev/null || systemctl start "$SERVICE_NAME" 2>/dev/null || true
+  (systemctl restart "$SERVICE_NAME" 2>/dev/null || systemctl start "$SERVICE_NAME" 2>/dev/null || true) || true
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
-    echo "服务已运行。"
+    echo -e "${GREEN}✅ Snell 已运行${RESET}"
   else
-    echo "⚠️ 服务未能启动，请检查配置。"
-    echo "   查看日志: journalctl -u ${SERVICE_NAME} -e --no-pager"
-    return 1
+    echo -e "${YELLOW}⚠️ Snell 启动失败，请运行以下命令查看日志：${RESET}"
+    echo "journalctl -u ${SERVICE_NAME} -e --no-pager"
   fi
 }
 
@@ -258,7 +243,7 @@ EOF
   chmod 640 "$SN_CONFIG"
 
   write_service
-  restart_and_verify
+  restart_and_verify || true
 
   echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
   echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
