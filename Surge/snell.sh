@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION=“1.0.12”
+SCRIPT_VERSION=“1.0.13”
 SCRIPT_INSTALL=”/usr/local/sbin/snell.sh”
 SCRIPT_LAUNCHER=”/usr/local/bin/snell”
 SCRIPT_REMOTE_RAW=“https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh”
@@ -121,17 +121,17 @@ chown -R “$SN_USER:$SN_USER” “$SN_DIR”
 }
 
 write_service() {
-cat > “$SERVICE_FILE” <<EOF
+cat > “$SERVICE_FILE” << ‘SERVICEEOF’
 [Unit]
 Description=Snell Server
 After=network-online.target nss-lookup.target
 
 [Service]
 Type=simple
-ExecStart=$SN_BIN -c $SN_CONFIG
-WorkingDirectory=$SN_DIR
-User=$SN_USER
-Group=$SN_USER
+ExecStart=/usr/local/bin/snell-server -c /etc/snell/config.yaml
+WorkingDirectory=/etc/snell
+User=snell
+Group=snell
 UMask=0077
 NoNewPrivileges=true
 LimitNOFILE=262144
@@ -140,7 +140,7 @@ RestartSec=5s
 
 [Install]
 WantedBy=multi-user.target
-EOF
+SERVICEEOF
 }
 
 port_used_by_others() {
@@ -214,10 +214,8 @@ fi
 chmod +x “$SCRIPT_INSTALL”
 fi
 
-cat > “$SCRIPT_LAUNCHER” << ‘LAUNCH’
-#!/usr/bin/env bash
-exec bash /usr/local/sbin/snell.sh “$@”
-LAUNCH
+echo ‘#!/usr/bin/env bash’ > “$SCRIPT_LAUNCHER”
+echo ‘exec bash /usr/local/sbin/snell.sh “$@”’ >> “$SCRIPT_LAUNCHER”
 chmod +x “$SCRIPT_LAUNCHER”
 }
 
@@ -317,13 +315,14 @@ fi
 local PASS
 PASS=$(head -c 32 /dev/urandom | base64 | tr -dc ‘A-Za-z0-9’ | head -c 31)
 
-cat > “$SN_CONFIG” <<EOF
+cat > “$SN_CONFIG” << CONFIGEOF
 [snell-server]
 listen = ::0:${def_port}
 psk = ${PASS}
 ipv6 = true
 obfs = off
-EOF
+CONFIGEOF
+
 chown “$SN_USER:$SN_USER” “$SN_CONFIG”
 chmod 640 “$SN_CONFIG”
 
