@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.7"
+SCRIPT_VERSION="1.0.8"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -138,13 +138,12 @@ port_used_by_others() {
 restart_and_verify() {
   systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-  (systemctl restart "$SERVICE_NAME" 2>/dev/null || systemctl start "$SERVICE_NAME" 2>/dev/null || true) || true
+  systemctl restart "$SERVICE_NAME" >/dev/null 2>&1
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo -e "${GREEN}✅ Snell 已运行${RESET}"
   else
-    echo -e "${YELLOW}⚠️ Snell 启动失败，请运行以下命令查看日志：${RESET}"
-    echo "journalctl -u ${SERVICE_NAME} -e --no-pager"
+    echo -e "${YELLOW}⚠️ Snell 启动失败，请执行： journalctl -u snell -e --no-pager${RESET}"
   fi
 }
 
@@ -211,6 +210,7 @@ self_update() {
 
 #---------------- actions ----------------
 install_snell() {
+  set +e
   require_pkg wget unzip curl iproute2
 
   echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
@@ -236,43 +236,38 @@ install_snell() {
   chmod +x "$SN_BIN"
   echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
-  # ---------- 创建配置目录和用户 ----------
   ensure_user_and_dirs
   ensure_launcher
 
-  # ---------- 清理旧配置目录并重新创建 ----------
+  # ---------- 生成 Snell v5 YAML 配置 ----------
   rm -rf "$SN_DIR"
   mkdir -p "$SN_DIR"
   chown "$SN_USER:$SN_USER" "$SN_DIR"
-  
-  # ---------- 生成配置文件 ----------
+
   local def_port=2048
   if port_used_by_others "$def_port"; then def_port=$(shuf -i 30000-39999 -n1); fi
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
+
   cat > "$SN_CONFIG" <<EOF
-[snell-server]
-listen = ::0:${def_port}
-psk = ${PASS}
-ipv6 = true
+listen: ::0:${def_port}
+psk: ${PASS}
+ipv6: true
+obfs: off
 EOF
   chown "$SN_USER:$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
 
-  # ---------- 注册服务并启动 ----------
   write_service
-  restart_and_verify || true
+  restart_and_verify
+  set -e
 
   echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
   echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
 
   local IP4=$(curl -s4 https://api.ipify.org || true)
-  local IP6=$(curl -s6 https://api64.ipify.org || true)
   local COUNTRY4=$(curl -s http://ipinfo.io/${IP4}/country 2>/dev/null || echo "-")
-  local COUNTRY6=$(curl -s https://ipapi.co/${IP6}/country/ 2>/dev/null || echo "-")
-
   echo -e "${CYAN}----- Surge 配置示例 -----${RESET}"
   [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
-  [ -n "$IP6" ] && generate_surge_config "$IP6" "$def_port" "$PASS" "$COUNTRY6" "$LATEST"
   echo -e "${CYAN}--------------------------${RESET}"
 }
 
