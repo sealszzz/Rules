@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-#================= 脚本元信息 =================
-SCRIPT_VERSION="1.1.11"
+SCRIPT_VERSION="1.1.12"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
 
-#================= snell 基本配置 =================
 SN_USER="snell"
 SN_DIR="/etc/snell"
-SN_CONFIG="$SN_DIR/snell.conf"
+SN_CONFIG="$SN_DIR/snell-server.conf"
 SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
-#================= 颜色 =================
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -111,7 +108,7 @@ After=network-online.target nss-lookup.target
 
 [Service]
 Type=simple
-ExecStart=$SN_BIN
+ExecStart=$SN_BIN -c $SN_CONFIG
 WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
@@ -216,7 +213,6 @@ self_update() {
   fi
 }
 
-#———【安装snell并随机端口】———
 install_snell() {
   set +e
   require_pkg wget unzip curl iproute2
@@ -278,7 +274,6 @@ EOF
   echo -e "${CYAN}——————————${RESET}"
 }
 
-#———【修改配置功能】———
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
   local old_port new_port psk ok=0
@@ -305,7 +300,6 @@ modify_config_action() {
 
   [ "$ok" = 1 ] || return 1
 
-  # 新密码随机
   psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -367,7 +361,6 @@ uninstall_action() {
   echo -e "${GREEN}✅ 已卸载 Snell 和管理脚本。${RESET}"
 }
 
-#================= 主菜单 =================
 need_root
 ensure_launcher
 
