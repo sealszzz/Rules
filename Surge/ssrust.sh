@@ -35,9 +35,10 @@ normalize_ver(){ echo "${1:-}" | sed 's/^v//'; }
 version_gt(){ [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]; }
 
 get_latest_version() {
-  # 读取 GitHub Releases 最新 tag
+  require_pkg curl jq
+  # 直接用 jq 取 tag_name，避免 curl | grep 造成的 SIGPIPE
   curl -fsSL https://api.github.com/repos/shadowsocks/shadowsocks-rust/releases/latest \
-    | grep -m1 '"tag_name"' | cut -d '"' -f4
+    | jq -r '.tag_name' 2>/dev/null
 }
 
 get_current_version() {
@@ -195,22 +196,23 @@ self_update() {
   fi
 }
 
-# ====== JSON/配置交互 ======
 prompt_method() {
-  echo "请选择加密方式（会自动生成匹配长度的密码）："
-  echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
-  echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
-  echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
-  local sel
+  >&2 echo "请选择加密方式（会自动生成匹配长度的密码）："
+  >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
+  >&2 echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
+  >&2 echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
+  local sel choice
   while true; do
     read -rp "输入编号 [1-3]（回车默认1）: " sel
     sel="${sel:-1}"
     case "$sel" in
-      1) echo "2022-blake3-aes-128-gcm"; return ;;
-      2) echo "2022-blake3-aes-256-gcm"; return ;;
-      3) echo "2022-blake3-chacha20-poly1305"; return ;;
-      *) echo "无效编号，请重新输入 1-3。";;
+      1) choice="2022-blake3-aes-128-gcm" ;;
+      2) choice="2022-blake3-aes-256-gcm" ;;
+      3) choice="2022-blake3-chacha20-poly1305" ;;
+      *) >&2 echo "无效编号，请重新输入 1-3。"; continue ;;
     esac
+    echo "$choice"   # 仅把最终结果写到 stdout，供 $(...) 捕获
+    return 0
   done
 }
 
