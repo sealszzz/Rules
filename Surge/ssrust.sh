@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-set -Eeuo pipefail
+set -Euo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.4.5"
+SCRIPT_VERSION="1.5.0"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -15,10 +15,13 @@ SS_BIN="/usr/local/bin/ssserver"
 SERVICE_NAME="ssrust"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
+#================= 颜色 =================
+RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
+
 #---------------- helpers ----------------
 need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo "请用 root 运行：sudo $0"; exit 1
+    echo -e "${RED}请用 root 运行：sudo $0${RESET}"; exit 1
   fi
 }
 
@@ -28,20 +31,36 @@ require_pkg() {
   if [ "${#miss[@]}" -gt 0 ]; then apt update && apt install -y "${miss[@]}"; fi
 }
 
+normalize_ver(){ echo "${1:-}" | sed 's/^v//'; }
+version_gt(){ [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]; }
+
 get_latest_version() {
+  # 读取 GitHub Releases 最新 tag
   curl -fsSL https://api.github.com/repos/shadowsocks/shadowsocks-rust/releases/latest \
-   | grep '"tag_name"' | head -n1 | cut -d '"' -f4
+    | grep -m1 '"tag_name"' | cut -d '"' -f4
 }
 
 get_current_version() {
   if [ -x "$SS_BIN" ]; then
+    # 形如：ssserver 1.23.5
     "$SS_BIN" --version 2>/dev/null | awk '{print $2}' || true
   fi
 }
 
-normalize_ver(){ echo "$1" | sed 's/^v//'; }
-version_gt(){
-  [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]
+arch_triple() {
+  case "$(uname -m)" in
+    x86_64|amd64)   echo "x86_64-unknown-linux-gnu" ;;
+    aarch64|arm64)  echo "aarch64-unknown-linux-gnu" ;;
+    armv7l|armv7)   echo "armv7-unknown-linux-gnueabihf" ;;
+    i386|i686)      echo "i686-unknown-linux-gnu" ;;
+    *) echo "unsupported" ;;
+  esac
+}
+
+get_download_url() {
+  local ver="$1" triple; triple="$(arch_triple)"
+  [ "$triple" = "unsupported" ] && { echo >&2 -e "${RED}不支持的架构：$(uname -m)${RESET}"; return 1; }
+  echo "https://github.com/shadowsocks/shadowsocks-rust/releases/download/${ver}/shadowsocks-${ver}.${triple}.tar.xz"
 }
 
 is_active() {
@@ -74,7 +93,6 @@ WorkingDirectory=$SS_DIR
 User=$SS_USER
 Group=$SS_USER
 UMask=0077
-
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=on-failure
@@ -85,17 +103,14 @@ WantedBy=multi-user.target
 EOF
 }
 
-get_main_pid() {
-  systemctl show -p MainPID "$SERVICE_NAME" 2>/dev/null | cut -d= -f2
-}
+get_main_pid(){ systemctl show -p MainPID "$SERVICE_NAME" 2>/dev/null | cut -d= -f2; }
 
 port_used_by_others() {
-  local port="$1"
-  local pid_self; pid_self="$(get_main_pid || echo 0)"
-  if ! command -v ss >/dev/null 2>&1; then require_pkg iproute2; fi
-  local pids
-  pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
-  if [ -z "$pids" ]; then return 1; fi
+  local port="$1" pid_self; pid_self="$(get_main_pid || echo 0)"
+  command -v ss >/dev/null 2>&1 || require_pkg iproute2
+  local pids; pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' \
+    | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
+  [ -z "$pids" ] && return 1
   while read -r p; do
     [ -z "$p" ] && continue
     if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then return 0; fi
@@ -103,68 +118,31 @@ port_used_by_others() {
   return 1
 }
 
-prompt_method() {
-  >&2 echo "请选择加密方式（将随机生成对应长度的密码）："
-  >&2 echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
-  >&2 echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
-  >&2 echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
-
-  local sel choice
-  while true; do
-    read -rp "输入编号 [1-3]（回车默认1）: " sel
-    sel="${sel:-1}"
-    case "$sel" in
-      1) choice="2022-blake3-aes-128-gcm" ;;
-      2) choice="2022-blake3-aes-256-gcm" ;;
-      3) choice="2022-blake3-chacha20-poly1305" ;;
-      *) >&2 echo "无效编号，请重新输入 1-3。"; continue ;;
-    esac
-    echo "$choice"
-    return 0
+random_unused_port() {
+  local port
+  for _ in {1..50}; do
+    port=$(shuf -i 1024-65535 -n1)
+    if ! port_used_by_others "$port"; then echo "$port"; return 0; fi
   done
-}
-
-prompt_port() {
-  local def="$1" input
-  while true; do
-    read -rp "新端口 (1024-65535，回车默认 $def): " input
-    input="${input:-$def}"
-    if ! [[ "$input" =~ ^[0-9]+$ ]]; then >&2 echo "必须是数字。"; continue; fi
-    if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then >&2 echo "仅允许 1024-65535。"; continue; fi
-    if port_used_by_others "$input"; then >&2 echo "端口 $input 已被占用，请重试。"; continue; fi
-    echo "$input"; return
-  done
-}
-
-gen_password_by_method() {
-  local method="$1" n
-  case "$method" in
-    2022-blake3-aes-128-gcm) n=16 ;;   # 需要 16 字节
-    *) n=32 ;;                          # 其余 2022 算法需要 32 字节
-  esac
-  # 生成 n 字节随机密钥，并用 Base64 表示（去掉换行）
-  openssl rand -base64 "$n" | tr -d '\n'
-}
-
-json_get() {
-  local key="$1"
-  jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG"
+  echo 0
 }
 
 restart_and_verify() {
-  systemctl daemon-reload
+  systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-  systemctl restart "$SERVICE_NAME" 2>/dev/null || systemctl start "$SERVICE_NAME" 2>/dev/null || true
+  if ! systemctl restart "$SERVICE_NAME" >/dev/null 2>&1; then
+    echo -e "${YELLOW}⚠️ 服务重启失败，请查看： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
+    return 0
+  fi
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
-    echo "服务已运行。"
+    echo -e "${GREEN}✅ 服务已运行${RESET}"
   else
-    echo "⚠️ 服务未能启动，请检查配置。"
-    echo "   查看日志: journalctl -u ${SERVICE_NAME} -e --no-pager"
-    return 1
+    echo -e "${YELLOW}⚠️ 服务未在运行，请查看： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
   fi
 }
 
+# ====== 展示/交互 ======
 show_header() {
   local curver; curver="$(get_current_version || echo '-')" ; [ -z "$curver" ] && curver='-'
   local status; status="$(is_active)"
@@ -202,7 +180,7 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
+  [ -z "${remote:-}" ] && { echo "获取远端脚本版本失败。"; return 1; }
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
@@ -217,35 +195,80 @@ self_update() {
   fi
 }
 
-#---------------- actions ----------------
-install_action() {
-  if [ -x "$SS_BIN" ]; then
-    echo "检测到已安装（版本：$(get_current_version || echo '-')）。如需升级请选择菜单 2。"
-    return
-  fi
+# ====== JSON/配置交互 ======
+prompt_method() {
+  echo "请选择加密方式（会自动生成匹配长度的密码）："
+  echo "  1) 2022-blake3-aes-128-gcm    (默认，16字节密钥)"
+  echo "  2) 2022-blake3-aes-256-gcm    (32字节密钥)"
+  echo "  3) 2022-blake3-chacha20-poly1305 (32字节密钥)"
+  local sel
+  while true; do
+    read -rp "输入编号 [1-3]（回车默认1）: " sel
+    sel="${sel:-1}"
+    case "$sel" in
+      1) echo "2022-blake3-aes-128-gcm"; return ;;
+      2) echo "2022-blake3-aes-256-gcm"; return ;;
+      3) echo "2022-blake3-chacha20-poly1305"; return ;;
+      *) echo "无效编号，请重新输入 1-3。";;
+    esac
+  done
+}
 
+prompt_port() {
+  local def="$1" input
+  while true; do
+    read -rp "新端口 (1024-65535，回车默认 $def): " input
+    input="${input:-$def}"
+    [[ "$input" =~ ^[0-9]+$ ]] || { echo "必须是数字。"; continue; }
+    [ "$input" -ge 1024 ] && [ "$input" -le 65535 ] || { echo "仅允许 1024-65535。"; continue; }
+    if port_used_by_others "$input"; then echo "端口 $input 已被占用，请重试。"; continue; fi
+    echo "$input"; return
+  done
+}
+
+gen_password_by_method() {
+  local method="$1" n
+  case "$method" in
+    2022-blake3-aes-128-gcm) n=16 ;;   # 16 字节
+    *) n=32 ;;                          # 其余 2022 算法 32 字节
+  esac
+  openssl rand -base64 "$n" | tr -d '\n'
+}
+
+json_get() {
+  local key="$1"
+  # 兼容你现有的平面结构
+  jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG"
+}
+
+# ====== 动作 ======
+install_ss() {
   require_pkg wget xz-utils openssl curl jq iproute2
-  echo "获取最新版..."
+  echo -e "${CYAN}获取最新版...${RESET}"
   LATEST="$(get_latest_version || true)"
-  [ -z "${LATEST:-}" ] && { echo "获取最新版本失败（GitHub API）。"; return 1; }
-  echo "最新版：$LATEST"
+  [ -z "${LATEST:-}" ] && { echo -e "${RED}获取最新版本失败（GitHub API）。${RESET}"; return 1; }
+  echo -e "${YELLOW}最新版：$LATEST${RESET}"
 
-  echo "下载并安装..."
-  wget -qO- "https://github.com/shadowsocks/shadowsocks-rust/releases/download/${LATEST}/shadowsocks-${LATEST}.x86_64-unknown-linux-gnu.tar.xz" \
-   | tar -xJ -C /tmp
-  mv /tmp/ssserver "$SS_BIN"
-  chmod +x "$SS_BIN"
+  local url; url="$(get_download_url "$LATEST")" || return 1
+  echo -e "${CYAN}下载并安装...${RESET}"
+  local tmpdir; tmpdir="$(mktemp -d)"
+  if ! wget -qO- "$url" | tar -xJ -C "$tmpdir"; then
+    echo -e "${RED}下载或解压失败${RESET}"; rm -rf "$tmpdir"; return 1
+  fi
+  if [ ! -f "$tmpdir/ssserver" ]; then
+    echo -e "${RED}未在解压目录找到 ssserver${RESET}"; ls -la "$tmpdir"; rm -rf "$tmpdir"; return 1
+  fi
+  install -m 0755 "$tmpdir/ssserver" "$SS_BIN"
+  rm -rf "$tmpdir"
+  echo -e "${GREEN}✅ 已安装 ssserver 到 $SS_BIN${RESET}"
 
   ensure_user_and_dirs
   ensure_launcher
 
+  # 生成默认配置
   if [ ! -f "$SS_CONFIG" ]; then
+    local def_port; def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=2048
     local PASS; PASS="$(openssl rand -base64 16 | tr -d '\n')"
-    # 默认端口 2048，如被占用则找一个空闲端口
-    local def_port=2048
-    if port_used_by_others "$def_port"; then
-      def_port=$(shuf -i 20000-29999 -n1)
-    fi
     cat > "$SS_CONFIG" <<EOF
 {
   "server": "::",
@@ -256,51 +279,54 @@ install_action() {
   "timeout": 300
 }
 EOF
-    chown "$SS_USER:$SS_USER" "$SS_CONFIG"
-    chmod 640 "$SS_CONFIG"
-    echo "已生成默认配置：端口 $def_port，加密 2022-blake3-aes-128-gcm"
+    chown "$SS_USER:$SS_USER" "$SS_CONFIG"; chmod 640 "$SS_CONFIG"
+    echo -e "${GREEN}默认配置已生成：端口 $def_port，方法 2022-blake3-aes-128-gcm${RESET}"
   fi
 
   write_service
-  systemctl daemon-reload
   restart_and_verify
 
-  echo "安装完成，服务当前状态：$(is_active)"
-  echo "现在起可直接输入：ssrust 进入管理菜单。"
+  echo -e "当前状态：$(is_active)"
+  echo -e "现在起可直接输入：${YELLOW}ssrust${RESET} 进入管理菜单。"
 }
 
-upgrade_action() {
+install_or_update_action() {
+  require_pkg wget xz-utils openssl curl jq iproute2
   if [ ! -x "$SS_BIN" ]; then
-    echo "尚未安装，先执行菜单 1 安装。"; return
+    install_ss; return
   fi
-  require_pkg wget xz-utils curl
   local current latest
   current="$(get_current_version || echo '')"
-  [ -z "$current" ] && { echo "无法获取已装版本。"; return 1; }
   latest="$(get_latest_version || true)"
-  [ -z "$latest" ] && { echo "获取最新版本失败（GitHub API）。"; return 1; }
-
-  echo "当前版本：$current"
+  [ -z "$latest" ] && { echo "无法获取最新版本。"; return 1; }
+  echo "当前版本：${current:-unknown}"
   echo "最新版本：$latest"
-  if version_gt "$latest" "$current"; then
-    echo "发现新版本，开始升级..."
-    wget -qO- "https://github.com/shadowsocks/shadowsocks-rust/releases/download/${latest}/shadowsocks-${latest}.x86_64-unknown-linux-gnu.tar.xz" \
-     | tar -xJ -C /tmp
-    mv /tmp/ssserver "$SS_BIN"
-    chmod +x "$SS_BIN"
-    restart_and_verify || true
-    echo "升级完成 → $(get_current_version)"
-  else
+  if [ -n "$current" ] && ! version_gt "$latest" "$current"; then
     echo "已是最新版本，无需升级。"
+  else
+    echo "发现新版本，开始升级..."
+    local url; url="$(get_download_url "$latest")" || return 1
+    local tmpdir; tmpdir="$(mktemp -d)"
+    if ! wget -qO- "$url" | tar -xJ -C "$tmpdir"; then
+      echo -e "${RED}下载或解压失败${RESET}"; rm -rf "$tmpdir"; return 1
+    fi
+    if [ ! -f "$tmpdir/ssserver" ]; then
+      echo -e "${RED}未在解压目录找到 ssserver${RESET}"; ls -la "$tmpdir"; rm -rf "$tmpdir"; return 1
+    fi
+    install -m 0755 "$tmpdir/ssserver" "$SS_BIN"
+    rm -rf "$tmpdir"
+    echo "✅ 升级完成 → $(get_current_version || echo unknown)"
   fi
+  if [ -f "$SS_CONFIG" ]; then
+    echo -e "${CYAN}当前配置：${RESET}"
+    cat "$SS_CONFIG"
+  fi
+  restart_and_verify
 }
 
 show_config_action() {
-  if [ ! -f "$SS_CONFIG" ]; then
-    echo "未找到配置文件：$SS_CONFIG"; return
-  fi
+  if [ ! -f "$SS_CONFIG" ]; then echo "未找到配置文件：$SS_CONFIG"; return; fi
   require_pkg jq
-  echo "配置文件：$SS_CONFIG"
   local PORT PASS METHOD
   PORT=$(json_get "server_port")
   PASS=$(json_get "password")
@@ -326,11 +352,11 @@ edit_config_action() {
   local def_for_prompt="${cur_port:-2048}"
   local new_port; new_port="$(prompt_port "$def_for_prompt")"
 
-  echo "当前加密方式: $cur_method"
+  echo "当前加密方式: ${cur_method:-未知}"
   local new_method; new_method="$(prompt_method)"
 
   local new_pass="$cur_pass"
-  if [ "$new_method" != "$cur_method" ]; then
+  if [ "$new_method" != "$cur_method" ] || [ -z "${new_pass:-}" ]; then
     new_pass="$(gen_password_by_method "$new_method")"
     echo "已为新加密方式生成随机密码。"
   fi
@@ -349,6 +375,8 @@ EOF
 
   echo "配置已更新，正在重启服务..."
   restart_and_verify
+  echo -e "${CYAN}修改后的配置如下：${RESET}"
+  cat "$SS_CONFIG"
 }
 
 uninstall_action() {
@@ -356,40 +384,63 @@ uninstall_action() {
   systemctl disable "$SERVICE_NAME" 2>/dev/null || true
   rm -f "$SS_BIN" "$SERVICE_FILE"
   rm -rf "$SS_DIR"
-  # 删除用户（忽略找不到 home/mail 的提示）
-  if id -u "$SS_USER" >/dev/null 2>&1; then
-    userdel "$SS_USER" 2>/dev/null || true
-  fi
-  # 删除脚本和启动器
+  if id -u "$SS_USER" >/dev/null 2>&1; then userdel "$SS_USER" 2>/dev/null || true; fi
   rm -f "$SCRIPT_INSTALL" "$SCRIPT_LAUNCHER"
   systemctl daemon-reload
-  echo "✅ 已卸载 ss-rust 和管理脚本。"
+  systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
+  hash -r 2>/dev/null || true
+  echo -e "${GREEN}✅ 已卸载 Shadowsocks-Rust 和管理脚本。${RESET}"
 }
 
-#---------------- main ----------------
+main_self_heal() {
+  if [ -x "$SS_BIN" ]; then
+    ensure_user_and_dirs
+    [ -f "$SS_CONFIG" ] || {
+      echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
+      local def_port; def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=2048
+      local PASS; PASS="$(openssl rand -base64 16 | tr -d '\n')"
+      cat > "$SS_CONFIG" <<EOF
+{
+  "server": "::",
+  "server_port": $def_port,
+  "method": "2022-blake3-aes-128-gcm",
+  "password": "$PASS",
+  "mode": "tcp_and_udp",
+  "timeout": 300
+}
+EOF
+      chown "$SS_USER:$SS_USER" "$SS_CONFIG"; chmod 640 "$SS_CONFIG"
+    }
+    [ -f "$SERVICE_FILE" ] || {
+      echo -e "${YELLOW}发现缺失 systemd 服务文件，自动补全...${RESET}"
+      write_service
+    }
+  fi
+}
+
+# ------------------- 入口主循环 ------------------
 need_root
 ensure_launcher
 
 while true; do
+  main_self_heal
   clear
   show_header
-  echo "1) 安装（装完即运行）"
-  echo "2) 升级（仅新版本才替换并重启）"
+  echo "1) 安装或更新 SSRust"
+  echo "2) 查看配置文件"
   echo "3) 修改配置"
-  echo "4) 查看配置"
-  echo "5) 卸载"
-  echo "6) 升级脚本（从GitHub拉取新版本）"
+  echo "4) 卸载 SSRust"
+  echo "5) 更新脚本"
   echo "0) 退出"
   echo "-----------------------------------------------"
-  read -rp "请选择 [0-6]: " choice
+  read -rp "请选择 [0-5]: " choice
   echo
   case "${choice:-}" in
-    1) install_action; pause ;;
-    2) upgrade_action; pause ;;
-    3) edit_config_action; pause ;;
-    4) show_config_action; pause ;;
-    5) uninstall_action; pause ;;
-    6) self_update; pause ;;
+    1) install_or_update_action; pause ;;
+    2) show_config_action;       pause ;;
+    3) edit_config_action;       pause ;;
+    4) uninstall_action;         pause ;;
+    5) self_update;              pause ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
