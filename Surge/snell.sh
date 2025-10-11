@@ -1,11 +1,13 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.1.13"
+#================= 脚本元信息 =================
+SCRIPT_VERSION="1.1.15"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
 
+#================= snell 基本配置 =================
 SN_USER="snell"
 SN_DIR="/etc/snell"
 SN_CONFIG="$SN_DIR/snell-server.conf"
@@ -13,6 +15,7 @@ SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
+#================= 颜色 =================
 RED="\033[31m"
 GREEN="\033[32m"
 YELLOW="\033[33m"
@@ -108,7 +111,7 @@ After=network-online.target nss-lookup.target
 
 [Service]
 Type=simple
-ExecStart=$SN_BIN -c $SN_CONFIG
+ExecStart=$SN_BIN
 WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
@@ -198,34 +201,34 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; pause; return 1; fi
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/snell.sh.$$"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$tmp"
-    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; pause; return 1; }
+    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; return 1; }
     install -m 0755 "$tmp" "$SCRIPT_INSTALL"; rm -f "$tmp"
     exec bash "$SCRIPT_INSTALL"
   else
     echo "脚本已是最新版本。"
   fi
-  pause
 }
 
-# 1. 安装或升级
-install_or_upgrade_action() {
+#———【安装或更新 Snell】———
+install_or_update_action() {
   require_pkg wget unzip curl iproute2
 
   if [ ! -x "$SN_BIN" ]; then
-    echo -e "${CYAN}未安装 Snell，开始安装...${RESET}"
+    # 走安装
+    echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
     LATEST="$(get_latest_version || true)"
-    [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; pause; return 1; }
+    [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
     echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
 
     local URL; URL="$(get_download_url "$LATEST")"
-    [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; pause; return 1; }
+    [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
 
     echo -e "${CYAN}下载 Snell 中...${RESET}"
     wget -O /tmp/snell.zip "$URL"
@@ -235,7 +238,7 @@ install_or_upgrade_action() {
     if [ -z "$SN_SRC" ]; then
       echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
       unzip -l /tmp/snell.zip || true
-      pause; return 1
+      return 1
     fi
 
     mv "$SN_SRC" "$SN_BIN"
@@ -264,54 +267,37 @@ EOF
 
     write_service
     restart_and_verify
-
     echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
-    local IP4=$(curl -s4 https://api.ipify.org || true)
-    local COUNTRY4=$(curl -s http://ipinfo.io/${IP4}/country 2>/dev/null || echo "-")
-    echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
-    [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
-    echo -e "${CYAN}——————————${RESET}"
-    echo
-    show_config_action
-    pause
-    return
-  fi
-
-  # 已安装，检查升级
-  local current latest
-  current="$(detect_installed_version || echo '')"
-  latest="$(get_latest_version || true)"
-  [ -z "$latest" ] && { echo "无法获取最新版本。"; pause; return 1; }
-
-  echo "当前已安装版本：$current"
-  echo "最新可用版本：$latest"
-  if version_gt "$latest" "$current"; then
-    echo "发现新版本，开始升级..."
-    local URL; URL="$(get_download_url "$latest")"
-    wget -O /tmp/snell.zip "$URL"
-    unzip -o /tmp/snell.zip -d /tmp >/dev/null
-    mv /tmp/snell-server "$SN_BIN"
-    chmod +x "$SN_BIN"
-    restart_and_verify
-    echo "✅ 升级完成 → $(detect_installed_version)"
   else
-    echo "已是最新版本，无需升级。"
+    # 走更新
+    local current latest
+    current="$(detect_installed_version || echo '')"
+    latest="$(get_latest_version || true)"
+    [ -z "$latest" ] && { echo "无法获取最新版本。"; pause; return 1; }
+
+    echo "当前版本：$current"
+    echo "最新版本：$latest"
+    if version_gt "$latest" "$current"; then
+      echo "发现新版本，开始升级..."
+      local URL; URL="$(get_download_url "$latest")"
+      wget -O /tmp/snell.zip "$URL"
+      unzip -o /tmp/snell.zip -d /tmp >/dev/null
+      mv /tmp/snell-server "$SN_BIN"
+      chmod +x "$SN_BIN"
+      restart_and_verify
+      echo "✅ 升级完成 → $(detect_installed_version)"
+    else
+      echo "已是最新版本，无需升级。"
+    fi
   fi
+  # 显示配置
+  echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
+  cat "$SN_CONFIG"
   echo
-  show_config_action
   pause
 }
 
-# 2. 查看配置
-show_config_action() {
-  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; else
-    echo "———————————————–"
-    cat "$SN_CONFIG"
-    echo "———————————————–"
-  fi
-}
-
-# 3. 修改配置
+#———【修改配置功能】———
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
   local old_port new_port psk ok=0
@@ -338,6 +324,7 @@ modify_config_action() {
 
   [ "$ok" = 1 ] || return 1
 
+  # 新密码随机
   psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -357,7 +344,14 @@ EOF
   pause
 }
 
-# 4. 卸载
+show_config_action() {
+  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
+  echo "———————————————–"
+  cat "$SN_CONFIG"
+  echo "———————————————–"
+  pause
+}
+
 uninstall_action() {
   systemctl stop "$SERVICE_NAME" 2>/dev/null || true
   systemctl disable "$SERVICE_NAME" 2>/dev/null || true
@@ -372,24 +366,25 @@ uninstall_action() {
   pause
 }
 
+#================= 主菜单 =================
 need_root
 ensure_launcher
 
 while true; do
   clear
   show_header
-  echo "1) 安装或升级 Snell"
+  echo "1) 安装或更新 Snell"
   echo "2) 查看配置文件"
   echo "3) 修改配置（仅端口，密码自动变）"
   echo "4) 卸载 Snell"
-  echo "5) 更新脚本（从 GitHub 拉取最新）"
+  echo "5) 升级脚本（从 GitHub 拉取最新）"
   echo "0) 退出"
   echo "———————————————–"
   read -rp "请选择 [0-5]: " choice
   echo
   case "${choice:-}" in
-    1) install_or_upgrade_action ;;
-    2) show_config_action; pause ;;
+    1) install_or_update_action ;;
+    2) show_config_action ;;
     3) modify_config_action ;;
     4) uninstall_action ;;
     5) self_update ;;
