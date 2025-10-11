@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.2.1"
+SCRIPT_VERSION="1.2.2"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -214,6 +214,65 @@ self_update() {
   pause
 }
 
+install_snell() {
+  require_pkg wget unzip curl iproute2
+  echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
+  LATEST="$(get_latest_version || true)"
+  [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; pause; return 1; }
+  echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
+
+  local URL; URL="$(get_download_url "$LATEST")"
+  [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; pause; return 1; }
+
+  echo -e "${CYAN}下载 Snell 中...${RESET}"
+  wget -O /tmp/snell.zip "$URL"
+  unzip -o /tmp/snell.zip -d /tmp >/dev/null
+
+  SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+  if [ -z "$SN_SRC" ]; then
+    echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
+    unzip -l /tmp/snell.zip || true
+    pause; return 1
+  fi
+
+  mv "$SN_SRC" "$SN_BIN"
+  chmod +x "$SN_BIN"
+  echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
+
+  ensure_user_and_dirs
+  ensure_launcher
+
+  rm -rf "$SN_DIR"
+  mkdir -p "$SN_DIR"
+  chown "$SN_USER:$SN_USER" "$SN_DIR"
+
+  local def_port; def_port=$(random_unused_port)
+  [ "$def_port" = 0 ] && def_port=2048
+  local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
+
+  cat > "$SN_CONFIG" <<EOF
+[snell-server]
+listen = ::0:${def_port}
+psk = $PASS
+ipv6 = true
+EOF
+  chown "$SN_USER:$SN_USER" "$SN_CONFIG"
+  chmod 640 "$SN_CONFIG"
+
+  write_service
+  restart_and_verify
+
+  echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
+  echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
+
+  local IP4=$(curl -s4 https://api.ipify.org || true)
+  local COUNTRY4=$(curl -s http://ipinfo.io/${IP4}/country 2>/dev/null || echo "-")
+  echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
+  [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
+  echo -e "${CYAN}——————————${RESET}"
+  pause
+}
+
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
 
@@ -246,8 +305,8 @@ install_or_update_action() {
       cat "$SN_CONFIG"
     fi
     restart_and_verify
+    pause
   fi
-  pause
 }
 
 modify_config_action() {
@@ -316,7 +375,6 @@ uninstall_action() {
   pause
 }
 
-# ------- 每次主菜单前自愈，缺啥补啥 -------
 main_self_heal() {
   if [ -x "$SN_BIN" ]; then
     ensure_user_and_dirs
@@ -346,6 +404,7 @@ need_root
 ensure_launcher
 
 while true; do
+  main_self_heal
   clear
   show_header
   echo "1) 安装或更新 Snell"
@@ -359,10 +418,10 @@ while true; do
   echo
   case "${choice:-}" in
     1) install_or_update_action ;;
-    2) show_config_action; pause ;;
+    2) show_config_action ;;
     3) modify_config_action ;;
-    4) uninstall_action; pause ;;
-    5) self_update; pause ;;
+    4) uninstall_action ;;
+    5) self_update ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
