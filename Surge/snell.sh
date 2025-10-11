@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.2.2"
+SCRIPT_VERSION="1.2.3"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -270,22 +270,17 @@ EOF
   echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
   [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
   echo -e "${CYAN}——————————${RESET}"
-  pause
 }
 
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
-
   if [ ! -x "$SN_BIN" ]; then
-    # 未安装，走 install 流程
     install_snell
   else
-    # 已安装，走升级逻辑
     local current latest
     current="$(detect_installed_version || echo '')"
     latest="$(get_latest_version || true)"
-    [ -z "$latest" ] && { echo "无法获取最新版本。"; pause; return 1; }
-
+    [ -z "$latest" ] && { echo "无法获取最新版本。"; return 1; }
     echo "当前版本：$current"
     echo "最新版本：$latest"
     if version_gt "$latest" "$current"; then
@@ -299,23 +294,20 @@ install_or_update_action() {
     else
       echo "已是最新版本，无需升级。"
     fi
-    # 升级完成，显示当前配置并启动Snell
     if [ -f "$SN_CONFIG" ]; then
       echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
       cat "$SN_CONFIG"
     fi
     restart_and_verify
-    pause
   fi
 }
 
 modify_config_action() {
-  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
+  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
   local old_port new_port psk ok=0
   old_port=$(awk -F ':' '/^listen/ {gsub(/[ ]+/,"",$2); split($2,a,":"); print a[2]}' "$SN_CONFIG" | tr -d '\r\n ')
   echo -e "${YELLOW}当前监听端口：$old_port${RESET}"
   read -rp "输入新端口 [1024-65535，回车=随机]：" new_port
-
   if [ -z "$new_port" ]; then
     new_port=$(random_unused_port)
     [ "$new_port" = 0 ] && new_port=2048
@@ -324,33 +316,27 @@ modify_config_action() {
     if [[ "$new_port" =~ ^[0-9]+$ ]] && [ "$new_port" -ge 1024 ] && [ "$new_port" -le 65535 ]; then
       if port_used_by_others "$new_port"; then
         echo -e "${RED}❌ 端口 $new_port 已被占用，请换一个${RESET}"
-        pause; return
+        return
       fi
       ok=1
     else
       echo -e "${RED}❌ 端口必须在 1024-65535 范围内${RESET}"
-      pause; return
+      return
     fi
   fi
-
-  [ "$ok" = 1 ] || { pause; return 1; }
-
+  [ "$ok" = 1 ] || return 1
   psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
-
   cat > "$SN_CONFIG" <<EOF
 [snell-server]
 listen = ::0:${new_port}
 psk = $psk
 ipv6 = true
 EOF
-
   chown "$SN_USER:$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
   restart_and_verify
-
   echo -e "${CYAN}修改后的配置如下：${RESET}"
   cat "$SN_CONFIG"
-  pause
 }
 
 show_config_action() {
@@ -417,11 +403,11 @@ while true; do
   read -rp "请选择 [0-5]: " choice
   echo
   case "${choice:-}" in
-    1) install_or_update_action ;;
-    2) show_config_action ;;
-    3) modify_config_action ;;
-    4) uninstall_action ;;
-    5) self_update ;;
+    1) install_or_update_action; pause ;;
+    2) show_config_action; pause ;;
+    3) modify_config_action; pause ;;
+    4) uninstall_action; pause ;;
+    5) self_update; pause ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
