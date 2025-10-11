@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.0.8"
+SCRIPT_VERSION="1.0.9"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -10,7 +10,7 @@ SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/m
 #================= snell 基本配置 =================
 SN_USER="snell"
 SN_DIR="/etc/snell"
-SN_CONFIG="$SN_DIR/snell.conf"
+SN_CONFIG="$SN_DIR/config.yaml"   # ✅ 改为新版路径
 SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
@@ -114,7 +114,7 @@ After=network-online.target nss-lookup.target
 
 [Service]
 Type=simple
-ExecStart=$SN_BIN -c $SN_CONFIG
+ExecStart=$SN_BIN        # ✅ 去掉 -c 参数
 WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
