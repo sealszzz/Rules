@@ -40,11 +40,11 @@ get_latest_version() {
   html=$(curl -fsSL --connect-timeout 5 -m 10 "$url") || return 1
 
   v_beta=$(printf '%s' "$html" \
-    | grep -oE 'snell-server-v[0-9]+.[0-9]+.[0-9]+b[0-9]+' \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+' \
     | sed -E 's/^snell-server-v//' \
     | sed -E 's/b([0-9]+)/-beta.\1/' \
     | sort -V | tail -n1 \
-    | sed -E 's/-beta.([0-9]+)/b\1/')
+    | sed -E 's/-beta\.([0-9]+)/b\1/')
 
   if [ -n "$v_beta" ]; then
     echo "v${v_beta}"
@@ -52,7 +52,7 @@ get_latest_version() {
   fi
 
   v_stable=$(printf '%s' "$html" \
-    | grep -oE 'snell-server-v[0-9]+.[0-9]+.[0-9]+' \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+' \
     | sed -E 's/^snell-server-v//' \
     | sort -V | tail -n1)
   [ -n "$v_stable" ] && echo "v${v_stable}"
@@ -73,7 +73,7 @@ get_download_url() {
 
 detect_installed_version() {
   if [ -x "$SN_BIN" ]; then
-    "$SN_BIN" -v 2>&1 | grep -oP 'v[0-9]+.[0-9]+.[0-9]+[a-z0-9]*' | head -n1 || echo "unknown"
+    "$SN_BIN" -v 2>&1 | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+[a-z0-9]*' | head -n1 || echo "unknown"
   else
     echo "unknown"
   fi
@@ -143,13 +143,10 @@ random_unused_port() {
 restart_and_verify() {
   systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-
-  # 不让重启失败把菜单杀掉
   if ! systemctl restart "$SERVICE_NAME" >/dev/null 2>&1; then
     echo -e "${YELLOW}⚠️ Snell 重启失败，请查看日志： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
     return 0
   fi
-
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo -e "${GREEN}✅ Snell 已运行${RESET}"
@@ -204,31 +201,30 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; pause; return 1; fi
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/snell.sh.$$"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$tmp"
-    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; pause; return 1; }
+    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; return 1; }
     install -m 0755 "$tmp" "$SCRIPT_INSTALL"; rm -f "$tmp"
     exec bash "$SCRIPT_INSTALL"
   else
     echo "脚本已是最新版本。"
   fi
-  pause
 }
 
 install_snell() {
   require_pkg wget unzip curl iproute2
   echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
   LATEST="$(get_latest_version || true)"
-  [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; pause; return 1; }
+  [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
   echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
 
   local URL; URL="$(get_download_url "$LATEST")"
-  [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; pause; return 1; }
+  [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
 
   echo -e "${CYAN}下载 Snell 中...${RESET}"
   wget -O /tmp/snell.zip "$URL"
@@ -238,7 +234,7 @@ install_snell() {
   if [ -z "$SN_SRC" ]; then
     echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
     unzip -l /tmp/snell.zip || true
-    pause; return 1
+    return 1
   fi
 
   mv "$SN_SRC" "$SN_BIN"
@@ -318,7 +314,8 @@ install_or_update_action() {
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
   local old_port new_port psk ok=0
-  old_port=$(awk -F ':' '/^listen/ {gsub(/[ ]+/,"",$2); split($2,a,":"); print a[2]}' "$SN_CONFIG" | tr -d '\r\n ')
+  # 取 listen = ::0:PORT 的最后一个冒号后的数字
+  old_port=$(awk -F ':' '/^[[:space:]]*listen[[:space:]]*=/{print $NF}' "$SN_CONFIG" | tr -dc '0-9')
   echo -e "${YELLOW}当前监听端口：$old_port${RESET}"
   read -rp "输入新端口 [1024-65535，回车=随机]：" new_port
   if [ -z "$new_port" ]; then
@@ -353,11 +350,10 @@ EOF
 }
 
 show_config_action() {
-  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; pause; return; fi
+  if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
   echo "———————————————–"
   cat "$SN_CONFIG"
   echo "———————————————–"
-  pause
 }
 
 uninstall_action() {
@@ -371,7 +367,6 @@ uninstall_action() {
   systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
   hash -r 2>/dev/null || true
   echo -e "${GREEN}✅ 已卸载 Snell 和管理脚本。${RESET}"
-  pause
 }
 
 main_self_heal() {
