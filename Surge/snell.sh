@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION=“1.0.10”
+SCRIPT_VERSION=“1.0.11”
 SCRIPT_INSTALL=”/usr/local/sbin/snell.sh”
 SCRIPT_LAUNCHER=”/usr/local/bin/snell”
 SCRIPT_REMOTE_RAW=“https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh”
@@ -33,7 +33,9 @@ fi
 require_pkg() {
 local pkgs=(”$@”) miss=()
 for p in “${pkgs[@]}”; do
-dpkg -s “$p” >/dev/null 2>&1 || miss+=(”$p”)
+if ! dpkg -s “$p” >/dev/null 2>&1; then
+miss+=(”$p”)
+fi
 done
 if [ “${#miss[@]}” -gt 0 ]; then
 apt update && apt install -y “${miss[@]}”
@@ -48,11 +50,7 @@ html=$(curl -fsSL –connect-timeout 10 -m 15 “$url”) || return 1
 
 # 匹配 beta 版本
 
-v_beta=$(echo “$html”   
-| grep -oE ‘snell-server-v[0-9]+.[0-9]+.[0-9]+b[0-9]+’   
-| sed -E ‘s/^snell-server-v//’   
-| sort -Vr   
-| head -n1)
+v_beta=$(echo “$html” | grep -oE ‘snell-server-v[0-9]+.[0-9]+.[0-9]+b[0-9]+’ | sed -E ‘s/^snell-server-v//’ | sort -Vr | head -n1)
 
 if [ -n “$v_beta” ]; then
 echo “v${v_beta}”
@@ -61,12 +59,7 @@ fi
 
 # 匹配稳定版本
 
-v_stable=$(echo “$html”   
-| grep -oE ‘snell-server-v[0-9]+.[0-9]+.[0-9]+[^b]’   
-| sed -E ‘s/^snell-server-v//’   
-| grep -E ‘^[0-9]+.[0-9]+.[0-9]+$’   
-| sort -Vr   
-| head -n1)
+v_stable=$(echo “$html” | grep -oE ‘snell-server-v[0-9]+.[0-9]+.[0-9]+[^b]’ | sed -E ‘s/^snell-server-v//’ | grep -E ‘^[0-9]+.[0-9]+.[0-9]+$’ | sort -Vr | head -n1)
 
 [ -n “$v_stable” ] && echo “v${v_stable}”
 }
@@ -86,7 +79,9 @@ esac
 
 detect_installed_version() {
 if [ -x “$SN_BIN” ]; then
-“$SN_BIN” -v 2>&1 | grep -oE ‘v[0-9]+.[0-9]+.[0-9]+[a-z0-9]*’ | head -n1 || echo “unknown”
+local ver_output
+ver_output=$(”$SN_BIN” -v 2>&1)
+echo “$ver_output” | grep -oE ‘v[0-9]+.[0-9]+.[0-9]+[a-z0-9]*’ | head -n1 || echo “unknown”
 else
 echo “unknown”
 fi
@@ -101,7 +96,9 @@ local v1 v2
 v1=$(normalize_ver “$1”)
 v2=$(normalize_ver “$2”)
 [ “$v1” = “$v2” ] && return 1
-[ “$(printf ‘%s\n%s\n’ “$v1” “$v2” | sort -V | head -n1)” != “$v1” ]
+local sorted
+sorted=$(printf ‘%s\n%s\n’ “$v1” “$v2” | sort -V | head -n1)
+[ “$sorted” != “$v1” ]
 }
 
 #–––––––– systemd 相关 ––––––––
@@ -116,7 +113,9 @@ fi
 }
 
 ensure_user_and_dirs() {
-id -u “$SN_USER” >/dev/null 2>&1 || useradd -r -M -d “$SN_DIR” -s /usr/sbin/nologin “$SN_USER”
+if ! id -u “$SN_USER” >/dev/null 2>&1; then
+useradd -r -M -d “$SN_DIR” -s /usr/sbin/nologin “$SN_USER”
+fi
 mkdir -p “$SN_DIR”
 chown -R “$SN_USER:$SN_USER” “$SN_DIR”
 }
@@ -146,8 +145,12 @@ EOF
 
 port_used_by_others() {
 local port=”$1”
-if ! command -v ss >/dev/null 2>&1; then require_pkg iproute2; fi
-ss -lntupH 2>/dev/null | awk -v P=”:$port” ‘$4 ~ P {print $0}’ | grep -qv snell
+if ! command -v ss >/dev/null 2>&1; then
+require_pkg iproute2
+fi
+local check_result
+check_result=$(ss -lntupH 2>/dev/null | awk -v P=”:$port” ‘$4 ~ P {print $0}’ | grep -v snell)
+[ -n “$check_result” ]
 }
 
 restart_and_verify() {
@@ -170,7 +173,8 @@ local psk=”$3”
 local country=”$4”
 local ver=”$5”
 ver=”${ver#v}”
-echo -e “${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${ver%%b*}, reuse = true, tfo = true${RESET}”
+ver=”${ver%%b*}”
+echo -e “${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${ver}, reuse = true, tfo = true${RESET}”
 }
 
 show_header() {
@@ -194,7 +198,11 @@ read -rp “按回车键返回菜单…” _ || true
 ensure_launcher() {
 mkdir -p “$(dirname “$SCRIPT_INSTALL”)”
 local self
-self=”$(readlink -f “$0” 2>/dev/null || realpath “$0” 2>/dev/null || echo “$0”)”
+if [ -f “$0” ]; then
+self=$(readlink -f “$0” 2>/dev/null || realpath “$0” 2>/dev/null || echo “$0”)
+else
+self=”$0”
+fi
 
 if [[ “$self” == /proc/*/fd/* ]] || [[ “$self” == /dev/fd/* ]]; then
 curl -fsSL “$SCRIPT_REMOTE_RAW” -o “$SCRIPT_INSTALL” || return 1
@@ -214,7 +222,9 @@ chmod +x “$SCRIPT_LAUNCHER”
 }
 
 remote_script_version() {
-curl -fsSL “$SCRIPT_REMOTE_RAW” 2>/dev/null | grep -m1 ‘^SCRIPT_VERSION=’ | sed ‘s/^SCRIPT_VERSION=//; s/”//g’
+local remote_content
+remote_content=$(curl -fsSL “$SCRIPT_REMOTE_RAW” 2>/dev/null)
+echo “$remote_content” | grep -m1 ‘^SCRIPT_VERSION=’ | sed ‘s/^SCRIPT_VERSION=//; s/”//g’
 }
 
 self_update() {
@@ -231,7 +241,11 @@ if version_gt “$remote” “$SCRIPT_VERSION”; then
 echo “发现新版本，正在更新脚本…”
 local tmp=”/tmp/snell.sh.$$”
 curl -fsSL “$SCRIPT_REMOTE_RAW” -o “$tmp” || { echo “下载失败”; return 1; }
-grep -q ‘^SCRIPT_VERSION=’ “$tmp” || { echo “远端脚本异常”; rm -f “$tmp”; return 1; }
+if ! grep -q ‘^SCRIPT_VERSION=’ “$tmp”; then
+echo “远端脚本异常”
+rm -f “$tmp”
+return 1
+fi
 install -m 0755 “$tmp” “$SCRIPT_INSTALL”
 rm -f “$tmp”
 echo “✅ 更新成功，重新启动脚本…”
@@ -301,7 +315,7 @@ if port_used_by_others “$def_port”; then
 def_port=$(shuf -i 30000-39999 -n1)
 fi
 local PASS
-PASS=”$(tr -dc A-Za-z0-9 </dev/urandom | head -c 31)”
+PASS=$(head -c 32 /dev/urandom | base64 | tr -dc ‘A-Za-z0-9’ | head -c 31)
 
 cat > “$SN_CONFIG” <<EOF
 [snell-server]
