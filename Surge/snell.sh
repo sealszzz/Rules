@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-SCRIPT_VERSION="1.1.13"
+SCRIPT_VERSION="1.1.12"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -198,26 +198,27 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; pause; return 1; fi
   echo "本地脚本版本：$SCRIPT_VERSION"
   echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/snell.sh.$$"
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$tmp"
-    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; return 1; }
+    grep -q '^SCRIPT_VERSION=' "$tmp" || { echo "远端脚本异常"; rm -f "$tmp"; pause; return 1; }
     install -m 0755 "$tmp" "$SCRIPT_INSTALL"; rm -f "$tmp"
     exec bash "$SCRIPT_INSTALL"
   else
     echo "脚本已是最新版本。"
   fi
+  pause
 }
 
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
 
-  # 如果未装，走安装
   if [ ! -x "$SN_BIN" ]; then
+    # 安装
     echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
     LATEST="$(get_latest_version || true)"
     [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; pause; return 1; }
@@ -272,12 +273,11 @@ EOF
     echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
     [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
     echo -e "${CYAN}——————————${RESET}"
-
     pause
     return
   fi
 
-  # 已装则走“升级”逻辑，升级后显示配置
+  # 已装，检查升级
   local current latest
   current="$(detect_installed_version || echo '')"
   latest="$(get_latest_version || true)"
@@ -298,12 +298,10 @@ EOF
     echo "已是最新版本，无需升级。"
   fi
 
-  # 升级后显示配置
-  if [ -f "$SN_CONFIG" ]; then
-    echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
-    cat "$SN_CONFIG"
-    echo
-  fi
+  # 无论升级与否都显示当前配置
+  echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
+  cat "$SN_CONFIG"
+  echo
   pause
 }
 
@@ -339,7 +337,7 @@ modify_config_action() {
     fi
   fi
 
-  [ "$ok" = 1 ] || { pause; return 1; }
+  [ "$ok" = 1 ] || return 1
 
   psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
@@ -384,7 +382,7 @@ while true; do
   echo "2) 查看配置文件"
   echo "3) 修改配置"
   echo "4) 卸载 Snell"
-  echo "5) 升级脚本"
+  echo "5) 升级脚本（从 GitHub 拉取最新）"
   echo "0) 退出"
   echo "———————————————–"
   read -rp "请选择 [0-5]: " choice
@@ -394,7 +392,7 @@ while true; do
     2) show_config_action ;;
     3) modify_config_action ;;
     4) uninstall_action ;;
-    5) self_update; pause ;;
+    5) self_update ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
