@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.0"
+SCRIPT_VERSION="3.1.1"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -135,9 +135,19 @@ update_geodata(){
 
 #---------------- 配置生成 ----------------
 prompt_listen_addr(){
-  echo; echo "监听地址："; echo "  1) 0.0.0.0   （默认，对外可连）"; echo "  2) 127.0.0.1 （仅本机；配合 Nginx stream 更隐蔽）"
-  read -rp "选择 1/2 [默认1]: " n; n="${n:-1}"
-  [ "$n" = "2" ] && echo "127.0.0.1" || echo "0.0.0.0"
+  echo
+  cat <<'TEXT'
+监听地址：
+  1) 0.0.0.0    （默认；对外可直连）
+  2) 127.0.0.1  （仅本机；配合 Nginx stream 更隐蔽）
+TEXT
+  read -rp "请选择 1/2 [默认1]: " n
+  n="${n:-1}"
+  if [ "$n" = "2" ]; then
+    echo "127.0.0.1"
+  else
+    echo "0.0.0.0"
+  fi
 }
 
 write_config(){
@@ -215,11 +225,21 @@ install_xray(){
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
 
   echo "生成 Reality 密钥对 ..."
-  local kp; kp=$("$XRAY_BIN" x25519)
-  local priv=$(echo "$kp" | awk '/Private key/ {print $3}')
-  local pub=$( echo "$kp" | awk '/Public key/  {print $3}')
-  [ -n "$priv" ] && [ -n "$pub" ] || { echo -e "${RED}生成密钥失败${RESET}"; return; }
+# 兼容不同版本的 xray x25519 输出（Private key / PrivateKey 等）
+local out priv pub
+out="$("$XRAY_BIN" x25519 2>&1 || true)"
 
+# 提取“冒号后的所有内容”，去掉前后空白
+priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^private[[:space:]]*key/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^public[[:space:]]*key/  {print $2; exit}' | sed 's/[[:space:]]*$//')"
+
+if [[ -z "$priv" || -z "$pub" ]]; then
+  echo -e "${RED}生成密钥失败：无法从 xray 输出中解析${RESET}"
+  echo "—— xray x25519 原始输出 ——"
+  echo "$out"
+  return 1
+fi
+  
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
   view_info
