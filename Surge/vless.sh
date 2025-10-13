@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.2.1"
+SCRIPT_VERSION="3.2.2"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -229,7 +229,7 @@ install_xray(){
   read -rp "UUID（留空自动生成）： " uuid; uuid=${uuid:-$(cat /proc/sys/kernel/random/uuid)}
   is_uuid "$uuid" || { echo -e "${RED}UUID 无效${RESET}"; return; }
 
-  read -rp "$(echo -e "SNI 伪装域名（默认 ${CYAN}learn.microsoft.com${RESET}）：")" sni; sni=${sni:-learn.microsoft.com}
+  read -rp "$(echo -e "SNI 伪装域名（默认 ${CYAN}www.lovelive-anime.jp${RESET}）：")" sni; sni=${sni:-www.lovelive-anime.jp}
   is_domain "$sni" || { echo -e "${RED}域名无效${RESET}"; return; }
 
   listen=$(prompt_listen_addr)
@@ -360,7 +360,7 @@ main(){
 
   if [[ $# -gt 0 && "$1" == "install" ]]; then
     shift
-    local port=443 uuid="" sni="learn.microsoft.com" listen="0.0.0.0" shortid=""
+    local port=443 uuid="" sni="www.lovelive-anime.jp" listen="0.0.0.0" shortid=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --port)   port="$2"; shift 2 ;;
