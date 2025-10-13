@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.7"
+SCRIPT_VERSION="3.1.8"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -15,19 +15,8 @@ XRAY_SERVICE="xray"
 XRAY_INSTALLER_URL="https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
 GITHUB_API_RELEASES="https://api.github.com/repos/XTLS/Xray-core/releases/latest"
 
-#================= UI/颜色 & 小提示开关 =================
+#================= 颜色 =================
 RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
-# 小提示：1=显示，0=隐藏
-SHOW_TIPS=1
-
-tips() {
-  [ "${SHOW_TIPS:-1}" = "1" ] || return 0
-  echo -e "${YELLOW}小贴士：${RESET}"
-  echo " - 监听 127.0.0.1 时，用 Nginx stream 基于 SNI 分流到本机端口更隐蔽。"
-  echo " - Reality 的 SNI 不要填你自己 VPS 的域名，用大站域名（如 learn.microsoft.com）。"
-  echo " - 端口被占用多见于 Nginx/TUIC/其它服务；换端口或停掉占用方。"
-  echo
-}
 
 #---------------- helpers ----------------
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo -e "${RED}请用 root 运行${RESET}"; exit 1; }; }
@@ -146,14 +135,23 @@ update_geodata(){
 }
 
 #---------------- 配置生成 ----------------
+# 关键修复：说明文字输出到 stderr，仅地址写到 stdout，避免被写进 config.json
 prompt_listen_addr(){
-  echo
-  echo "监听地址："
-  echo "  1) 0.0.0.0    （对外可直连，默认）"
-  echo "  2) 127.0.0.1  （仅本机；需配合 Nginx stream 分流）"
+  >&2 echo "监听地址："
+  >&2 echo "  1) 0.0.0.0    （对外可直连，默认）"
+  >&2 echo "  2) 127.0.0.1  （仅本机；需配合 Nginx stream 分流）"
   read -rp "请选择 [1-2]（默认 1）： " n
   n="${n:-1}"
   [[ "$n" = "2" ]] && echo "127.0.0.1" || echo "0.0.0.0"
+}
+
+# 稳健解析 x25519 输出：兼容 PrivateKey/Private key、PublicKey/Public key；无 Public 时用 Password 兜底
+parse_x25519(){
+  local out="$1" priv="" pub=""
+  priv="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]rivate[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
+  pub="$( printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]ublic[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p'  | head -n1)"
+  [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]assword[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
+  echo "$priv|$pub"
 }
 
 write_config(){
@@ -194,32 +192,24 @@ write_config(){
     }],
     "outbounds": [{"protocol":"freedom","settings":{"domainStrategy":"UseIPv4v6"}}]
   }' > "$XRAY_CONFIG"
+  chmod 644 "$XRAY_CONFIG"
 }
 
 restart_xray(){
-  systemctl enable --now "$XRAY_SERVICE" >/dev/null 2>&1 || true
+  systemctl enable "$XRAY_SERVICE" >/dev/null 2>&1 || true
   if ! systemctl restart "$XRAY_SERVICE"; then
     echo -e "${YELLOW}⚠️ 重启失败，查看日志：journalctl -u $XRAY_SERVICE -e --no-pager${RESET}"
     return 1
   fi
-  sleep 1
-  if systemctl is-active --quiet "$XRAY_SERVICE"; then
-    echo -e "${GREEN}✅ Xray 已运行${RESET}"
-  else
-    echo -e "${YELLOW}⚠️ Xray 未在运行，检查日志${RESET}"
-    return 1
-  fi
-}
-
-# 解析 xray x25519 输出（兼容 PrivateKey/Private key、PublicKey/Public key、或 Password=公钥）
-parse_x25519(){
-  local out="$1" priv="" pub=""
-  # 提取私钥
-  priv="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]rivate[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
-  # 提取公钥（优先 Public，其次 Password）
-  pub="$( printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]ublic[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p'         | head -n1)"
-  [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]assword[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
-  echo "$priv|$pub"
+  for i in {1..8}; do
+    if systemctl is-active --quiet "$XRAY_SERVICE"; then
+      echo -e "${GREEN}✅ Xray 已运行${RESET}"
+      return 0
+    fi
+    sleep 1
+  done
+  echo -e "${YELLOW}⚠️ Xray 未在运行，检查日志：journalctl -u $XRAY_SERVICE -e --no-pager${RESET}"
+  return 1
 }
 
 #---------------- 安装/修改/信息 ----------------
@@ -237,10 +227,10 @@ install_xray(){
   is_domain "$sni" || { echo -e "${RED}域名无效${RESET}"; return; }
 
   listen=$(prompt_listen_addr)
-  tips
 
   echo "安装/更新 Xray 核心 ..."
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
+  systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
   echo "生成 Reality 密钥对 ..."
   local out priv pub pair
@@ -265,7 +255,7 @@ modify_config(){
   cur_port=$(jq -r '.inbounds[0].port' "$XRAY_CONFIG")
   cur_uuid=$(jq -r '.inbounds[0].settings.clients[0].id' "$XRAY_CONFIG")
   cur_sni=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$XRAY_CONFIG")
-  cur_listen=$(jq -r '.inbounds[0].listen' "$XRAY_CONFIG")
+  cur_listen=$(jq -r '.inbounds[0].listen // "0.0.0.0"' "$XRAY_CONFIG")
   priv=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$XRAY_CONFIG")
   pub=$( jq -r '.inbounds[0].streamSettings.realitySettings.publicKey'  "$XRAY_CONFIG")
 
@@ -277,9 +267,7 @@ modify_config(){
   read -rp "UUID（当前 $cur_uuid）： " uuid; uuid=${uuid:-$cur_uuid}; is_uuid "$uuid" || { echo "UUID 无效"; return; }
   read -rp "SNI（当前 $cur_sni）： " sni;   sni=${sni:-$cur_sni};   is_domain "$sni" || { echo "域名无效"; return; }
 
-  echo; echo "监听地址（当前 ${cur_listen:-0.0.0.0}）："
-  listen=$(prompt_listen_addr); listen=${listen:-${cur_listen:-0.0.0.0}}
-  tips
+  listen=$(prompt_listen_addr); listen=${listen:-$cur_listen}
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
@@ -288,38 +276,30 @@ modify_config(){
 
 view_info(){
   [ -f "$XRAY_CONFIG" ] || { echo "未安装"; return; }
-  local ip uuid port sni pub sid display_ip
+  local ip uuid port sni pub sid
   ip=$(get_public_ip)
   uuid=$(jq -r '.inbounds[0].settings.clients[0].id' "$XRAY_CONFIG")
   port=$(jq -r '.inbounds[0].port' "$XRAY_CONFIG")
   sni=$( jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$XRAY_CONFIG")
   pub=$( jq -r '.inbounds[0].streamSettings.realitySettings.publicKey'  "$XRAY_CONFIG")
   sid=$( jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0]' "$XRAY_CONFIG")
-  display_ip="$ip"; [[ "$ip" == *:* ]] && display_ip="[$ip]"
   local name="$(hostname) X-reality"; local enc=$(printf '%s' "$name" | sed 's/ /%20/g')
-  local link="vless://${uuid}@${display_ip}:${port}?flow=xtls-rprx-vision&encryption=none&type=tcp&security=reality&sni=${sni}&fp=chrome&pbk=${pub}&sid=${sid}#${enc}"
+  local link="vless://${uuid}@${ip}:${port}?flow=xtls-rprx-vision&encryption=none&type=tcp&security=reality&sni=${sni}&fp=chrome&pbk=${pub}&sid=${sid}#${enc}"
   echo "----------------------------------------------------------------"
   echo -e "${GREEN}订阅：${RESET} $link"
   echo "----------------------------------------------------------------"
 }
 
 uninstall_xray(){
-  # 按要求：卸载不二次确认
+  # 保留一次确认（如需无确认，删掉下面两行判断即可）
+  read -rp "确认卸载 Xray？[y/N]: " c; [[ "$c" =~ ^[yY]$ ]] || { echo "已取消"; return; }
   systemctl stop "$XRAY_SERVICE" 2>/dev/null || true
   exec_official "remove --purge" || true
   rm -f "$XRAY_CONFIG"
   echo "已卸载 Xray。"
 }
 
-view_log(){
-  echo -e "${YELLOW}按 Ctrl+C 返回菜单${RESET}"
-  trap - INT 2>/dev/null || true
-  journalctl -u "$XRAY_SERVICE" -f --no-pager &
-  local jpid=$!
-  trap "kill $jpid 2>/dev/null" INT
-  wait "$jpid" 2>/dev/null || true
-  trap - INT 2>/dev/null || true
-}
+view_log(){ journalctl -u "$XRAY_SERVICE" -f --no-pager; }
 
 #---------------- 菜单 ----------------
 show_header(){
@@ -341,8 +321,8 @@ menu_loop(){
     echo "2) 更新 Xray 核心（GitHub Releases）"
     echo "3) 更新 Geo 数据（官方脚本）"
     echo "4) 重启 Xray"
-    echo "5) 卸载 Xray（无确认）"
-    echo "6) 查看日志（Ctrl+C 返回）"
+    echo "5) 卸载 Xray"
+    echo "6) 查看日志"
     echo "7) 修改配置（端口/UUID/SNI/监听地址）"
     echo "8) 查看订阅链接"
     echo "9) 更新本脚本"
@@ -355,10 +335,10 @@ menu_loop(){
       3) update_geodata; pause ;;
       4) restart_xray; pause ;;
       5) uninstall_xray; pause ;;
-      6) view_log ;;   # 看完直接回菜单
+      6) view_log ;;
       7) modify_config; pause ;;
       8) view_info; pause ;;
-      9) self_update ;;
+      9) self_update; ;;
       0) exit 0 ;;
       *) echo "无效选项"; pause ;;
     esac
@@ -390,10 +370,13 @@ main(){
     [[ "$listen" == "0.0.0.0" || "$listen" == "127.0.0.1" ]] || { echo "--listen 仅支持 0.0.0.0/127.0.0.1"; exit 1; }
 
     exec_official "install" || { echo "官方安装失败"; exit 1; }
+    systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
+
+    local out pair priv pub
     out="$("$XRAY_BIN" x25519 2>&1 || true)"
     pair="$(parse_x25519 "$out")"
     priv="${pair%%|*}"; pub="${pair##*|}"
-    [ -z "$priv" -o -z "$pub" ] && { echo "生成密钥失败"; echo "$out"; exit 1; }
+    [ -n "$priv" ] && [ -n "$pub" ] || { echo "x25519 输出无法解析："; echo "$out"; exit 1; }
 
     write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
     restart_xray || exit 1
