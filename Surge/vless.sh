@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.2.0"
+SCRIPT_VERSION="3.2.1"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -36,19 +36,11 @@ is_port_in_use(){
   else timeout 1 bash -c "</dev/tcp/127.0.0.1/$1" 2>/dev/null; fi
 }
 
-get_public_ip(){
-  local ip; ip=$(curl -fsSL --max-time 5 https://api.ipify.org || true)
-  [ -n "$ip" ] || ip=$(curl -fsSL --max-time 5 https://checkip.amazonaws.com || true)
-  [ -n "$ip" ] || ip=$(curl -fsSL --max-time 5 https://ip.sb || true)
-  echo "${ip:-0.0.0.0}"
-}
-
 # 生成 8 位十六进制 shortId
 gen_shortid(){
   if command -v openssl >/dev/null 2>&1; then
     openssl rand -hex 4
   else
-    # 退路：用 /dev/urandom
     hexdump -n4 -e '4/1 "%02x"' /dev/urandom 2>/dev/null || echo 20220701
   fi
 }
@@ -212,7 +204,7 @@ restart_xray(){
   return 1
 }
 
-#---------------- 安装/修改/查看 ----------------
+#---------------- 查看配置 ----------------
 view_config_json(){
   if [ ! -f "$XRAY_CONFIG" ]; then
     echo "未找到配置文件：$XRAY_CONFIG"
@@ -226,6 +218,7 @@ view_config_json(){
   fi
 }
 
+#---------------- 安装/修改/卸载 ----------------
 install_xray(){
   require_pkg curl jq openssl
   local port uuid sni listen shortid
@@ -285,7 +278,6 @@ modify_config(){
 
   listen=$(prompt_listen_addr); listen=${listen:-$cur_listen}
 
-  # 保留现有 shortId，如不存在则生成一个
   local shortid="${cur_sid:-$(gen_shortid)}"
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen" "$shortid"
@@ -303,14 +295,27 @@ uninstall_xray(){
 
 view_log(){ echo "按 Ctrl+C 返回菜单"; journalctl -u "$XRAY_SERVICE" -f --no-pager; }
 
-#---------------- 菜单 ----------------
+#---------------- 状态/菜单 ----------------
+xray_installed(){
+  [ -x "$XRAY_BIN" ] || [ -f "/etc/systemd/system/${XRAY_SERVICE}.service" ] || [ -f "/lib/systemd/system/${XRAY_SERVICE}.service" ]
+}
+
+xray_status_text(){
+  if ! xray_installed; then
+    echo "未安装"
+  elif systemctl is-active --quiet "$XRAY_SERVICE"; then
+    echo "运行中"
+  else
+    echo "未运行"
+  fi
+}
+
 show_header(){
-  local ver active
-  ver=$("$XRAY_BIN" version 2>/dev/null | head -n1 | awk '{print $2}' || echo "-")
-  systemctl is-active --quiet "$XRAY_SERVICE" && active="运行中" || active="未运行"
+  local ver="-"; [ -x "$XRAY_BIN" ] && ver=$("$XRAY_BIN" version 2>/dev/null | head -n1 | awk '{print $2}' || echo "-")
+  local status; status="$(xray_status_text)"
   echo "================================================"
   echo "  Xray VLESS-Reality 管理界面"
-  echo "  状态：$active    版本：$ver"
+  echo "  状态：$status    版本：$ver"
   echo "  配置：$XRAY_CONFIG"
   echo "  脚本：$SCRIPT_VERSION"
   echo "================================================"
