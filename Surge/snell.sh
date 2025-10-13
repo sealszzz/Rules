@@ -110,10 +110,9 @@ After=network-online.target nss-lookup.target
 StartLimitIntervalSec=60
 StartLimitBurst=20
 
-
 [Service]
 Type=simple
-ExecStart=$SN_BIN -c $SN_CONFIG
+ExecStart=$SN_BIN --config $SN_CONFIG
 WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
