@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.8"
+SCRIPT_VERSION="3.1.9"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -31,8 +31,8 @@ is_uuid(){ [[ "$1" =~ ^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{
 is_domain(){ [[ "$1" =~ ^[A-Za-z0-9-]{1,63}(\.[A-Za-z0-9-]{1,63})+$ ]] && [[ "$1" != *--* ]]; }
 
 is_port_in_use(){
-  if command -v ss >/dev/null; then ss -tuln | grep -qE "[:.]$1[[:space:]]"
-  elif command -v netstat >/dev/null; then netstat -tuln | grep -qE "[:.]$1[[:space:]]"
+  if command -v ss >/dev/null; then ss -tuln | grep -q ":$1 "
+  elif command -v netstat >/dev/null; then netstat -tuln | grep -q ":$1 "
   else timeout 1 bash -c "</dev/tcp/127.0.0.1/$1" 2>/dev/null; fi
 }
 
@@ -84,7 +84,7 @@ self_update(){
 
 #---------------- Xray 安装/更新 ----------------
 exec_official(){
-  local sc; sc=$(curl -fsSL "$XRAY_INSTALLER_URL") || { echo -e "${RED}下载官方安装脚本失败${RESET}"; return 1; }
+  local sc; sc=$(curl -fsSL "$XRAY_INSTALLER_URL") || { echo -e "${RED}下载官方脚本失败${RESET}"; return 1; }
   bash -c "$sc" @ $1
 }
 
@@ -135,7 +135,6 @@ update_geodata(){
 }
 
 #---------------- 配置生成 ----------------
-# 关键修复：说明文字输出到 stderr，仅地址写到 stdout，避免被写进 config.json
 prompt_listen_addr(){
   >&2 echo "监听地址："
   >&2 echo "  1) 0.0.0.0    （对外可直连，默认）"
@@ -143,15 +142,6 @@ prompt_listen_addr(){
   read -rp "请选择 [1-2]（默认 1）： " n
   n="${n:-1}"
   [[ "$n" = "2" ]] && echo "127.0.0.1" || echo "0.0.0.0"
-}
-
-# 稳健解析 x25519 输出：兼容 PrivateKey/Private key、PublicKey/Public key；无 Public 时用 Password 兜底
-parse_x25519(){
-  local out="$1" priv="" pub=""
-  priv="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]rivate[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
-  pub="$( printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]ublic[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p'  | head -n1)"
-  [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]assword[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
-  echo "$priv|$pub"
 }
 
 write_config(){
@@ -212,7 +202,20 @@ restart_xray(){
   return 1
 }
 
-#---------------- 安装/修改/信息 ----------------
+#---------------- 安装/修改/查看 ----------------
+view_config_json(){
+  if [ ! -f "$XRAY_CONFIG" ]; then
+    echo "未找到配置文件：$XRAY_CONFIG"
+    return 1
+  fi
+  if command -v jq >/dev/null 2>&1; then
+    jq -C . "$XRAY_CONFIG"
+  else
+    echo "(提示：安装 jq 可彩色美化： apt update && apt install -y jq)"
+    cat "$XRAY_CONFIG"
+  fi
+}
+
 install_xray(){
   require_pkg curl jq
   local port uuid sni listen
@@ -233,10 +236,10 @@ install_xray(){
   systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
   echo "生成 Reality 密钥对 ..."
-  local out priv pub pair
+  local out priv pub
   out="$("$XRAY_BIN" x25519 2>&1 || true)"
-  pair="$(parse_x25519 "$out")"
-  priv="${pair%%|*}"; pub="${pair##*|}"
+  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+  pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
   if [[ -z "$priv" || -z "$pub" ]]; then
     echo -e "${RED}生成密钥失败：无法从 xray 输出中解析${RESET}"
     echo "—— xray x25519 原始输出 ——"
@@ -246,7 +249,8 @@ install_xray(){
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
-  view_info
+  echo -e "${GREEN}当前配置：${RESET}"
+  view_config_json
 }
 
 modify_config(){
@@ -271,35 +275,18 @@ modify_config(){
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
-  view_info
-}
-
-view_info(){
-  [ -f "$XRAY_CONFIG" ] || { echo "未安装"; return; }
-  local ip uuid port sni pub sid
-  ip=$(get_public_ip)
-  uuid=$(jq -r '.inbounds[0].settings.clients[0].id' "$XRAY_CONFIG")
-  port=$(jq -r '.inbounds[0].port' "$XRAY_CONFIG")
-  sni=$( jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$XRAY_CONFIG")
-  pub=$( jq -r '.inbounds[0].streamSettings.realitySettings.publicKey'  "$XRAY_CONFIG")
-  sid=$( jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0]' "$XRAY_CONFIG")
-  local name="$(hostname) X-reality"; local enc=$(printf '%s' "$name" | sed 's/ /%20/g')
-  local link="vless://${uuid}@${ip}:${port}?flow=xtls-rprx-vision&encryption=none&type=tcp&security=reality&sni=${sni}&fp=chrome&pbk=${pub}&sid=${sid}#${enc}"
-  echo "----------------------------------------------------------------"
-  echo -e "${GREEN}订阅：${RESET} $link"
-  echo "----------------------------------------------------------------"
+  echo -e "${GREEN}当前配置：${RESET}"
+  view_config_json
 }
 
 uninstall_xray(){
-  # 保留一次确认（如需无确认，删掉下面两行判断即可）
-  read -rp "确认卸载 Xray？[y/N]: " c; [[ "$c" =~ ^[yY]$ ]] || { echo "已取消"; return; }
   systemctl stop "$XRAY_SERVICE" 2>/dev/null || true
   exec_official "remove --purge" || true
   rm -f "$XRAY_CONFIG"
   echo "已卸载 Xray。"
 }
 
-view_log(){ journalctl -u "$XRAY_SERVICE" -f --no-pager; }
+view_log(){ echo "按 Ctrl+C 返回菜单"; journalctl -u "$XRAY_SERVICE" -f --no-pager; }
 
 #---------------- 菜单 ----------------
 show_header(){
@@ -324,7 +311,7 @@ menu_loop(){
     echo "5) 卸载 Xray"
     echo "6) 查看日志"
     echo "7) 修改配置（端口/UUID/SNI/监听地址）"
-    echo "8) 查看订阅链接"
+    echo "8) 查看配置（JSON）"
     echo "9) 更新本脚本"
     echo "0) 退出"
     echo "-----------------------------------------------"
@@ -337,7 +324,7 @@ menu_loop(){
       5) uninstall_xray; pause ;;
       6) view_log ;;
       7) modify_config; pause ;;
-      8) view_info; pause ;;
+      8) view_config_json; pause ;;
       9) self_update; ;;
       0) exit 0 ;;
       *) echo "无效选项"; pause ;;
@@ -372,15 +359,15 @@ main(){
     exec_official "install" || { echo "官方安装失败"; exit 1; }
     systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
-    local out pair priv pub
+    local out priv pub
     out="$("$XRAY_BIN" x25519 2>&1 || true)"
-    pair="$(parse_x25519 "$out")"
-    priv="${pair%%|*}"; pub="${pair##*|}"
+    priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+    pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
     [ -n "$priv" ] && [ -n "$pub" ] || { echo "x25519 输出无法解析："; echo "$out"; exit 1; }
 
     write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
     restart_xray || exit 1
-    view_info
+    view_config_json
   else
     menu_loop
   fi
