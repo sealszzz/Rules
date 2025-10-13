@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-SCRIPT_VERSION="1.2.3"
+SCRIPT_VERSION="1.2.5"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -104,7 +104,12 @@ write_service() {
   cat > "$SERVICE_FILE" <<EOF
 [Unit]
 Description=Snell Server
+Documentation=https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell
+Wants=network-online.target
 After=network-online.target nss-lookup.target
+StartLimitIntervalSec=60
+StartLimitBurst=20
+
 
 [Service]
 Type=simple
@@ -115,8 +120,8 @@ Group=$SN_USER
 UMask=0077
 NoNewPrivileges=true
 LimitNOFILE=262144
-Restart=on-failure
-RestartSec=5s
+Restart=always
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
