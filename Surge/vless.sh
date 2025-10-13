@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.5"
+SCRIPT_VERSION="3.1.6"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -15,8 +15,19 @@ XRAY_SERVICE="xray"
 XRAY_INSTALLER_URL="https://github.com/XTLS/Xray-install/raw/main/install-release.sh"
 GITHUB_API_RELEASES="https://api.github.com/repos/XTLS/Xray-core/releases/latest"
 
-#================= 颜色 =================
+#================= UI/颜色 & 小提示开关 =================
 RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
+# 可选小提示：1=显示，0=不显示（你要“可选小提示”，默认开着；想关就把这行改成 0）
+SHOW_TIPS=1
+
+tips() {
+  [ "${SHOW_TIPS:-1}" = "1" ] || return 0
+  echo -e "${YELLOW}小贴士：${RESET}"
+  echo " - 监听 127.0.0.1 时，需用 Nginx stream 基于 SNI 分流至本机端口。"
+  echo " - Reality 的 SNI 不要填你自己 VPS 的域名，随便用一个大站域名即可（如 learn.microsoft.com）。"
+  echo " - 端口被占用常见于 Nginx/TUIC/其它服务，换端口或停掉占用方。"
+  echo
+}
 
 #---------------- helpers ----------------
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo -e "${RED}请用 root 运行${RESET}"; exit 1; }; }
@@ -215,6 +226,7 @@ install_xray(){
   is_domain "$sni" || { echo -e "${RED}域名无效${RESET}"; return; }
 
   listen=$(prompt_listen_addr)
+  tips
 
   echo "安装/更新 Xray 核心 ..."
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
@@ -222,9 +234,9 @@ install_xray(){
   echo "生成 Reality 密钥对 ..."
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>&1 || true)"
-  # Private key（兼容 PrivateKey / Private key）
+  # Private key（兼容大小写/空格）
   priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^private[[:space:]]*key/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
-  # Public key（兼容 Public key；若缺失，退而取 Password 字段）
+  # Public key；若缺失，退而取 Password 字段（部分旧输出）
   pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^public[[:space:]]*key/  {print $2; exit}' | sed 's/[[:space:]]*$//')"
   [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^password$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
 
@@ -260,6 +272,7 @@ modify_config(){
 
   echo; echo "监听地址（当前 ${cur_listen:-0.0.0.0}）："
   listen=$(prompt_listen_addr); listen=${listen:-${cur_listen:-0.0.0.0}}
+  tips
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
@@ -284,7 +297,7 @@ view_info(){
 }
 
 uninstall_xray(){
-  # 直接卸载（按你的要求：去掉二次确认）
+  # 按你要求：卸载无二次确认
   systemctl stop "$XRAY_SERVICE" 2>/dev/null || true
   exec_official "remove --purge" || true
   rm -f "$XRAY_CONFIG"
@@ -335,7 +348,7 @@ menu_loop(){
       3) update_geodata; pause ;;
       4) restart_xray; pause ;;
       5) uninstall_xray; pause ;;
-      6) view_log ;;
+      6) view_log ;;   # 看完直接回菜单，不强制 pause
       7) modify_config; pause ;;
       8) view_info; pause ;;
       9) self_update ;;
