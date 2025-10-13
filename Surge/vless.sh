@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.9"
+SCRIPT_VERSION="3.2.0"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -41,6 +41,16 @@ get_public_ip(){
   [ -n "$ip" ] || ip=$(curl -fsSL --max-time 5 https://checkip.amazonaws.com || true)
   [ -n "$ip" ] || ip=$(curl -fsSL --max-time 5 https://ip.sb || true)
   echo "${ip:-0.0.0.0}"
+}
+
+# 生成 8 位十六进制 shortId
+gen_shortid(){
+  if command -v openssl >/dev/null 2>&1; then
+    openssl rand -hex 4
+  else
+    # 退路：用 /dev/urandom
+    hexdump -n4 -e '4/1 "%02x"' /dev/urandom 2>/dev/null || echo 20220701
+  fi
 }
 
 #---------------- 自安装/启动器/自更新 ----------------
@@ -145,7 +155,7 @@ prompt_listen_addr(){
 }
 
 write_config(){
-  local port="$1" uuid="$2" sni="$3" priv="$4" pub="$5" listen="$6" shortid="20220701"
+  local port="$1" uuid="$2" sni="$3" priv="$4" pub="$5" listen="$6" shortid="$7"
   mkdir -p "$(dirname "$XRAY_CONFIG")"
   jq -n \
     --argjson port "$port" \
@@ -156,7 +166,7 @@ write_config(){
     --arg shortid "$shortid" \
     --arg listen "$listen" \
   '{
-    "log": {"loglevel": "warning"},
+    "log": {"loglevel": "info"},
     "inbounds": [{
       "listen": $listen,
       "port": $port,
@@ -217,8 +227,8 @@ view_config_json(){
 }
 
 install_xray(){
-  require_pkg curl jq
-  local port uuid sni listen
+  require_pkg curl jq openssl
+  local port uuid sni listen shortid
   read -rp "$(echo -e "端口 [1-65535]（默认 ${CYAN}443${RESET}）：")" port; port=${port:-443}
   is_valid_port "$port" || { echo -e "${RED}端口无效${RESET}"; return; }
   is_port_in_use "$port" && { echo -e "${RED}端口被占用${RESET}"; return; }
@@ -230,6 +240,7 @@ install_xray(){
   is_domain "$sni" || { echo -e "${RED}域名无效${RESET}"; return; }
 
   listen=$(prompt_listen_addr)
+  shortid="$(gen_shortid)"
 
   echo "安装/更新 Xray 核心 ..."
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
@@ -247,7 +258,7 @@ install_xray(){
     return 1
   fi
 
-  write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
+  write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen" "$shortid"
   restart_xray || return
   echo -e "${GREEN}当前配置：${RESET}"
   view_config_json
@@ -255,13 +266,14 @@ install_xray(){
 
 modify_config(){
   [ -f "$XRAY_CONFIG" ] || { echo "未安装"; return; }
-  local cur_port cur_uuid cur_sni cur_listen priv pub
+  local cur_port cur_uuid cur_sni cur_listen priv pub cur_sid
   cur_port=$(jq -r '.inbounds[0].port' "$XRAY_CONFIG")
   cur_uuid=$(jq -r '.inbounds[0].settings.clients[0].id' "$XRAY_CONFIG")
   cur_sni=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$XRAY_CONFIG")
   cur_listen=$(jq -r '.inbounds[0].listen // "0.0.0.0"' "$XRAY_CONFIG")
   priv=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$XRAY_CONFIG")
   pub=$( jq -r '.inbounds[0].streamSettings.realitySettings.publicKey'  "$XRAY_CONFIG")
+  cur_sid=$(jq -r '.inbounds[0].streamSettings.realitySettings.shortIds[0] // empty' "$XRAY_CONFIG")
 
   local port uuid sni listen
   read -rp "端口（当前 $cur_port）： " port; port=${port:-$cur_port}
@@ -273,7 +285,10 @@ modify_config(){
 
   listen=$(prompt_listen_addr); listen=${listen:-$cur_listen}
 
-  write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
+  # 保留现有 shortId，如不存在则生成一个
+  local shortid="${cur_sid:-$(gen_shortid)}"
+
+  write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen" "$shortid"
   restart_xray || return
   echo -e "${GREEN}当前配置：${RESET}"
   view_config_json
@@ -340,7 +355,7 @@ main(){
 
   if [[ $# -gt 0 && "$1" == "install" ]]; then
     shift
-    local port=443 uuid="" sni="learn.microsoft.com" listen="0.0.0.0"
+    local port=443 uuid="" sni="learn.microsoft.com" listen="0.0.0.0" shortid=""
     while [[ $# -gt 0 ]]; do
       case "$1" in
         --port)   port="$2"; shift 2 ;;
@@ -356,6 +371,9 @@ main(){
     is_domain "$sni" || { echo "SNI 域名无效"; exit 1; }
     [[ "$listen" == "0.0.0.0" || "$listen" == "127.0.0.1" ]] || { echo "--listen 仅支持 0.0.0.0/127.0.0.1"; exit 1; }
 
+    require_pkg openssl
+    shortid="$(gen_shortid)"
+
     exec_official "install" || { echo "官方安装失败"; exit 1; }
     systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
@@ -365,7 +383,7 @@ main(){
     pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
     [ -n "$priv" ] && [ -n "$pub" ] || { echo "x25519 输出无法解析："; echo "$out"; exit 1; }
 
-    write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
+    write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen" "$shortid"
     restart_xray || exit 1
     view_config_json
   else
