@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.6"
+SCRIPT_VERSION="3.1.7"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -17,15 +17,15 @@ GITHUB_API_RELEASES="https://api.github.com/repos/XTLS/Xray-core/releases/latest
 
 #================= UI/颜色 & 小提示开关 =================
 RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
-# 可选小提示：1=显示，0=不显示（你要“可选小提示”，默认开着；想关就把这行改成 0）
+# 小提示：1=显示，0=隐藏
 SHOW_TIPS=1
 
 tips() {
   [ "${SHOW_TIPS:-1}" = "1" ] || return 0
   echo -e "${YELLOW}小贴士：${RESET}"
-  echo " - 监听 127.0.0.1 时，需用 Nginx stream 基于 SNI 分流至本机端口。"
-  echo " - Reality 的 SNI 不要填你自己 VPS 的域名，随便用一个大站域名即可（如 learn.microsoft.com）。"
-  echo " - 端口被占用常见于 Nginx/TUIC/其它服务，换端口或停掉占用方。"
+  echo " - 监听 127.0.0.1 时，用 Nginx stream 基于 SNI 分流到本机端口更隐蔽。"
+  echo " - Reality 的 SNI 不要填你自己 VPS 的域名，用大站域名（如 learn.microsoft.com）。"
+  echo " - 端口被占用多见于 Nginx/TUIC/其它服务；换端口或停掉占用方。"
   echo
 }
 
@@ -150,8 +150,8 @@ prompt_listen_addr(){
   echo
   echo "监听地址："
   echo "  1) 0.0.0.0    （对外可直连，默认）"
-  echo "  2) 127.0.0.1  （仅本机；配合 Nginx stream 更隐蔽）"
-  read -rp "请选择 [1/2]（默认 1）： " n
+  echo "  2) 127.0.0.1  （仅本机；需配合 Nginx stream 分流）"
+  read -rp "请选择 [1-2]（默认 1）： " n
   n="${n:-1}"
   [[ "$n" = "2" ]] && echo "127.0.0.1" || echo "0.0.0.0"
 }
@@ -211,6 +211,17 @@ restart_xray(){
   fi
 }
 
+# 解析 xray x25519 输出（兼容 PrivateKey/Private key、PublicKey/Public key、或 Password=公钥）
+parse_x25519(){
+  local out="$1" priv="" pub=""
+  # 提取私钥
+  priv="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]rivate[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
+  # 提取公钥（优先 Public，其次 Password）
+  pub="$( printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]ublic[[:space:]]*[Kk]ey[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p'         | head -n1)"
+  [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | sed -nE 's/^[[:space:]]*[Pp]assword[[:space:]]*:[[:space:]]*([A-Za-z0-9_\-]+).*$/\1/p' | head -n1)"
+  echo "$priv|$pub"
+}
+
 #---------------- 安装/修改/信息 ----------------
 install_xray(){
   require_pkg curl jq
@@ -232,14 +243,10 @@ install_xray(){
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
 
   echo "生成 Reality 密钥对 ..."
-  local out priv pub
+  local out priv pub pair
   out="$("$XRAY_BIN" x25519 2>&1 || true)"
-  # Private key（兼容大小写/空格）
-  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^private[[:space:]]*key/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
-  # Public key；若缺失，退而取 Password 字段（部分旧输出）
-  pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^public[[:space:]]*key/  {print $2; exit}' | sed 's/[[:space:]]*$//')"
-  [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^password$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
-
+  pair="$(parse_x25519 "$out")"
+  priv="${pair%%|*}"; pub="${pair##*|}"
   if [[ -z "$priv" || -z "$pub" ]]; then
     echo -e "${RED}生成密钥失败：无法从 xray 输出中解析${RESET}"
     echo "—— xray x25519 原始输出 ——"
@@ -297,7 +304,7 @@ view_info(){
 }
 
 uninstall_xray(){
-  # 按你要求：卸载无二次确认
+  # 按要求：卸载不二次确认
   systemctl stop "$XRAY_SERVICE" 2>/dev/null || true
   exec_official "remove --purge" || true
   rm -f "$XRAY_CONFIG"
@@ -348,7 +355,7 @@ menu_loop(){
       3) update_geodata; pause ;;
       4) restart_xray; pause ;;
       5) uninstall_xray; pause ;;
-      6) view_log ;;   # 看完直接回菜单，不强制 pause
+      6) view_log ;;   # 看完直接回菜单
       7) modify_config; pause ;;
       8) view_info; pause ;;
       9) self_update ;;
@@ -383,11 +390,9 @@ main(){
     [[ "$listen" == "0.0.0.0" || "$listen" == "127.0.0.1" ]] || { echo "--listen 仅支持 0.0.0.0/127.0.0.1"; exit 1; }
 
     exec_official "install" || { echo "官方安装失败"; exit 1; }
-    local out priv pub
     out="$("$XRAY_BIN" x25519 2>&1 || true)"
-    priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^private[[:space:]]*key/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
-    pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^public[[:space:]]*key/  {print $2; exit}' | sed 's/[[:space:]]*$//')"
-    [ -z "$pub" ] && pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^password$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+    pair="$(parse_x25519 "$out")"
+    priv="${pair%%|*}"; pub="${pair##*|}"
     [ -z "$priv" -o -z "$pub" ] && { echo "生成密钥失败"; echo "$out"; exit 1; }
 
     write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
