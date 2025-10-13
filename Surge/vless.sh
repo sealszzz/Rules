@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.2"
+SCRIPT_VERSION="3.1.3"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -46,7 +46,6 @@ get_public_ip(){
 #---------------- 自安装/启动器/自更新 ----------------
 ensure_installed_as_command() {
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
-  # 如果是通过 bash <(curl ...) 运行，$0 会是 /proc/.../fd/...
   local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
   if [[ "$self" == /proc/*/fd/* ]]; then
     curl -fsSL "$SCRIPT_URL" -o "$SCRIPT_INSTALL"
@@ -56,7 +55,6 @@ ensure_installed_as_command() {
       install -m 0755 "$self" "$SCRIPT_INSTALL"
     fi
   fi
-  # 启动器
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
 exec bash /usr/local/sbin/vless.sh "$@"
@@ -189,21 +187,26 @@ write_config(){
     }],
     "outbounds": [{"protocol":"freedom","settings":{"domainStrategy":"UseIPv4v6"}}]
   }' > "$XRAY_CONFIG"
+  # 显式放宽只读权限，避免 User=nobody 读取失败
+  chmod 644 "$XRAY_CONFIG"
 }
 
 restart_xray(){
-  systemctl enable --now "$XRAY_SERVICE" >/dev/null 2>&1 || true
+  systemctl enable "$XRAY_SERVICE" >/dev/null 2>&1 || true
   if ! systemctl restart "$XRAY_SERVICE"; then
     echo -e "${YELLOW}⚠️ 重启失败，查看日志：journalctl -u $XRAY_SERVICE -e --no-pager${RESET}"
     return 1
   fi
-  sleep 1
-  if systemctl is-active --quiet "$XRAY_SERVICE"; then
-    echo -e "${GREEN}✅ Xray 已运行${RESET}"
-  else
-    echo -e "${YELLOW}⚠️ Xray 未在运行，检查日志${RESET}"
-    return 1
-  fi
+  # 等待最多 ~8s 看进程是否稳定
+  for i in {1..8}; do
+    if systemctl is-active --quiet "$XRAY_SERVICE"; then
+      echo -e "${GREEN}✅ Xray 已运行${RESET}"
+      return 0
+    fi
+    sleep 1
+  done
+  echo -e "${YELLOW}⚠️ Xray 未在运行，检查日志：journalctl -u $XRAY_SERVICE -e --no-pager${RESET}"
+  return 1
 }
 
 #---------------- 安装/修改/信息 ----------------
@@ -224,9 +227,10 @@ install_xray(){
 
   echo "安装/更新 Xray 核心 ..."
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
+  # 先停掉默认启动，避免用默认配置起不来/占端口
+  systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
   echo "生成 Reality 密钥对 ..."
-  # —— 兼容不同版本的 xray x25519 输出 ——（PrivateKey/Private key/PublicKey/Public key/Password）
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>&1 || true)"
   priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
@@ -364,16 +368,15 @@ main(){
     [[ "$listen" == "0.0.0.0" || "$listen" == "127.0.0.1" ]] || { echo "--listen 仅支持 0.0.0.0/127.0.0.1"; exit 1; }
 
     exec_official "install" || { echo "官方安装失败"; exit 1; }
+    systemctl stop "$XRAY_SERVICE" >/dev/null 2>&1 || true
 
-    # —— 非交互路径同样使用稳健的 x25519 解析 —— 
+    # 稳健解析 x25519
     local out priv pub
     out="$("$XRAY_BIN" x25519 2>&1 || true)"
     priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
     pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
     if [[ -z "$priv" || -z "$pub" ]]; then
-      echo "x25519 输出无法解析："
-      echo "$out"
-      exit 1
+      echo "x25519 输出无法解析："; echo "$out"; exit 1
     fi
 
     write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
