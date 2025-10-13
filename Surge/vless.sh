@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（自升级/自安装） =================
-SCRIPT_VERSION="3.1.1"
+SCRIPT_VERSION="3.1.2"
 SCRIPT_INSTALL="/usr/local/sbin/vless.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/vless"
 SCRIPT_URL="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/vless.sh"
@@ -85,7 +85,10 @@ self_update(){
 }
 
 #---------------- Xray 安装/更新 ----------------
-exec_official(){ local sc; sc=$(curl -fsSL "$XRAY_INSTALLER_URL") || { echo -e "${RED}下载官方脚本失败${RESET}"; return 1; }; bash -c "$sc" @ $1; }
+exec_official(){
+  local sc; sc=$(curl -fsSL "$XRAY_INSTALLER_URL") || { echo -e "${RED}下载官方脚本失败${RESET}"; return 1; }
+  bash -c "$sc" @ $1
+}
 
 arch_tag(){
   case "$(uname -m)" in
@@ -136,12 +139,10 @@ update_geodata(){
 #---------------- 配置生成 ----------------
 prompt_listen_addr(){
   echo
-  cat <<'TEXT'
-监听地址：
-  1) 0.0.0.0    （默认；对外可直连）
-  2) 127.0.0.1  （仅本机；配合 Nginx stream 更隐蔽）
-TEXT
-  read -rp "请选择 1/2 [默认1]: " n
+  echo "Listen address:"
+  echo "  1) 0.0.0.0     (public, default)"
+  echo "  2) 127.0.0.1   (loopback; use with Nginx stream)"
+  read -rp "Choose [1/2, default 1]: " n
   n="${n:-1}"
   if [ "$n" = "2" ]; then
     echo "127.0.0.1"
@@ -225,21 +226,18 @@ install_xray(){
   exec_official "install" || { echo -e "${RED}官方安装脚本失败${RESET}"; return; }
 
   echo "生成 Reality 密钥对 ..."
-# 兼容不同版本的 xray x25519 输出（Private key / PrivateKey 等）
-local out priv pub
-out="$("$XRAY_BIN" x25519 2>&1 || true)"
+  # —— 兼容不同版本的 xray x25519 输出 ——（PrivateKey/Private key/PublicKey/Public key/Password）
+  local out priv pub
+  out="$("$XRAY_BIN" x25519 2>&1 || true)"
+  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+  pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+  if [[ -z "$priv" || -z "$pub" ]]; then
+    echo -e "${RED}生成密钥失败：无法从 xray 输出中解析${RESET}"
+    echo "—— xray x25519 原始输出 ——"
+    echo "$out"
+    return 1
+  fi
 
-# 提取“冒号后的所有内容”，去掉前后空白
-priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^private[[:space:]]*key/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
-pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($0) ~ /^public[[:space:]]*key/  {print $2; exit}' | sed 's/[[:space:]]*$//')"
-
-if [[ -z "$priv" || -z "$pub" ]]; then
-  echo -e "${RED}生成密钥失败：无法从 xray 输出中解析${RESET}"
-  echo "—— xray x25519 原始输出 ——"
-  echo "$out"
-  return 1
-fi
-  
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
   view_info
@@ -251,7 +249,7 @@ modify_config(){
   cur_port=$(jq -r '.inbounds[0].port' "$XRAY_CONFIG")
   cur_uuid=$(jq -r '.inbounds[0].settings.clients[0].id' "$XRAY_CONFIG")
   cur_sni=$(jq -r '.inbounds[0].streamSettings.realitySettings.serverNames[0]' "$XRAY_CONFIG")
-  cur_listen=$(jq -r '.inbounds[0].listen' "$XRAY_CONFIG")
+  cur_listen=$(jq -r '.inbounds[0].listen // "0.0.0.0"' "$XRAY_CONFIG")
   priv=$(jq -r '.inbounds[0].streamSettings.realitySettings.privateKey' "$XRAY_CONFIG")
   pub=$( jq -r '.inbounds[0].streamSettings.realitySettings.publicKey'  "$XRAY_CONFIG")
 
@@ -263,8 +261,8 @@ modify_config(){
   read -rp "UUID（当前 $cur_uuid）： " uuid; uuid=${uuid:-$cur_uuid}; is_uuid "$uuid" || { echo "UUID 无效"; return; }
   read -rp "SNI（当前 $cur_sni）： " sni;   sni=${sni:-$cur_sni};   is_domain "$sni" || { echo "域名无效"; return; }
 
-  echo; echo "监听地址（当前 ${cur_listen:-0.0.0.0}）："
-  listen=$(prompt_listen_addr); listen=${listen:-${cur_listen:-0.0.0.0}}
+  echo; echo "监听地址（当前 $cur_listen）："
+  listen=$(prompt_listen_addr); listen=${listen:-$cur_listen}
 
   write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
   restart_xray || return
@@ -366,9 +364,18 @@ main(){
     [[ "$listen" == "0.0.0.0" || "$listen" == "127.0.0.1" ]] || { echo "--listen 仅支持 0.0.0.0/127.0.0.1"; exit 1; }
 
     exec_official "install" || { echo "官方安装失败"; exit 1; }
-    local kp; kp=$("$XRAY_BIN" x25519)
-    local priv=$(echo "$kp" | awk '/Private key/ {print $3}')
-    local pub=$( echo "$kp" | awk '/Public key/  {print $3}')
+
+    # —— 非交互路径同样使用稳健的 x25519 解析 —— 
+    local out priv pub
+    out="$("$XRAY_BIN" x25519 2>&1 || true)"
+    priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^private[[:space:]]*key$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+    pub="$( printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^(public[[:space:]]*key|publickey|password)$/ {print $2; exit}' | sed 's/[[:space:]]*$//')"
+    if [[ -z "$priv" || -z "$pub" ]]; then
+      echo "x25519 输出无法解析："
+      echo "$out"
+      exit 1
+    fi
+
     write_config "$port" "$uuid" "$sni" "$priv" "$pub" "$listen"
     restart_xray || exit 1
     view_info
