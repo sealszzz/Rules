@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.5.3"
+SCRIPT_VERSION="1.5.4"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -362,11 +362,29 @@ edit_config_action() {
 
   echo "当前加密方式: ${cur_method:-未知}"
   local new_method; new_method="$(prompt_method)"
+  
+  # 计算新算法所需密钥字节数（2022-128=16，其它=32）
+  local req_bytes=32
+  [ "$new_method" = "2022-blake3-aes-128-gcm" ] && req_bytes=16
+
+  # 当前密码的“解码后字节数”（若不是合法base64则记为0）
+  local decoded_len
+  decoded_len=$(printf '%s' "${cur_pass:-}" | base64 -d 2>/dev/null | wc -c | tr -d ' ') || decoded_len=0
+
+  echo "当前密码: ${cur_pass:-<空>}"
+  read -rp "密码选项：1) 不修改（默认）  2) 随机生成  请输入 [1/2]：" pass_sel
+  pass_sel="${pass_sel:-1}"
 
   local new_pass="$cur_pass"
-  if [ "$new_method" != "$cur_method" ] || [ -z "${new_pass:-}" ]; then
+  if [ "$pass_sel" = "2" ]; then
     new_pass="$(gen_password_by_method "$new_method")"
-    echo "已为新加密方式生成随机密码。"
+    echo "已随机生成新密码。"
+  else
+    # 选择不改，但若与新算法不匹配（长度不符或为空），则自动随机
+    if [ -z "${new_pass:-}" ] || [ "$decoded_len" -ne "$req_bytes" ]; then
+      new_pass="$(gen_password_by_method "$new_method")"
+      echo "原密码与新加密方式不匹配，已自动生成随机密码。"
+    fi
   fi
 
   cat > "$SS_CONFIG" <<EOF
