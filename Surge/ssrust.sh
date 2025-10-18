@@ -357,7 +357,7 @@ edit_config_action() {
   cur_pass=$(json_get "password")
   cur_method=$(json_get "method")
 
-  local def_for_prompt="${cur_port:-2048}"
+  local def_for_prompt="${cur_port:-8443}"
   local new_port; new_port="$(prompt_port "$def_for_prompt")"
 
   echo "当前加密方式: ${cur_method:-未知}"
