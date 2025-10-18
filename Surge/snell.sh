@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-SCRIPT_VERSION="1.2.7"
+SCRIPT_VERSION="1.2.8"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -114,6 +114,8 @@ Group=$SN_USER
 Type=simple
 UMask=0077
 ExecStart=$SN_BIN -c $SN_CONFIG
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=always
