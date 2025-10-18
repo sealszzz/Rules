@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-SCRIPT_VERSION="1.2.5"
+SCRIPT_VERSION="1.2.6"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -105,18 +105,15 @@ write_service() {
 [Unit]
 Description=Snell Server
 Documentation=https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell
-Wants=network-online.target
 After=network-online.target nss-lookup.target
-StartLimitIntervalSec=60
-StartLimitBurst=20
+Wants=network-online.target
 
 [Service]
-Type=simple
-ExecStart=$SN_BIN --config $SN_CONFIG
-WorkingDirectory=$SN_DIR
 User=$SN_USER
 Group=$SN_USER
+Type=simple
 UMask=0077
+ExecStart=$SN_BIN -c $SN_CONFIG
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=always
@@ -252,8 +249,7 @@ install_snell() {
   mkdir -p "$SN_DIR"
   chown "$SN_USER:$SN_USER" "$SN_DIR"
 
-  local def_port; def_port=$(random_unused_port)
-  [ "$def_port" = 0 ] && def_port=8443
+  local def_port=8443
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -378,8 +374,7 @@ main_self_heal() {
     ensure_user_and_dirs
     [ -f "$SN_CONFIG" ] || {
       echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
-      local def_port=$(random_unused_port)
-      [ "$def_port" = 0 ] && def_port=8443
+      local def_port=8443
       local PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
       cat > "$SN_CONFIG" <<EOF
 [snell-server]
