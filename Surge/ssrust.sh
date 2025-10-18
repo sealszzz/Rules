@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.5.2"
+SCRIPT_VERSION="1.5.3"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -271,7 +271,11 @@ install_ss() {
 
   # 生成默认配置
   if [ ! -f "$SS_CONFIG" ]; then
-    local def_port; def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=2048
+    local def_port=8443
+    if port_used_by_others "$def_port"; then
+      def_port=$(random_unused_port)
+      [ "$def_port" = 0 ] && def_port=8443
+    fi
     local PASS; PASS="$(openssl rand -base64 16 | tr -d '\n')"
     cat > "$SS_CONFIG" <<EOF
 {
@@ -401,7 +405,11 @@ main_self_heal() {
     ensure_user_and_dirs
     [ -f "$SS_CONFIG" ] || {
       echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
-      local def_port; def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=2048
+      local def_port=8443
+      if port_used_by_others "$def_port"; then
+        def_port=$(random_unused_port)
+        [ "$def_port" = 0 ] && def_port=8443
+      fi      
       local PASS; PASS="$(openssl rand -base64 16 | tr -d '\n')"
       cat > "$SS_CONFIG" <<EOF
 {
