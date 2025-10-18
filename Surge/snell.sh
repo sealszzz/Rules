@@ -249,7 +249,7 @@ install_snell() {
   mkdir -p "$SN_DIR"
   chown "$SN_USER:$SN_USER" "$SN_DIR"
 
-  local def_port=8443
+  local def_port=8448
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -320,7 +320,7 @@ modify_config_action() {
   read -rp "输入新端口 [1024-65535，回车=随机]：" new_port
   if [ -z "$new_port" ]; then
     new_port=$(random_unused_port)
-    [ "$new_port" = 0 ] && new_port=8443
+    [ "$new_port" = 0 ] && new_port=8448
     ok=1
   else
     if [[ "$new_port" =~ ^[0-9]+$ ]] && [ "$new_port" -ge 1024 ] && [ "$new_port" -le 65535 ]; then
@@ -374,7 +374,7 @@ main_self_heal() {
     ensure_user_and_dirs
     [ -f "$SN_CONFIG" ] || {
       echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
-      local def_port=8443
+      local def_port=8448
       local PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
       cat > "$SN_CONFIG" <<EOF
 [snell-server]
