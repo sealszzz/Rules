@@ -2,7 +2,7 @@
 set -Euo pipefail
 
 #================= 脚本元信息（用于自升级） =================
-SCRIPT_VERSION="1.5.1"
+SCRIPT_VERSION="1.5.2"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
@@ -87,16 +87,15 @@ Description=Shadowsocks-Rust Server
 Documentation=https://github.com/shadowsocks/shadowsocks-rust
 Wants=network-online.target
 After=network-online.target nss-lookup.target
-StartLimitIntervalSec=60
-StartLimitBurst=20
 
 [Service]
-Type=simple
-ExecStart=$SS_BIN --config $SS_CONFIG
-WorkingDirectory=$SS_DIR
 User=$SS_USER
 Group=$SS_USER
+Type=simple
 UMask=0077
+ExecStart=$SS_BIN -c $SS_CONFIG
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=always
