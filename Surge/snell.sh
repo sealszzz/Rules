@@ -250,8 +250,12 @@ install_snell() {
   rm -rf "$SN_DIR"
   mkdir -p "$SN_DIR"
   chown "$SN_USER:$SN_USER" "$SN_DIR"
-
+  
   local def_port=8448
+  if port_used_by_others "$def_port"; then
+    def_port=$(random_unused_port)
+    [ "$def_port" = 0 ] && def_port=8448
+  fi
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
