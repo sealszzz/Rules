@@ -319,19 +319,22 @@ install_or_update_action() {
 
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
-  local old_port new_port psk ok=0
-  # 取 listen = ::0:PORT 的最后一个冒号后的数字
+  local old_port new_port cur_psk new_psk ok=0
+
+  # 取 listen 的端口
   old_port=$(awk -F ':' '/^[[:space:]]*listen[[:space:]]*=/{print $NF}' "$SN_CONFIG" | tr -dc '0-9')
+  # 取当前 psk
+  cur_psk="$(awk -F '=' '/^[[:space:]]*psk[[:space:]]*=/{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$SN_CONFIG")"
+
   echo -e "${YELLOW}当前监听端口：$old_port${RESET}"
-  read -rp "输入新端口 [1024-65535，回车=随机]：" new_port
+  read -rp "输入新端口 [1024-65535，回车=不修改]：" new_port
   if [ -z "$new_port" ]; then
-    new_port=$(random_unused_port)
-    [ "$new_port" = 0 ] && new_port=8448
+    new_port="$old_port"
     ok=1
   else
     if [[ "$new_port" =~ ^[0-9]+$ ]] && [ "$new_port" -ge 1024 ] && [ "$new_port" -le 65535 ]; then
       if port_used_by_others "$new_port"; then
-        echo -e "${RED}❌ 端口 $new_port 已被占用，请换一个${RESET}"
+        echo -e "${RED}❌ 端口 $new_port 已被占用，请重试${RESET}"
         return
       fi
       ok=1
@@ -341,13 +344,23 @@ modify_config_action() {
     fi
   fi
   [ "$ok" = 1 ] || return 1
-  psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
+
+  echo -e "${YELLOW}当前密码(PSK)：${cur_psk:-<空>}${RESET}"
+  read -rp "密码选项：1) 不修改（默认）  2) 随机生成  请输入 [1/2]：" sel
+  sel="${sel:-1}"
+  if [ "$sel" = "2" ]; then
+    new_psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
+  else
+    new_psk="${cur_psk}"
+  fi
+
   cat > "$SN_CONFIG" <<EOF
 [snell-server]
 listen = ::0:${new_port}
-psk = $psk
+psk = ${new_psk}
 ipv6 = true
 EOF
+
   chown "$SN_USER:$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
   restart_and_verify
