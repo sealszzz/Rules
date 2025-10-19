@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-SCRIPT_VERSION="1.2.9"
+SCRIPT_VERSION="1.3.0"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
@@ -126,10 +126,21 @@ WantedBy=multi-user.target
 EOF
 }
 
+# ==== 变更1：新增/替换端口占用检测（忽略自身 PID） ====
+get_main_pid(){ systemctl show -p MainPID "$SERVICE_NAME" 2>/dev/null | cut -d= -f2; }
+
 port_used_by_others() {
-  local port="$1"
-  if ! command -v ss >/dev/null 2>&1; then require_pkg iproute2; fi
-  ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $0}' | grep -q .
+  local port="$1" pid_self pids
+  pid_self="$(get_main_pid || echo 0)"
+  command -v ss >/dev/null 2>&1 || require_pkg iproute2
+  pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' \
+    | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
+  [ -z "$pids" ] && return 1
+  while read -r p; do
+    [ -z "$p" ] && continue
+    if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then return 0; fi
+  done <<< "$pids"
+  return 1
 }
 
 random_unused_port() {
@@ -319,7 +330,7 @@ install_or_update_action() {
 
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
-  local old_port new_port cur_psk new_psk ok=0
+  local old_port new_port cur_psk new_psk
 
   # 取 listen 的端口
   old_port=$(awk -F ':' '/^[[:space:]]*listen[[:space:]]*=/{print $NF}' "$SN_CONFIG" | tr -dc '0-9')
@@ -327,32 +338,32 @@ modify_config_action() {
   cur_psk="$(awk -F '=' '/^[[:space:]]*psk[[:space:]]*=/{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$SN_CONFIG")"
 
   echo -e "${YELLOW}当前监听端口：$old_port${RESET}"
-  read -rp "输入新端口 [1024-65535，回车=不修改]：" new_port
-  if [ -z "$new_port" ]; then
-    new_port="$old_port"
-    ok=1
-  else
+  while true; do
+    read -rp "输入新端口 [1024-65535，回车=不修改]：" new_port
+    if [ -z "$new_port" ]; then
+      new_port="$old_port"; break
+    fi
     if [[ "$new_port" =~ ^[0-9]+$ ]] && [ "$new_port" -ge 1024 ] && [ "$new_port" -le 65535 ]; then
       if port_used_by_others "$new_port"; then
         echo -e "${RED}❌ 端口 $new_port 已被占用，请重试${RESET}"
-        return
+        continue
       fi
-      ok=1
+      break
     else
       echo -e "${RED}❌ 端口必须在 1024-65535 范围内${RESET}"
-      return
     fi
-  fi
-  [ "$ok" = 1 ] || return 1
+  done
 
   echo -e "${YELLOW}当前密码(PSK)：${cur_psk:-<空>}${RESET}"
-  read -rp "密码选项：1) 不修改（默认）  2) 随机生成  请输入 [1/2]：" sel
-  sel="${sel:-1}"
-  if [ "$sel" = "2" ]; then
-    new_psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
-  else
-    new_psk="${cur_psk}"
-  fi
+  while true; do
+    read -rp "密码选项：1) 不修改（默认）  2) 随机生成  请输入 [1/2]：" sel
+    sel="${sel:-1}"
+    case "$sel" in
+      1) new_psk="${cur_psk}"; [ -n "$new_psk" ] || new_psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"; break ;;
+      2) new_psk="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"; break ;;
+      *) echo "无效输入，请输入 1 或 2";;
+    esac
+  done
 
   cat > "$SN_CONFIG" <<EOF
 [snell-server]
