@@ -25,7 +25,7 @@ cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
-  # 白名单（可留空，后续可动态添加）
+  # 白名单（后续可动态添加；如只放单 IP，可去掉 flags interval）
   set whitelist4 { type ipv4_addr; flags interval; }
   set whitelist6 { type ipv6_addr; flags interval; }
 
@@ -55,9 +55,9 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    # 2.5) 剔除 DHCPv4/v6：直接丢弃，不纳入黑名单（不使用 DHCP 时启用）
-    udp dport { 67, 68 } drop          # DHCPv4
-    udp dport { 546, 547 } drop        # DHCPv6
+    # 2.5) DHCPv4/v6：仅在“确定不用 DHCP(6)”时再启用以下两行
+    # udp dport { 67, 68 } drop          # DHCPv4
+    # udp dport { 546, 547 } drop        # DHCPv6
 
     # 3) 未开放端口：拉黑 + 丢弃（排除未指定地址 0.0.0.0/::）
     tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
@@ -65,12 +65,8 @@ table inet filter {
     udp dport != @udp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
     udp dport != @udp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
 
-    # 允许端口的新建必须是 SYN
+    # 允许端口的新建必须是 SYN（仅作用 TCP，不影响 QUIC/UDP）
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
-
-    # 4) SSH 超速 -> 入黑名单（每源 >6 次/分钟的新建连接）
-    tcp dport ${SSH_PORT} ct state new limit rate over 6/minute add @blacklist4 { ip saddr }  counter drop
-    tcp dport ${SSH_PORT} ct state new limit rate over 6/minute add @blacklist6 { ip6 saddr } counter drop
 
     # 5) 最终放行允许端口
     tcp dport @tcp_allow accept
