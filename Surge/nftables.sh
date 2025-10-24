@@ -25,9 +25,9 @@ cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
-  # 白名单（后续可动态添加；如只放单 IP，可去掉 flags interval）
-  set whitelist4 { type ipv4_addr; flags interval; }
-  set whitelist6 { type ipv6_addr; flags interval; }
+  # 白名单：自动过期（12h）；仍保留 interval 以便支持区间元素（可留）
+  set whitelist4 { type ipv4_addr; flags interval; timeout 12h; }
+  set whitelist6 { type ipv6_addr; flags interval; timeout 12h; }
 
   # 黑名单（长封，7d；再次 add 会刷新超时）
   set blacklist4 { type ipv4_addr; timeout 7d; }
@@ -59,11 +59,13 @@ table inet filter {
     # udp dport { 67, 68 } drop          # DHCPv4
     # udp dport { 546, 547 } drop        # DHCPv6
 
-    # 3) 未开放端口：拉黑 + 丢弃（排除未指定地址 0.0.0.0/::）
-    tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
-    tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
-    udp dport != @udp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
-    udp dport != @udp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
+    # 3) 未开放端口策略：
+    #   TCP：仅对“初始 SYN 且未在允许列表”的连接加黑
+    tcp flags & (syn | ack) == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
+    tcp flags & (syn | ack) == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
+
+    #   UDP：未开放端口仅丢弃，不加黑
+    udp dport != @udp_allow ct state new counter drop
 
     # 允许端口的新建必须是 SYN（仅作用 TCP，不影响 QUIC/UDP）
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
@@ -89,8 +91,8 @@ nft list ruleset | sed -n "1,200p" || true
 
 echo
 echo "[*] 常用操作："
-echo "  动态加白(IPv4)：nft add element inet filter whitelist4 { 203.0.113.45 }"
-echo "  动态加白(IPv6)：nft add element inet filter whitelist6 { 2001:db8::1234 }"
-echo "  手动拉黑(IPv4)：nft add element inet filter blacklist4 { 198.51.100.10 }"
-echo "  查看集合：nft list set inet filter whitelist4 ; nft list set inet filter blacklist4"
+echo "  动态加白(IPv4, 12h 自动过期)：nft add element inet filter whitelist4 { 203.0.113.45 }"
+echo "  动态加白(IPv6, 12h 自动过期)：nft add element inet filter whitelist6 { 2001:db8::1234 }"
+echo "  手动拉黑(IPv4, 7d)：nft add element inet filter blacklist4 { 198.51.100.10 }"
+echo "  查看集合：nft list set inet filter whitelist4 ; nft list set inet filter whitelist6 ; nft list set inet filter blacklist4"
 '
