@@ -76,12 +76,9 @@ Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/tuic
 ExecStart=/usr/local/bin/tuic-server -c /etc/tuic/config.json
-
-# 低端口绑定所需能力；不授予其他 root 权限
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-
 LimitNOFILE=262144
 Restart=on-failure
 RestartSec=3s
