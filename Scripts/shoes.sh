@@ -7,7 +7,7 @@ apt install -y curl jq ca-certificates uuid-runtime openssl tar xz-utils unzip
 [ -f /etc/tls/cert.pem ] || { echo "MISSING /etc/tls/cert.pem"; exit 1; }
 [ -f /etc/tls/key.pem ]  || { echo "MISSING /etc/tls/key.pem";  exit 1; }
 
-# 1) 用户/目录 & 私钥权限
+# 1) 用户/目录
 getent group shoes >/dev/null || groupadd --system shoes
 id -u shoes >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
 install -d -o shoes -g shoes -m 750 /var/lib/shoes
