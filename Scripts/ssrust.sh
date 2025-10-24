@@ -1,25 +1,21 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-#================= 脚本元信息（用于自升级） =================
 SCRIPT_VERSION="1.5.6"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/ssrust.sh"
 
-#================= ss-rust 基本配置 =================
 SS_USER="ssrust"
-SS_DIR="/etc/ssrust"                 # 配置目录（root 管理）
-SS_STATE_DIR="/var/lib/ssrust"       # 运行期/工作目录（ssrust 拥有）
+SS_DIR="/etc/ssrust"
+SS_STATE_DIR="/var/lib/ssrust"
 SS_CONFIG="$SS_DIR/config.json"
 SS_BIN="/usr/local/bin/ssserver"
 SERVICE_NAME="ssrust"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
-#================= 颜色 =================
 RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
 
-#---------------- helpers ----------------
 need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
     echo -e "${RED}请用 root 运行：sudo $0${RESET}"; exit 1
@@ -71,7 +67,6 @@ is_active() {
   fi
 }
 
-# ===== 分离：/etc 配置(root:组只读) + /var/lib 运行目录(用户可写) =====
 ensure_user_and_dirs() {
   id -u "$SS_USER" >/dev/null 2>&1 || useradd -r -M -d "$SS_STATE_DIR" -s /usr/sbin/nologin "$SS_USER"
   mkdir -p "$SS_STATE_DIR" "$SS_DIR"
@@ -146,7 +141,6 @@ restart_and_verify() {
   fi
 }
 
-# ====== 展示/交互 ======
 show_header() {
   local curver; curver="$(get_current_version || echo '-')" ; [ -z "$curver" ] && curver='-'
   local status; status="$(is_active)"
@@ -244,7 +238,6 @@ json_get() {
   jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG"
 }
 
-# ====== 动作 ======
 install_ss() {
   require_pkg wget xz-utils openssl curl jq iproute2
   echo -e "${CYAN}获取最新版...${RESET}"
@@ -443,7 +436,6 @@ EOF
   fi
 }
 
-# ------------------- 入口主循环 ------------------
 need_root
 ensure_launcher
 
