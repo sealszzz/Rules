@@ -130,7 +130,7 @@ uninstall_shoes() {
   remove_unit_files /etc/systemd/system/shoes.service
   remove_paths \
     /usr/local/bin/shoes \
-    /usr/local/sbin/shoes-update \
+    /usr/local/bin/shoes.bak.* \
     /etc/shoes \
     /var/lib/shoes
   remove_user_group "shoes"
