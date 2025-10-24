@@ -74,8 +74,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
   quic_settings:
     cert: "/etc/tls/cert.pem"
     key:  "/etc/tls/key.pem"
-    alpn_protocols:
-    - h3
+    alpn_protocols: ["h3"]
     congestion_control: bbr
   protocol:
     type: tuic
@@ -87,8 +86,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
   quic_settings:
     cert: "/etc/tls/cert.pem"
     key:  "/etc/tls/key.pem"
-    alpn_protocols:
-    - h3
+    alpn_protocols: ["h3"]
     congestion_control: bbr
   protocol:
     type: hysteria2
@@ -107,7 +105,7 @@ else
   echo "Existing /etc/shoes/config.yml detected; keep it."
 fi
 
-# ===== 4) systemd 单元（修正 ExecStart 路径 + WorkingDirectory）=====
+# ===== 4) systemd 单元 =====
 cat >/etc/systemd/system/shoes.service <<EOF
 [Unit]
 Description=Shoes Server
