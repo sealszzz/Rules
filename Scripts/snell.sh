@@ -1,14 +1,14 @@
 #!/usr/bin/env bash
 set -Euo pipefail
 
-SCRIPT_VERSION="1.3.0"
+SCRIPT_VERSION="1.3.1"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Surge/snell.sh"
 
 SN_USER="snell"
-SN_DIR="/etc/snell"               # 配置目录（root 管理）
-SN_STATE_DIR="/var/lib/snell"     # 运行期/工作目录（snell 拥有）
+SN_DIR="/etc/snell"
+SN_STATE_DIR="/var/lib/snell"
 SN_CONFIG="$SN_DIR/snell-server.conf"
 SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
@@ -90,18 +90,14 @@ is_active() {
   fi
 }
 
-# ===== 关键改动：用户+目录分离 =====
 ensure_user_and_dirs() {
-  # snell 用户的 home = /var/lib/snell（可写）
   if ! id -u "$SN_USER" >/dev/null 2>&1; then
     useradd -r -M -d "$SN_STATE_DIR" -s /usr/sbin/nologin "$SN_USER"
   fi
   mkdir -p "$SN_STATE_DIR" "$SN_DIR"
 
-  # 运行目录归 snell 拥有
   chown -R "$SN_USER:$SN_USER" "$SN_STATE_DIR"
 
-  # 配置目录归 root 管理，snell 组可读/可进目录
   chown root:"$SN_USER" "$SN_DIR"
   chmod 750 "$SN_DIR"
 }
@@ -133,7 +129,6 @@ WantedBy=multi-user.target
 EOF
 }
 
-# ==== 端口占用检测 ====
 get_main_pid(){ systemctl show -p MainPID "$SERVICE_NAME" 2>/dev/null | cut -d= -f2; }
 
 port_used_by_others() {
@@ -261,7 +256,6 @@ install_snell() {
   ensure_user_and_dirs
   ensure_launcher
 
-  # 配置目录由 root 管理；不再 chown 给 snell
   mkdir -p "$SN_DIR"
   chown root:"$SN_USER" "$SN_DIR"
   chmod 750 "$SN_DIR"
@@ -279,7 +273,6 @@ listen = ::0:${def_port}
 psk = $PASS
 ipv6 = true
 EOF
-  # 配置文件 root 写，snell 组读
   chown root:"$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
 
@@ -373,7 +366,6 @@ psk = ${new_psk}
 ipv6 = true
 EOF
 
-  # 配置仍然 root 写、snell 组读
   chown root:"$SN_USER" "$SN_CONFIG"
   chmod 640 "$SN_CONFIG"
   restart_and_verify
@@ -424,7 +416,6 @@ EOF
   fi
 }
 
-# ------------------- 入口主循环 ------------------
 need_root
 ensure_launcher
 
