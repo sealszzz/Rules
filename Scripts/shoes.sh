@@ -76,10 +76,10 @@ if [ ! -f /etc/shoes/config.yml ]; then
 
   cat >/etc/shoes/config.yml <<EOF
 # Shoes 服务配置（同时启用 TUIC 与 Hysteria2）
-# - TUIC 监听 UDP/8443
-# - Hysteria2 监听 UDP/443
+# - TUIC 监听 UDP/443
+# - Hysteria2 监听 UDP/8443
 # 证书由 /etc/tls/cert.pem /etc/tls/key.pem 提供
-- address: "[::]:8443"
+- address: "[::]:443"
   transport: quic
   quic_settings:
     cert: "/etc/tls/cert.pem"
@@ -91,7 +91,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
     uuid: "$T_UUID"
     password: "$T_PASS"
 
-- address: "[::]:443"
+- address: "[::]:8443"
   transport: quic
   quic_settings:
     cert: "/etc/tls/cert.pem"
