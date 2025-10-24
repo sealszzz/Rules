@@ -15,10 +15,6 @@ id -u shoes >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s
 install -d -o shoes -g shoes -m 750 /var/lib/shoes
 install -d -o root  -g shoes -m 750 /etc/shoes
 
-# 可选：让 shoes 能读私钥（更安全的共享证书方式）
-chgrp shoes /etc/tls/key.pem 2>/dev/null || true
-chmod 640  /etc/tls/key.pem  2>/dev/null || true
-
 # ===== 2) 选择并安装二进制（优先 GNU，其次 musl；支持 x86_64 & aarch64）=====
 json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
 tag="$(echo "$json" | jq -r ".tag_name")"
@@ -56,12 +52,6 @@ esac
 binpath="$(find "$tmpd/unpack" -maxdepth 3 -type f -name shoes -perm -u+x | head -n1)"
 [ -n "$binpath" ] || { echo "shoes binary not found in archive"; exit 1; }
 
-# 备份旧二进制
-if [ -x /usr/local/bin/shoes ]; then
-  cp -a /usr/local/bin/shoes "/usr/local/bin/shoes.bak.$(date +%Y%m%d%H%M%S)"
-fi
-install -m 0755 "$binpath" /usr/local/bin/shoes
-
 # 记录已装版本
 echo "$tag" > /etc/shoes/.installed_tag
 chown shoes:shoes /etc/shoes/.installed_tag
@@ -84,7 +74,8 @@ if [ ! -f /etc/shoes/config.yml ]; then
   quic_settings:
     cert: "/etc/tls/cert.pem"
     key:  "/etc/tls/key.pem"
-    alpn: ["h3"]
+    alpn_protocols:
+    - h3
     congestion_control: bbr
   protocol:
     type: tuic
@@ -96,7 +87,8 @@ if [ ! -f /etc/shoes/config.yml ]; then
   quic_settings:
     cert: "/etc/tls/cert.pem"
     key:  "/etc/tls/key.pem"
-    alpn: ["h3"]
+    alpn_protocols:
+    - h3
     congestion_control: bbr
   protocol:
     type: hysteria2
