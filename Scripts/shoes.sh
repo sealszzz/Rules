@@ -64,7 +64,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
   T_PASS="$(head -c16 /dev/urandom | xxd -p)"
   H_PASS="$(head -c16 /dev/urandom | xxd -p)"
   cat >/etc/shoes/config.yml <<EOF
-- address: "[::]:443"
+- address: "[::]:8443"
   transport: quic
   quic_settings:
     cert: "/etc/tls/cert.pem"
@@ -74,18 +74,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
   protocol:
     type: tuic
     uuid: "$T_UUID"
-    password: "$T_PASS"
-
-- address: "[::]:8443"
-  transport: quic
-  quic_settings:
-    cert: "/etc/tls/cert.pem"
-    key:  "/etc/tls/key.pem"
-    alpn_protocols: ["h3"]
-    congestion_control: bbr
-  protocol:
-    type: hysteria2
-    password: "$H_PASS"
+    password: "$T_PASS"    
   rules:
     - allow-all-direct
 EOF
