@@ -1,33 +1,190 @@
 # Apple
-DOMAIN-KEYWORD,apple-relay
-DOMAIN,upload.appleschoolcontent.com
-DOMAIN,stocks-data-service.apple.com
-DOMAIN,configuration.ls.apple.com
-DOMAIN,testflight.apple.com
-DOMAIN,icons.axm-usercontent-apple.com
-DOMAIN,appldnld.apple.com.edgesuite.net
-DOMAIN,api.apple-cloudkit.com
-DOMAIN,api.smoot.apple.com
-DOMAIN,time.apple.com
-DOMAIN,cdn.apple-mapkit.com
-# DOMAIN-WILDCARD,time*.apple.com
-DOMAIN-SUFFIX,entrust.net
-DOMAIN-SUFFIX,digicert.com
-DOMAIN-SUFFIX,vertexsmb.com
-DOMAIN-SUFFIX,apple-cloudkit.com
-DOMAIN-SUFFIX,apple-livephotoskit.com
-DOMAIN-SUFFIX,apple
-DOMAIN-SUFFIX,itunes.com
-# DOMAIN-SUFFIX,apple.com
-# DOMAIN-SUFFIX,icloud.com
-DOMAIN-SUFFIX,icloud-content.com
-DOMAIN-SUFFIX,apple-dns.net
-DOMAIN-SUFFIX,mzstatic.com
-DOMAIN-SUFFIX,swcdn.apple.com
-DOMAIN-SUFFIX,cdn-apple.com
 IP-CIDR,17.0.0.0/8,no-resolve
 IP-ASN,714,no-resolve
 IP-ASN,1036,no-resolve
 IP-ASN,1042,no-resolve
 IP-ASN,2709,no-resolve
 IP-ASN,6185,no-resolve
+
+# 设备设置
+DOMAIN-SUFFIX,albert.apple.com
+DOMAIN-SUFFIX,captive.apple.com
+DOMAIN-SUFFIX,gs.apple.com
+DOMAIN-SUFFIX,humb.apple.com
+DOMAIN-SUFFIX,static.ips.apple.com
+DOMAIN-SUFFIX,sq-device.apple.com
+DOMAIN-SUFFIX,tbsc.apple.com
+DOMAIN-SUFFIX,time-ios.apple.com
+DOMAIN-SUFFIX,time.apple.com
+DOMAIN-SUFFIX,time-macos.apple.com
+
+# 设备管理
+DOMAIN-WILDCARD,*.push.apple.com
+DOMAIN-SUFFIX,deviceenrollment.apple.com
+DOMAIN-SUFFIX,deviceservices-external.apple.com
+DOMAIN-SUFFIX,gdmf.apple.com
+DOMAIN-SUFFIX,identity.apple.com
+DOMAIN-SUFFIX,iprofiles.apple.com
+DOMAIN-SUFFIX,mdmenrollment.apple.com
+DOMAIN-SUFFIX,setup.icloud.com
+DOMAIN-SUFFIX,vpp.itunes.apple.com
+DOMAIN-WILDCARD,*.appattest.apple.com
+DOMAIN-SUFFIX,axm-servicediscovery.apple.com
+
+# Apple 商务管理和 Apple 校园教务管理
+DOMAIN-WILDCARD,*.business.apple.com
+DOMAIN-WILDCARD,*.school.apple.com
+DOMAIN-SUFFIX,appleid.cdn-apple.com
+DOMAIN-SUFFIX,idmsa.apple.com
+DOMAIN-WILDCARD,*.itunes.apple.com
+DOMAIN-WILDCARD,*.mzstatic.com
+DOMAIN-SUFFIX,api.ent.apple.com
+DOMAIN-SUFFIX,api.edu.apple.com
+DOMAIN-SUFFIX,statici.icloud.com
+DOMAIN-WILDCARD,*.vertexsmb.com
+DOMAIN-SUFFIX,www.apple.com.cn
+DOMAIN-SUFFIX,upload.appleschoolcontent.com
+DOMAIN-SUFFIX,api-business.apple.com
+DOMAIN-SUFFIX,api-school.apple.com
+
+# 员工和学生
+DOMAIN-SUFFIX,ws-ee-maidsvc.icloud.com
+
+# Apple 商务必备设备管理
+DOMAIN-SUFFIX,axm-adm-enroll.apple.com
+DOMAIN-SUFFIX,axm-adm-mdm.apple.com
+DOMAIN-SUFFIX,axm-adm-scep.apple.com
+DOMAIN-SUFFIX,axm-app.apple.com
+DOMAIN-WILDCARD,*.apple-mapkit.com
+DOMAIN-SUFFIX,icons.axm-usercontent-apple.com
+
+# “课堂”和“课业”
+DOMAIN-SUFFIX,s.mzstatic.com
+DOMAIN-SUFFIX,play.itunes.apple.com
+DOMAIN-SUFFIX,ws-ee-maidsvc.icloud.com
+DOMAIN-SUFFIX,ws.school.apple.com
+DOMAIN-SUFFIX,pg-bootstrap.itunes.apple.com
+DOMAIN-SUFFIX,cls-iosclient.itunes.apple.com
+DOMAIN-SUFFIX,cls-ingest.itunes.apple.com
+
+# 软件更新
+DOMAIN-SUFFIX,appldnld.apple.com
+DOMAIN-SUFFIX,configuration.apple.com
+DOMAIN-SUFFIX,gdmf.apple.com
+DOMAIN-SUFFIX,gg.apple.com
+DOMAIN-SUFFIX,gs.apple.com
+DOMAIN-SUFFIX,ig.apple.com
+DOMAIN-SUFFIX,mesu.apple.com
+DOMAIN-SUFFIX,oscdn.apple.com
+DOMAIN-SUFFIX,osrecovery.apple.com
+DOMAIN-SUFFIX,skl.apple.com
+DOMAIN-SUFFIX,swcdn.apple.com
+DOMAIN-SUFFIX,swdist.apple.com
+DOMAIN-SUFFIX,swdownload.apple.com
+DOMAIN-SUFFIX,swscan.apple.com
+DOMAIN-SUFFIX,updates-http.cdn-apple.com
+DOMAIN-SUFFIX,updates.cdn-apple.com
+DOMAIN-SUFFIX,xp.apple.com
+DOMAIN-SUFFIX,gdmf-ados.apple.com
+DOMAIN-SUFFIX,gsra.apple.com
+DOMAIN-SUFFIX,wkms-public.apple.com
+DOMAIN-SUFFIX,fcs-keys-pub-prod.cdn-apple.com
+
+# App 和附加内容
+DOMAIN-WILDCARD,*.itunes.apple.com
+DOMAIN-WILDCARD,*.apps.apple.com
+DOMAIN-WILDCARD,*.mzstatic.com
+DOMAIN-SUFFIX,itunes.apple.com
+DOMAIN-SUFFIX,ppq.apple.com
+DOMAIN-SUFFIX,api.apple-cloudkit.com
+DOMAIN-WILDCARD,*.appattest.apple.com
+DOMAIN-WILDCARD,*.apps-marketplace.apple.com
+DOMAIN-SUFFIX,token.safebrowsing.apple
+DOMAIN-SUFFIX,audiocontentdownload.apple.com
+DOMAIN-SUFFIX,devimages-cdn.apple.com
+DOMAIN-SUFFIX,download.developer.apple.com
+DOMAIN-SUFFIX,playgrounds-assets-cdn.apple.com
+DOMAIN-SUFFIX,playgrounds-cdn.apple.com
+DOMAIN-SUFFIX,sylvan.apple.com
+DOMAIN-SUFFIX,gateway.icloud.com
+
+# 运营商更新
+DOMAIN-SUFFIX,appldnld.apple.com
+DOMAIN-SUFFIX,appldnld.apple.com.edgesuite.net
+DOMAIN-SUFFIX,itunes.com
+DOMAIN-SUFFIX,itunes.apple.com
+DOMAIN-SUFFIX,updates-http.cdn-apple.com
+DOMAIN-SUFFIX,updates.cdn-apple.com
+
+# 内容缓存
+DOMAIN-SUFFIX,lcdn-registration.apple.com
+DOMAIN-SUFFIX,suconfig.apple.com
+DOMAIN-SUFFIX,xp-cdn.apple.com
+DOMAIN-SUFFIX,lcdn-locator.apple.com
+DOMAIN-SUFFIX,serverstatus.apple.com
+
+# Beta 版更新
+DOMAIN-SUFFIX,bpapi.apple.com
+DOMAIN-SUFFIX,cssubmissions.apple.com
+DOMAIN-SUFFIX,fba.apple.com
+
+# Apple 诊断
+DOMAIN-SUFFIX,diagassets.apple.com
+
+# 域名系统解析
+DOMAIN-SUFFIX,doh.dns.apple.com
+
+# 证书验证
+DOMAIN-SUFFIX,certs.apple.com
+DOMAIN-SUFFIX,crl.apple.com
+DOMAIN-SUFFIX,crl3.digicert.com
+DOMAIN-SUFFIX,crl4.digicert.com
+DOMAIN-SUFFIX,ocsp.apple.com
+DOMAIN-SUFFIX,ocsp.digicert.cn
+DOMAIN-SUFFIX,ocsp.digicert.com
+DOMAIN-SUFFIX,ocsp2.apple.com
+DOMAIN-SUFFIX,valid.apple.com
+
+# Apple Account
+DOMAIN-SUFFIX,account.apple.com
+DOMAIN-SUFFIX,appleid.cdn-apple.com
+DOMAIN-SUFFIX,idmsa.apple.com
+DOMAIN-SUFFIX,gsa.apple.com
+
+# iCloud
+DOMAIN-WILDCARD,*.apple-cloudkit.com
+DOMAIN-WILDCARD,*.apple-livephotoskit.com
+DOMAIN-WILDCARD,*.apzones.com
+DOMAIN-WILDCARD,*.cdn-apple.com
+DOMAIN-WILDCARD,*.gc.apple.com
+DOMAIN-WILDCARD,*.icloud.com
+DOMAIN-WILDCARD,*.icloud.com.cn
+DOMAIN-WILDCARD,*.icloud.apple.com
+DOMAIN-WILDCARD,*.icloud-content.com
+DOMAIN-WILDCARD,*.iwork.apple.com
+DOMAIN-SUFFIX,mask.icloud.com
+DOMAIN-SUFFIX,mask-h2.icloud.com
+DOMAIN-SUFFIX,mask-api.icloud.com
+
+# Apple Intelligence、Siri 和搜索
+DOMAIN-SUFFIX,guzzoni.apple.com
+DOMAIN-WILDCARD,*.smoot.apple.com
+DOMAIN-SUFFIX,apple-relay.cloudflare.com
+DOMAIN-SUFFIX,apple-relay.fastly-edge.com
+DOMAIN-SUFFIX,cp4.cloudflare.com
+DOMAIN-SUFFIX,apple-relay.apple.com
+
+# 关联域
+DOMAIN-SUFFIX,app-site-association.cdn-apple.com
+DOMAIN-SUFFIX,app-site-association.networking.apple
+
+# Tap to Pay on iPhone
+DOMAIN-SUFFIX,pos-device.apple.com
+DOMAIN-SUFFIX,humb.apple.com
+DOMAIN-SUFFIX,iphonesubmissions.apple.com
+
+# iPhone 上的证件校验器
+DOMAIN-SUFFIX,smp-device-content.apple.com
+DOMAIN-SUFFIX,idv.cdn-apple.com
+DOMAIN-SUFFIX,idv-prod1.apple.com
+DOMAIN-SUFFIX,humb.apple.com
