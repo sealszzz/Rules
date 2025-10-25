@@ -50,15 +50,15 @@ inbound:
     - username: "${USER1}"
       password: "${PASS1}"
   jls-upstream:
-    addr: "${UPSTREAM_HOST}:${UPSTREAM_PORT}"   # 必须写 域名:端口，域名与客户端 server-name 一致
+    addr: "${UPSTREAM_HOST}:${UPSTREAM_PORT}"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
-  # initial-mtu: 1400                           # 可选：高丢包网络建议启用
-  # min-mtu: 1290                               # 可选：需小于 initial-mtu
+  # initial-mtu: 1400        # 可选：高丢包网络建议启用
+  # min-mtu: 1290            # 可选：需小于 initial-mtu
 outbound:
   type: direct
-  dns-strategy: prefer-ipv4                     # 或 prefer-ipv6 / ipv4-only / ipv6-only
+  dns-strategy: prefer-ipv4  # 或 prefer-ipv6 / ipv4-only / ipv6-only
 log-level: "${LOG_LEVEL}"
 EOF
 
