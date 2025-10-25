@@ -25,7 +25,7 @@ cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
-  # 黑名单（长封，5d；再次 add 会刷新超时）
+  # 黑名单（长封，7d；再次 add 会刷新超时）
   set blacklist4 { type ipv4_addr; timeout 7d; size 65535; gc-interval 5m; }
   set blacklist6 { type ipv6_addr; timeout 7d; size 65535; gc-interval 5m; }
 
