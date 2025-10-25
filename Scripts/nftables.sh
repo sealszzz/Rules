@@ -94,5 +94,5 @@ echo "[*] 常用操作："
 echo "  动态加白(IPv4, 12h 自动过期)：nft add element inet filter whitelist4 { 203.0.113.45 }"
 echo "  动态加白(IPv6, 12h 自动过期)：nft add element inet filter whitelist6 { 2001:db8::1234 }"
 echo "  手动拉黑(IPv4, 7d)：nft add element inet filter blacklist4 { 198.51.100.10 }"
-echo "  查看集合：nft list set inet filter whitelist4 ; nft list set inet filter whitelist6 ; nft list set inet filter blacklist4"
+echo "  查看集合：nft list set inet filter whitelist4 ; nft list set inet filter whitelist6 ; nft list set inet filter blacklist4 ; nft list set inet filter blacklist6"
 '
