@@ -25,9 +25,9 @@ cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
-  # 黑名单（长封，7d；再次 add 会刷新超时）
-  set blacklist4 { type ipv4_addr; timeout 7d; }
-  set blacklist6 { type ipv6_addr; timeout 7d; }
+  # 黑名单（长封，5d；再次 add 会刷新超时）
+  set blacklist4 { type ipv4_addr; timeout 7d; size 65535; gc-interval 5m; }
+  set blacklist6 { type ipv6_addr; timeout 7d; size 65535; gc-interval 5m; }
 
   # 允许端口（按你的环境）
   set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 8443, 8448 }; }
@@ -55,8 +55,8 @@ table inet filter {
 
     # 3) 未开放端口策略：
     #   TCP：仅对“初始 SYN 且未在允许列表”的连接加黑
-    tcp flags & (syn | ack) == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
-    tcp flags & (syn | ack) == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
 
     #   UDP：未开放端口仅丢弃，不加黑
     udp dport != @udp_allow ct state new counter drop
@@ -64,7 +64,7 @@ table inet filter {
     # 允许端口的新建必须是 SYN（仅作用 TCP，不影响 QUIC/UDP）
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
 
-    # 5) 最终放行允许端口
+    # 4) 最终放行允许端口
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
