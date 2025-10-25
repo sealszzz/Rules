@@ -25,10 +25,6 @@ cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
-  # 白名单：自动过期（12h）；仍保留 interval 以便支持区间元素（可留）
-  set whitelist4 { type ipv4_addr; flags interval; timeout 12h; }
-  set whitelist6 { type ipv6_addr; flags interval; timeout 12h; }
-
   # 黑名单（长封，7d；再次 add 会刷新超时）
   set blacklist4 { type ipv4_addr; timeout 7d; }
   set blacklist6 { type ipv6_addr; timeout 7d; }
@@ -40,9 +36,7 @@ table inet filter {
   chain input {
     type filter hook input priority 0; policy drop;
 
-    # 1) 早期白/黑名单分流
-    ip  saddr @whitelist4 accept
-    ip6 saddr @whitelist6 accept
+    # 1) 早期黑名单丢弃
     ip  saddr @blacklist4 drop
     ip6 saddr @blacklist6 drop
 
@@ -91,8 +85,6 @@ nft list ruleset | sed -n "1,200p" || true
 
 echo
 echo "[*] 常用操作："
-echo "  动态加白(IPv4, 12h 自动过期)：nft add element inet filter whitelist4 { 203.0.113.45 }"
-echo "  动态加白(IPv6, 12h 自动过期)：nft add element inet filter whitelist6 { 2001:db8::1234 }"
 echo "  手动拉黑(IPv4, 7d)：nft add element inet filter blacklist4 { 198.51.100.10 }"
-echo "  查看集合：nft list set inet filter whitelist4 ; nft list set inet filter whitelist6 ; nft list set inet filter blacklist4 ; nft list set inet filter blacklist6"
+echo "  查看集合：nft list set inet filter blacklist4 ; nft list set inet filter blacklist6"
 '
