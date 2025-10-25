@@ -45,7 +45,7 @@ mv shadowquic /usr/local/bin/shadowquic
 cat >/etc/shadowquic/server.yaml <<EOF
 inbound:
   type: shadowquic
-  bind-addr: "0.0.0.0:${BIND_PORT}"
+  bind-addr: "[::]:${BIND_PORT}"
   users:
     - username: "${USER1}"
       password: "${PASS1}"
