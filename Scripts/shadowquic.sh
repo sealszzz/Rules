@@ -2,7 +2,7 @@ bash -c '
 set -euo pipefail
 
 # ====== 可调参数（可通过环境变量覆盖） ======
-: "${BIND_PORT:=8443}"                       # 服务监听 UDP 端口
+: "${BIND_PORT:=443}"                       # 服务监听 UDP 端口
 : "${UPSTREAM_HOST:=www.ycombinator.com}"    # 伪装用真实 TLS 域名（需可连通）
 : "${UPSTREAM_PORT:=443}"                    # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                      # trace / debug / info / warn / error
