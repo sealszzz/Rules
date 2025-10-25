@@ -55,12 +55,6 @@ EOF
 chown root:tuic /etc/tuic/config.json
 chmod 640 /etc/tuic/config.json
 
-# 可选：让 tuic 仅组读 TLS 私钥（更安全）
-if [ -f /etc/tls/key.pem ]; then
-  chgrp tuic /etc/tls/key.pem || true
-  chmod 640 /etc/tls/key.pem || true
-fi
-
 # --- systemd unit（非 root 绑 443 用 AmbientCapabilities，不用 setcap）---
 cat >/etc/systemd/system/tuic-server.service <<EOF
 [Unit]
