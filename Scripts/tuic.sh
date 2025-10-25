@@ -27,26 +27,24 @@ mv tuic-server /usr/local/bin/tuic-server
 UUID="$(uuidgen)"
 PASS="$(openssl rand -hex 16)"
 
-cat >/etc/tuic/config.json <<EOF
+cat >/etc/tuic/config.json <<'EOF'
 {
   "server": "[::]:443",
-  "users": { "$UUID": "$PASS" },
-
+  "users": {
+    "$UUID":
+    "$PASS"
+  },
   "certificate": "/etc/tls/cert.pem",
   "private_key": "/etc/tls/key.pem",
-
   "congestion_control": "bbr",
   "alpn": ["h3"],
-
   "udp_relay_ipv6": true,
   "dual_stack": true,
   "zero_rtt_handshake": false,
-
   "auth_timeout": "3s",
   "task_negotiation_timeout": "3s",
-  "max_idle_time": "30s",
   "max_external_packet_size": 1500,
-
+  "stream_timeout": "60s",
   "log_level": "warn"
 }
 EOF
