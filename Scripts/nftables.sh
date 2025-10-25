@@ -85,6 +85,7 @@ nft list ruleset | sed -n "1,200p" || true
 
 echo
 echo "[*] 常用操作："
-echo "  手动拉黑(IPv4, 7d)：nft add element inet filter blacklist4 { 198.51.100.10 }"
+echo "  手动拉黑(IPv4)：nft add element inet filter blacklist4 { 198.51.100.10 }"
+echo "  解除拉黑(IPv4)：nft delete element inet filter blacklist4 { 198.51.100.10 }"
 echo "  查看集合：nft list set inet filter blacklist4 ; nft list set inet filter blacklist6"
 '
