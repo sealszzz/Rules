@@ -7,7 +7,7 @@ set -euo pipefail
 : "${UPSTREAM_PORT:=443}"                    # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                      # trace / debug / info / warn / error
 
-# 两组演示账号（如需固定，可预先导出 USER1/PASS1/USER2/PASS2）
+# 账号（如需固定，可预先导出 USER1/PASS1/USER2/PASS2）
 : "${USER1:=$(tr -dc 0-9 </dev/urandom | head -c 8)}"
 : "${PASS1:=$(tr -dc 0-9 </dev/urandom | head -c 8)}"
 
