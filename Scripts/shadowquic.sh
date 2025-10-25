@@ -7,9 +7,9 @@ set -euo pipefail
 : "${UPSTREAM_PORT:=443}"                    # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                      # trace / debug / info / warn / error
 
-# 账号（如需固定，可预先导出 USER1/PASS1/USER2/PASS2）
-: "${USER1:=$(tr -dc 0-9 </dev/urandom | head -c 8)}"
-: "${PASS1:=$(tr -dc 0-9 </dev/urandom | head -c 8)}"
+# 账号（如需固定，可预先导出 USER1/PASS1）
+: "${USER1:=$(openssl rand -hex 8)}"    # 8 bytes -> 16 hex (64-bit)
+: "${PASS1:=$(openssl rand -hex 16)}"   # 16 bytes -> 32 hex (128-bit)
 
 # ====== 基础依赖 ======
 export DEBIAN_FRONTEND=noninteractive
