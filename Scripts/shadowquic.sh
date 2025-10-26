@@ -3,13 +3,13 @@ set -euo pipefail
 
 # ====== 可调参数（可通过环境变量覆盖） ======
 : "${BIND_PORT:=443}"                       # 服务监听 UDP 端口
-: "${UPSTREAM_HOST:=www.ycombinator.com}"    # 伪装用真实 TLS 域名（需可连通）
+: "${UPSTREAM_HOST:=www.debian.org}"    # 伪装用真实 TLS 域名（需可连通）
 : "${UPSTREAM_PORT:=443}"                    # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                      # trace / debug / info / warn / error
 
 # 账号（如需固定，可预先导出 USER1/PASS1）
-: "${USER1:=$(openssl rand -hex 8)}"    # 8 bytes -> 16 hex (64-bit)
 : "${PASS1:=$(openssl rand -hex 16)}"   # 16 bytes -> 32 hex (128-bit)
+: "${USER1:=$(openssl rand -hex 8)}"    # 8 bytes -> 16 hex (64-bit)
 
 # ====== 基础依赖 ======
 export DEBIAN_FRONTEND=noninteractive
@@ -47,18 +47,18 @@ inbound:
   type: shadowquic
   bind-addr: "[::]:${BIND_PORT}"
   users:
-    - username: "${USER1}"
-      password: "${PASS1}"
+    - password: "${PASS1}"
+      username: "${USER1}"
   jls-upstream:
     addr: "${UPSTREAM_HOST}:${UPSTREAM_PORT}"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
-  # initial-mtu: 1400        # 可选：高丢包网络建议启用
-  # min-mtu: 1290            # 可选：需小于 initial-mtu
+  # initial-mtu: 1400   # 可选：高丢包网络建议启用
+  # min-mtu: 1290       # 可选：需小于 initial-mtu
 outbound:
   type: direct
-  dns-strategy: prefer-ipv4  # 或 prefer-ipv6 / ipv4-only / ipv6-only
+  dns-strategy: prefer-ipv4   # 或 prefer-ipv6 / ipv4-only / ipv6-only
 log-level: "${LOG_LEVEL}"
 EOF
 
