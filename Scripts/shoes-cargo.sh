@@ -1,4 +1,4 @@
-bash -c '
+#!/usr/bin/env bash
 set -euo pipefail
 
 # ===== 0) 基础依赖（编译 Rust & 生成账户用）=====
