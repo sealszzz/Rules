@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -euo pipefai
+set -euo pipefail
 
 # ====== 可调参数（可通过环境变量覆盖） ======
 : "${BIND_PORT:=443}"                   # 服务监听 UDP 端口
@@ -106,4 +106,3 @@ systemctl --no-pager --full status shadowquic || true
 echo
 echo "UDP/${BIND_PORT} 监听检查："
 ss -u -lpn | grep ":${BIND_PORT} " || echo "未见 UDP/${BIND_PORT} 监听/占用（若刚启动，稍等 1~2 秒再查）"
-'
