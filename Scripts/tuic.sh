@@ -1,4 +1,4 @@
-bash -c '
+#!/usr/bin/env bash
 set -euo pipefail
 
 apt update
@@ -50,7 +50,7 @@ cat >/etc/tuic/config.json <<EOF
   "auth_timeout": "3s",
   "task_negotiation_timeout": "3s",
   "max_external_packet_size": 1500,
-  "max_idle_time": "60s",
+  "stream_timeout": "60s",
   "log_level": "warn"
 }
 EOF
@@ -95,5 +95,4 @@ echo "状态："
 systemctl --no-pager --full status tuic-server || true
 echo
 echo "UDP/443 占用检查（HTTP/3 会抢 UDP/443）："
-ss -u -lpn | grep ":443 " || echo "未见 UDP/443 监听/占用"
-'
+ss -u -lpn | grep ":443" || echo "未见 UDP/443 监听/占用"
