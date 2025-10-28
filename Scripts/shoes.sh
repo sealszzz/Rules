@@ -142,7 +142,8 @@ fi
 
 # ========= systemd =========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<'EOF'
+  # 需要展开 RUST_LOG → 不带引号的 EOF
+  cat >/etc/systemd/system/shoes.service <<EOF
 [Unit]
 Description=Shoes Server
 After=network-online.target nss-lookup.target
@@ -178,4 +179,4 @@ echo
 echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
 echo
 echo "UDP 监听检查："
-ss -Hnplu | grep -E ":${TUIC_PORT} |:${HY2_PORT} " || true
+ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)|:${HY2_PORT}([^0-9]|$)" || true
