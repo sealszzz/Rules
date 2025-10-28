@@ -31,33 +31,47 @@ install -d -o root  -g shoes -m 750 /etc/shoes
 
 # ========= 只在选 cargo 时才装构建链 =========
 ensure_cargo_toolchain() {
-  apt install -y --no-install-recommends git build-essential pkg-config
+  apt install -y --no-install-recommends \
+    git build-essential pkg-config cmake clang llvm-dev libclang-dev
+
   if ! command -v cargo >/dev/null 2>&1; then
     curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
   fi
   [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
   export PATH="$HOME/.cargo/bin:$PATH"
+
+  # 某些环境下避免 cargo 内置 git 受限
+  export CARGO_NET_GIT_FETCH_WITH_CLI=true
 }
 
-# ========= 方案 A：从源码编译（cargo）=========
+# ========= 方案 A：从源码编译（cargo，固定到 master 最新 SHA + 最新兼容依赖）=========
 install_shoes_cargo() {
   ensure_cargo_toolchain
 
-  # 1) 解析 master 最新提交（你要“每次都最新”）
-  local sha
-  sha="$(curl -fsSL https://api.github.com/repos/cfal/shoes/commits/master | jq -r .sha)"
-  [ -n "$sha" ] || { echo "无法获取 shoes/master 最新提交"; exit 1; }
+  # 优先 GitHub API（若存在 GITHUB_TOKEN 自动使用），失败则 git 原生兜底
+  local sha=""
+  if [ -n "${GITHUB_TOKEN-}" ]; then
+    sha="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
+            https://api.github.com/repos/cfal/shoes/commits/master \
+            | jq -r '.sha // empty' || true)"
+  else
+    sha="$(curl -fsSL https://api.github.com/repos/cfal/shoes/commits/master \
+            | jq -r '.sha // empty' || true)"
+  fi
 
-  # 2) 安装该提交的源码；不加 --locked，依赖按 Cargo.toml 拉“最新兼容”
+  if [ -z "$sha" ]; then
+    sha="$(git ls-remote https://github.com/cfal/shoes master 2>/dev/null | awk '{print $1}')" || true
+  fi
+
+  [ -n "$sha" ] || { echo "无法获取 shoes/master 最新提交（API 与 git 皆失败）"; exit 1; }
+
+  # 不加 --locked => 依赖按 Cargo.toml 解析为“最新兼容”
   cargo install --git https://github.com/cfal/shoes --rev "$sha" --force
-
-  # 3) 安装到 /usr/local/bin
   install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
-
   echo "== Built shoes @ ${sha} (HEAD of master), deps = latest allowed by Cargo.toml =="
 }
 
-# ========= 方案 B：下载最新 release 二进制（已修复 tmpd trap）=========
+# ========= 方案 B：下载最新 release 二进制 =========
 install_shoes_release() {
   local json latest_tag assets asset url pat_arch arch tmpd binpath
 
@@ -82,13 +96,13 @@ install_shoes_release() {
   echo "[*] Installing Shoes $latest_tag via asset: $asset"
 
   local tmpd; tmpd="$(mktemp -d)"
-  # 关键修复：在函数返回时清理局部 tmpd；兼容 set -u
+  # 函数返回即清理 tmpd；兼容 set -u
   trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
 
   curl -fL "$url" -o "$tmpd/pkg"
   mkdir -p "$tmpd/unpack"
   case "$asset" in
-    *.tar.gz) tar -xzf "$tmpd/pkg" -c -C "$tmpd/unpack" 2>/dev/null || tar -xzf "$tmpd/pkg" -C "$tmpd/unpack" ;;
+    *.tar.gz) tar -xzf "$tmpd/pkg" -C "$tmpd/unpack" ;;
     *.tar.xz) tar -xJf "$tmpd/pkg" -C "$tmpd/unpack" ;;
     *.zip)    unzip -q  "$tmpd/pkg" -d "$tmpd/unpack" ;;
   esac
@@ -102,10 +116,11 @@ install_shoes_release() {
   trap - RETURN
 }
 
-# ========= 交互选择安装路径（默认 N=release）=========
+# ========= 交互选择安装路径（默认 N=release；给默认值以防 stdin 异常）=========
 echo
+use_cargo=0
 while :; do
-  read -rp "是否用 cargo 从源码编译 Shoes？[y/N] " ans
+  read -rp "是否用 cargo 从源码编译 Shoes？[y/N] " ans || { echo; break; }
   ans="${ans:-N}"
   case "$ans" in
     [Yy]) use_cargo=1; break ;;
