@@ -2,9 +2,10 @@
 set -euo pipefail
 
 # ====== 可调参数（可通过环境变量覆盖） ======
-: "${BIND_PORT:=443}"                   # 服务监听 UDP 端口
-: "${UPSTREAM_HOST:=www.debian.org}"    # 伪装用真实 TLS 域名（需可连通）
-: "${LOG_LEVEL:=info}"                  # trace / debug / info / warn / error
+: "${BIND_PORT:=443}"
+: "${UPSTREAM_HOST:=www.debian.org}"
+: "${UPSTREAM_PORT:=443}"
+: "${LOG_LEVEL:=info}"
 
 # ====== 基础依赖 ======
 export DEBIAN_FRONTEND=noninteractive
@@ -48,7 +49,7 @@ inbound:
     - password: "${PASS1}"
       username: "${USER1}"
   jls-upstream:
-    addr: "${UPSTREAM_HOST}:443"
+    addr: "${UPSTREAM_HOST}:${UPSTREAM_PORT}"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
