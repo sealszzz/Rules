@@ -140,9 +140,9 @@ EOF
   echo "HY2  PASS: ${H_PASS}"
 fi
 
-# ========= systemd 单元（需要变量展开，故不加引号）=========
+# ========= systemd =========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<EOF
+  cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
 Description=Shoes Server
 After=network-online.target nss-lookup.target
