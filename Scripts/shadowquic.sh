@@ -4,7 +4,6 @@ set -euo pipefail
 # ====== 可调参数（可通过环境变量覆盖） ======
 : "${BIND_PORT:=443}"                   # 服务监听 UDP 端口
 : "${UPSTREAM_HOST:=www.debian.org}"    # 伪装用真实 TLS 域名（需可连通）
-: "${UPSTREAM_PORT:=443}"               # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                  # trace / debug / info / warn / error
 
 # ====== 基础依赖 ======
@@ -30,18 +29,17 @@ case "$arch" in
   *) echo "不支持的架构: $arch（目前脚本仅适配 x86_64 / aarch64）" >&2; exit 1 ;;
 esac
 
-# ====== 下载最新 release：先 GNU/glibc，再 musl ======
-cd /tmp
+# ====== 下载最新 release：先 GNU/glibc，再 musl（用临时目录+install 直装） ======
+tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
 URL_BASE="https://github.com/spongebob888/shadowquic/releases/latest/download"
 echo "下载 ${ASSET} （GNU/glibc 优先）..."
-if ! curl -fL -o shadowquic "$URL_BASE/${ASSET}"; then
+if ! curl -fL -o "$tmpd/shadowquic" "$URL_BASE/${ASSET}"; then
   echo "glibc 资产不存在或下载失败，回退到 musl：${FALLBACK}"
-  curl -fL -o shadowquic "$URL_BASE/${FALLBACK}"
+  curl -fL -o "$tmpd/shadowquic" "$URL_BASE/${FALLBACK}"
 fi
-chmod +x shadowquic
-mv shadowquic /usr/local/bin/shadowquic
+install -m 0755 "$tmpd/shadowquic" /usr/local/bin/shadowquic
 
-# ====== 生成服务端配置（YAML）=====
+# ====== 生成服务端配置（YAML，需要变量展开→不加引号的 EOF）=====
 cat >/etc/shadowquic/server.yaml <<EOF
 inbound:
   type: shadowquic
@@ -50,7 +48,7 @@ inbound:
     - password: "${PASS1}"
       username: "${USER1}"
   jls-upstream:
-    addr: "${UPSTREAM_HOST}:${UPSTREAM_PORT}"
+    addr: "${UPSTREAM_HOST}:443"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
@@ -66,10 +64,10 @@ EOF
 chown root:shadowquic /etc/shadowquic/server.yaml
 chmod 640 /etc/shadowquic/server.yaml
 
-# ====== systemd 单元（禁止展开更稳）=====
+# ====== systemd 单元（不需要变量展开→使用'EOF'）=====
 cat >/etc/systemd/system/shadowquic.service <<'EOF'
 [Unit]
-Description=ShadowQUIC Server (glibc-first)
+Description=ShadowQUIC Server
 Documentation=https://github.com/spongebob888/shadowquic
 After=network-online.target nss-lookup.target
 Wants=network-online.target
