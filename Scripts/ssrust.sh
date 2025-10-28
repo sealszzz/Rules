@@ -22,7 +22,6 @@ need_root() {
   fi
 }
 
-# ---- 依赖管理：apt update 只跑一次 ----
 require_pkg() {
   local pkgs=("$@") miss=()
   for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || miss+=("$p"); done
@@ -31,7 +30,7 @@ require_pkg() {
     apt install -y "${miss[@]}"
   fi
 }
-# 统一常用依赖清单（两处入口公用）
+
 DEPS_COMMON=(wget xz-utils tar openssl curl jq iproute2)
 ensure_deps(){ require_pkg "${DEPS_COMMON[@]}"; }
 
