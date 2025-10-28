@@ -2,8 +2,10 @@
 set -euo pipefail
 
 # ===== 0) 基础依赖（编译 Rust & 生成账户用）=====
+export DEBIAN_FRONTEND=noninteractive
 apt update
-apt install -y curl ca-certificates git build-essential pkg-config uuid-runtime openssl jq
+apt install -y --no-install-recommends \
+  curl ca-certificates git build-essential pkg-config uuid-runtime openssl jq iproute2
 
 # ===== 1) 安装 rustup/cargo（若尚未安装）=====
 if ! command -v cargo >/dev/null 2>&1; then
@@ -118,4 +120,4 @@ fi
 
 # ===== 6) 摘要 =====
 echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
-ss -Hnplu | egrep ":443 |:8443 " || true
+ss -Hnplu | grep -E ":443 |:8443 " || true
