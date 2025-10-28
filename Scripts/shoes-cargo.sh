@@ -98,4 +98,3 @@ fi
 # ===== 6) 摘要 =====
 echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
 ss -Hnplu | egrep ":443 |:8443 " || true
-'
