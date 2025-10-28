@@ -36,7 +36,8 @@ esac
 if [ "$USE_CARGO" -eq 1 ]; then
   apt install -y --no-install-recommends git build-essential pkg-config xz-utils
   if ! command -v cargo >/dev/null 2>&1; then
-    curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+    # D: curl 增强重试
+    curl -fsSL --retry 3 --retry-delay 1 https://sh.rustup.rs | sh -s -- -y --profile minimal
   fi
   [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
   export PATH="$HOME/.cargo/bin:$PATH"
@@ -64,14 +65,22 @@ else
     aarch64|arm64) ASSET="tuic-server-aarch64-linux"; ALT="tuic-server-aarch64-unknown-linux-gnu" ;;
     *) echo "不支持的架构: $arch" >&2; exit 1 ;;
   esac
-  cd /tmp
-  if ! curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${ASSET}"; then
+
+  # B: 用函数 + mktemp + trap 下载并安装，失败回退 ALT
+  install_release_tuic() {
+    local asset="$1" url tmpd
+    tmpd="$(mktemp -d)" || return 1
+    trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
+    url="https://github.com/Itsusinn/tuic/releases/latest/download/${asset}"
+    # D: curl 增强重试
+    curl -fsSL --retry 3 --retry-delay 1 -o "$tmpd/tuic-server" "$url" || return 1
+    install -m 0755 "$tmpd/tuic-server" /usr/local/bin/tuic-server
+  }
+
+  if ! install_release_tuic "$ASSET"; then
     echo "[!] 主资产下载失败，尝试回退：${ALT}"
-    curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${ALT}"
+    install_release_tuic "$ALT" || { echo "❌ 两个资产都失败"; exit 1; }
   fi
-  chmod +x tuic-server
-  install -m 0755 tuic-server /usr/local/bin/tuic-server
-  rm -f tuic-server
 fi
 
 # ========= 首次生成配置（存在则不覆盖）=========
@@ -141,7 +150,8 @@ systemctl try-reload-or-restart tuic-server || systemctl restart tuic-server
 # ========= 摘要 =========
 echo
 echo "== tuic-server version =="
-/usr/local/bin/tuic-server -V || true
+# C: 版本号兜底
+/usr/local/bin/tuic-server -V 2>/dev/null || /usr/local/bin/tuic-server --version 2>/dev/null || true
 echo
 echo "UDP/${TUIC_PORT} 监听检查（注意与其它 QUIC/HTTP3 冲突）"
 ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未见 UDP/${TUIC_PORT} 监听/占用"
