@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.5.6"
+SCRIPT_VERSION="1.5.7"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ssrust.sh"
@@ -22,17 +22,23 @@ need_root() {
   fi
 }
 
+# ---- 依赖管理：apt update 只跑一次 ----
 require_pkg() {
   local pkgs=("$@") miss=()
   for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || miss+=("$p"); done
-  if [ "${#miss[@]}" -gt 0 ]; then apt update && apt install -y "${miss[@]}"; fi
+  if [ "${#miss[@]}" -gt 0 ]; then
+    if [ -z "${APT_UPDATED:-}" ]; then apt update && APT_UPDATED=1; fi
+    apt install -y "${miss[@]}"
+  fi
 }
+# 统一常用依赖清单（两处入口公用）
+DEPS_COMMON=(wget xz-utils tar openssl curl jq iproute2)
+ensure_deps(){ require_pkg "${DEPS_COMMON[@]}"; }
 
 normalize_ver(){ echo "${1:-}" | sed 's/^v//'; }
 version_gt(){ [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]; }
 
 get_latest_version() {
-  require_pkg curl jq
   curl -fsSL https://api.github.com/repos/shadowsocks/shadowsocks-rust/releases/latest \
     | jq -r '.tag_name' 2>/dev/null
 }
@@ -239,7 +245,7 @@ json_get() {
 }
 
 install_ss() {
-  require_pkg wget xz-utils tar openssl curl jq iproute2
+  ensure_deps
   echo -e "${CYAN}获取最新版...${RESET}"
   LATEST="$(get_latest_version || true)"
   [ -z "${LATEST:-}" ] && { echo -e "${RED}获取最新版本失败（GitHub API）。${RESET}"; return 1; }
@@ -290,7 +296,7 @@ EOF
 }
 
 install_or_update_action() {
-  require_pkg wget xz-utils tar openssl curl jq iproute2
+  ensure_deps
   if [ ! -x "$SS_BIN" ]; then
     install_ss; return
   fi
