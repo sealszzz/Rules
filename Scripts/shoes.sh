@@ -47,9 +47,10 @@ install_shoes_cargo() {
   install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
 }
 
-# ========= 方案 B：下载最新 release 二进制 =========
+# ========= 方案 B：下载最新 release 二进制（已修复 tmpd trap）=========
 install_shoes_release() {
   local json latest_tag assets asset url pat_arch arch tmpd binpath
+
   json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
   latest_tag="$(echo "$json" | jq -r '.tag_name // empty')"
   [ -n "$latest_tag" ] || { echo "GitHub API error (no latest tag)"; exit 1; }
@@ -70,11 +71,14 @@ install_shoes_release() {
   url="$(echo "$json" | jq -r ".assets[] | select(.name==\"$asset\") | .browser_download_url")"
   echo "[*] Installing Shoes $latest_tag via asset: $asset"
 
-  tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
+  local tmpd; tmpd="$(mktemp -d)"
+  # 关键修复：在函数返回时清理局部 tmpd；兼容 set -u
+  trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
+
   curl -fL "$url" -o "$tmpd/pkg"
   mkdir -p "$tmpd/unpack"
   case "$asset" in
-    *.tar.gz) tar -xzf "$tmpd/pkg" -C "$tmpd/unpack" ;;
+    *.tar.gz) tar -xzf "$tmpd/pkg" -c -C "$tmpd/unpack" 2>/dev/null || tar -xzf "$tmpd/pkg" -C "$tmpd/unpack" ;;
     *.tar.xz) tar -xJf "$tmpd/pkg" -C "$tmpd/unpack" ;;
     *.zip)    unzip -q  "$tmpd/pkg" -d "$tmpd/unpack" ;;
   esac
@@ -83,6 +87,9 @@ install_shoes_release() {
   [ -n "$binpath" ] || { echo "shoes binary not found in asset"; exit 1; }
 
   install -m 0755 "$binpath" /usr/local/bin/shoes
+
+  # 清掉本函数的 RETURN trap，防止后续函数也触发
+  trap - RETURN
 }
 
 # ========= 交互选择安装路径（默认 N=release）=========
@@ -142,7 +149,6 @@ fi
 
 # ========= systemd =========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  # 需要展开 RUST_LOG → 不带引号的 EOF
   cat >/etc/systemd/system/shoes.service <<EOF
 [Unit]
 Description=Shoes Server
@@ -176,7 +182,12 @@ systemctl try-reload-or-restart shoes || systemctl restart shoes
 
 # ========= 摘要 =========
 echo
-echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
+ver="$(
+  /usr/local/bin/shoes -V 2>/dev/null \
+  || /usr/local/bin/shoes --version 2>/dev/null \
+  || true
+)"
+echo "== shoes version: ${ver:-unknown} =="
 echo
 echo "UDP 监听检查："
 ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)|:${HY2_PORT}([^0-9]|$)" || true
