@@ -1,5 +1,5 @@
-bash -c '
-set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefai
 
 # ====== 可调参数（可通过环境变量覆盖） ======
 : "${BIND_PORT:=443}"                   # 服务监听 UDP 端口
