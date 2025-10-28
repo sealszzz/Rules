@@ -7,14 +7,14 @@ set -euo pipefail
 : "${UPSTREAM_PORT:=443}"               # 上游端口，通常 443
 : "${LOG_LEVEL:=info}"                  # trace / debug / info / warn / error
 
-# 账号（如需固定，可预先导出 USER1/PASS1）
-: "${PASS1:=$(openssl rand -hex 16)}"   # 16 bytes -> 32 hex (128-bit)
-: "${USER1:=$(openssl rand -hex 8)}"    # 8 bytes -> 16 hex (64-bit)
-
 # ====== 基础依赖 ======
 export DEBIAN_FRONTEND=noninteractive
 apt update
 apt install -y --no-install-recommends curl ca-certificates openssl
+
+# 账号（如需固定，可预先导出 USER1/PASS1）；确保 openssl 已可用后再生成
+: "${PASS1:=$(openssl rand -hex 16)}"   # 16 bytes -> 32 hex (128-bit)
+: "${USER1:=$(openssl rand -hex 8)}"    # 8 bytes -> 16 hex (64-bit)
 
 # ====== 系统用户与目录 ======
 getent group shadowquic >/dev/null || groupadd --system shadowquic
