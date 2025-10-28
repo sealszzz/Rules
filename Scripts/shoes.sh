@@ -4,7 +4,7 @@ set -euo pipefail
 # ========== 依赖 ==========
 export DEBIAN_FRONTEND=noninteractive
 apt update
-apt install -y --no-install-recommends curl jq ca-certificates tar unzip xz-utils uuid-runtime xxd
+apt install -y --no-install-recommends curl jq ca-certificates tar unzip xz-utils uuid-runtime xxd iproute2
 
 # ========== 获取 GitHub 最新发布 ==========
 json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
@@ -94,7 +94,7 @@ fi
 
 # ========== systemd ==========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<EOF
+  cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
 Description=Shoes Server
 After=network-online.target nss-lookup.target
