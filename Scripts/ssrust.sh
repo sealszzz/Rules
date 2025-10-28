@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.5.7"
+SCRIPT_VERSION="1.5.8"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ssrust.sh"
@@ -43,7 +43,9 @@ get_latest_version() {
 }
 
 get_current_version() {
-  if [ -x "$SS_BIN" ]; then "$SS_BIN" --version 2>/dev/null | awk '{print $2}' || true; fi
+  if [ -x "$SS_BIN" ]; then
+    "$SS_BIN" --version 2>/dev/null | sed -nE 's/.*([0-9]+(\.[0-9]+){1,3}).*/\1/p' | head -n1 || true
+  fi
 }
 
 arch_triple() {
@@ -94,7 +96,7 @@ Group=$SS_USER
 Type=simple
 UMask=0077
 WorkingDirectory=$SS_STATE_DIR
-ExecStart=$SS_BIN -c $SS_CONFIG
+ExecStart="$SS_BIN" -c "$SS_CONFIG"
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -232,15 +234,15 @@ prompt_port() {
 gen_password_by_method() {
   local method="$1" n
   case "$method" in
-    2022-blake3-aes-128-gcm) n=16 ;;   # 16 字节
-    *) n=32 ;;                          # 其余 2022 算法 32 字节
+    2022-blake3-aes-128-gcm) n=16 ;;
+    *) n=32 ;;
   esac
   openssl rand -base64 "$n" | tr -d '\n'
 }
 
 json_get() {
   local key="$1"
-  jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG"
+  jq -r ".${key} // (.servers[0].${key})" "$SS_CONFIG" 2>/dev/null || true
 }
 
 install_ss() {
@@ -307,6 +309,8 @@ install_or_update_action() {
   echo "最新版本：$latest"
   if [ -n "$current" ] && ! version_gt "$latest" "$current"; then
     echo "已是最新版本，无需升级。"
+    [ -f "$SS_CONFIG" ] && { echo -e "${CYAN}当前配置：${RESET}"; cat "$SS_CONFIG"; }
+    restart_and_verify
   else
     echo "发现新版本，开始升级..."
     local url; url="$(get_download_url "$latest")" || return 1
@@ -320,12 +324,12 @@ install_or_update_action() {
     install -m 0755 "$tmpdir/ssserver" "$SS_BIN"
     rm -rf "$tmpdir"
     echo "✅ 升级完成 → $(get_current_version || echo unknown)"
+    if [ -f "$SS_CONFIG" ]; then
+      echo -e "${CYAN}当前配置：${RESET}"
+      cat "$SS_CONFIG"
+    fi
+    restart_and_verify
   fi
-  if [ -f "$SS_CONFIG" ]; then
-    echo -e "${CYAN}当前配置：${RESET}"
-    cat "$SS_CONFIG"
-  fi
-  restart_and_verify
 }
 
 show_config_action() {
@@ -405,7 +409,7 @@ uninstall_action() {
   rm -rf "$SS_DIR" "$SS_STATE_DIR"
   if id -u "$SS_USER" >/dev/null 2>&1; then userdel "$SS_USER" 2>/dev/null || true; fi
   rm -f "$SCRIPT_INSTALL" "$SCRIPT_LAUNCHER"
-  systemctl daemon-reload
+  systemctl daemon-reload || true
   systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
   hash -r 2>/dev/null || true
   echo -e "${GREEN}✅ 已卸载 Shadowsocks-Rust 和管理脚本。${RESET}"
