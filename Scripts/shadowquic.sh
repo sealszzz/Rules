@@ -10,7 +10,7 @@ set -euo pipefail
 # ====== 基础依赖 ======
 export DEBIAN_FRONTEND=noninteractive
 apt update
-apt install -y --no-install-recommends curl ca-certificates openssl
+apt install -y --no-install-recommends curl ca-certificates openssl iproute2
 
 # 账号（如需固定，可预先导出 USER1/PASS1）；确保 openssl 已可用后再生成
 : "${PASS1:=$(openssl rand -hex 16)}"   # 16 bytes -> 32 hex (128-bit)
@@ -66,8 +66,8 @@ EOF
 chown root:shadowquic /etc/shadowquic/server.yaml
 chmod 640 /etc/shadowquic/server.yaml
 
-# ====== systemd 单元 ======
-cat >/etc/systemd/system/shadowquic.service <<EOF
+# ====== systemd 单元（禁止展开更稳）=====
+cat >/etc/systemd/system/shadowquic.service <<'EOF'
 [Unit]
 Description=ShadowQUIC Server (glibc-first)
 Documentation=https://github.com/spongebob888/shadowquic
