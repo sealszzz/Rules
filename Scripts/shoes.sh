@@ -42,9 +42,19 @@ ensure_cargo_toolchain() {
 # ========= 方案 A：从源码编译（cargo）=========
 install_shoes_cargo() {
   ensure_cargo_toolchain
-  # 不锁定：始终拉取默认分支最新提交
-  cargo install --git https://github.com/cfal/shoes --force
+
+  # 1) 解析 master 最新提交（你要“每次都最新”）
+  local sha
+  sha="$(curl -fsSL https://api.github.com/repos/cfal/shoes/commits/master | jq -r .sha)"
+  [ -n "$sha" ] || { echo "无法获取 shoes/master 最新提交"; exit 1; }
+
+  # 2) 安装该提交的源码；不加 --locked，依赖按 Cargo.toml 拉“最新兼容”
+  cargo install --git https://github.com/cfal/shoes --rev "$sha" --force
+
+  # 3) 安装到 /usr/local/bin
   install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
+
+  echo "== Built shoes @ ${sha} (HEAD of master), deps = latest allowed by Cargo.toml =="
 }
 
 # ========= 方案 B：下载最新 release 二进制（已修复 tmpd trap）=========
