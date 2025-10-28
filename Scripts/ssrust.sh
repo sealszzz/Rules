@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.5.8"
+SCRIPT_VERSION="1.5.9"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/ssrust"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ssrust.sh"
@@ -222,12 +222,27 @@ prompt_method() {
 prompt_port() {
   local def="$1" input
   while true; do
+    # -p 的提示本来就写到 stderr，这里保持不动
     read -rp "新端口 (1024-65535，回车默认 $def): " input
     input="${input:-$def}"
-    [[ "$input" =~ ^[0-9]+$ ]] || { echo "必须是数字。"; continue; }
-    [ "$input" -ge 1024 ] && [ "$input" -le 65535 ] || { echo "仅允许 1024-65535。"; continue; }
-    if port_used_by_others "$input"; then echo "端口 $input 已被占用，请重试。"; continue; fi
-    echo "$input"; return
+
+    # 所有校验提示一律写 stderr，避免被命令替换捕获
+    if ! [[ "$input" =~ ^[0-9]+$ ]]; then
+      >&2 echo "必须是数字。"
+      continue
+    fi
+    if [ "$input" -lt 1024 ] || [ "$input" -gt 65535 ]; then
+      >&2 echo "仅允许 1024-65535。"
+      continue
+    fi
+    if port_used_by_others "$input"; then
+      >&2 echo "端口 $input 已被占用，请重试。"
+      continue
+    fi
+
+    # 只有最终可用的端口写到 stdout（被命令替换接收）
+    printf '%s\n' "$input"
+    return 0
   done
 }
 
