@@ -11,7 +11,6 @@
 set -euo pipefail
 
 # ---------- 自身安装信息 ----------
-SCRIPT_VERSION="1.0.0"
 SCRIPT_INSTALL="/usr/local/sbin/port.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/port"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/port.sh"
@@ -56,15 +55,12 @@ current_port() {
   [[ -f "$file" ]] || { echo ""; return; }
   case "$app" in
     tuic)
-      # 例："server": "[::]:443" / "server": "0.0.0.0:443" / "server": ":443"
       sed -nE 's/.*"server"[[:space:]]*:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
     shoes)
-      # 例：- address: "[::]:8443" / "0.0.0.0:8443" / ":8443"
       sed -nE 's/^[[:space:]]*-?[[:space:]]*address:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
     shadowquic)
-      # 例：bind-addr: "[::]:443" / "0.0.0.0:443" / ":443"
       sed -nE 's/^[[:space:]]*bind-addr:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
   esac
@@ -76,15 +72,12 @@ update_config() {
   [[ -f "$file" ]] || die "未找到配置文件：$file"
   case "$app" in
     tuic)
-      # 把 "server": "HOST:OLD" → "server": "HOST:NEW"
       sed -E -i 's#("server"[[:space:]]*:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
     shoes)
-      # 把 address: "HOST:OLD" → address: "HOST:NEW"
       sed -E -i 's#(^[[:space:]]*-?[[:space:]]*address:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
     shadowquic)
-      # 把 bind-addr: "HOST:OLD" → bind-addr: "HOST:NEW"
       sed -E -i 's#(^[[:space:]]*bind-addr:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
   esac
@@ -108,8 +101,6 @@ choose_port() {
   done
 }
 
-restart_service(){ systemctl restart "$1"; }
-
 ensure_launcher() {
   # 将脚本本体落盘到 /usr/local/sbin/port.sh，并写启动器 /usr/local/bin/port
   mkdir -p "$(dirname "$SCRIPT_INSTALL")" "$(dirname "$SCRIPT_LAUNCHER")"
@@ -125,6 +116,7 @@ ensure_launcher() {
     fi
     chmod +x "$SCRIPT_INSTALL"
   fi
+  # 启动器（禁止展开）
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
 exec bash /usr/local/sbin/port.sh "$@"
@@ -172,7 +164,7 @@ done
 
 systemctl daemon-reload
 for app in "${installed[@]}"; do
-  restart_service "${UNIT[$app]}"
+  systemctl restart "${UNIT[$app]}"
 done
 
 echo "完成。现在起可直接使用命令：port"
