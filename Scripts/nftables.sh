@@ -1,4 +1,5 @@
-bash -c 'set -euo pipefail
+#!/usr/bin/env bash
+set -euo pipefail
 
 # --- 0) 发现当前 SSH 端口（回落 2222） ---
 get_ssh_port() {
