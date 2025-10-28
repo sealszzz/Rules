@@ -106,4 +106,4 @@ echo "== tuic-server version =="
 /usr/local/bin/tuic-server -V || true
 echo
 echo "UDP/443 监听检查（注意与其它 QUIC/HTTP3 服务冲突）"
-ss -Hnplu | grep ":443 " || echo "未见 UDP/443 监听/占用"
+ss -Hnplu | grep ":443" || echo "未见 UDP/443 监听/占用"
