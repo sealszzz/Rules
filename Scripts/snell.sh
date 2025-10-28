@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.3.4"
+SCRIPT_VERSION="1.3.5"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/snell.sh"
@@ -275,9 +275,11 @@ EOF
 
   echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
   echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
+
+  # 仅展示配置内容（首次安装）
   echo -e "${CYAN}—— 当前 Snell 配置 ——${RESET}"
   cat "$SN_CONFIG" || true
-  echo "———————————————–"  
+  echo "———————————————–"
 }
 
 install_or_update_action() {
@@ -313,10 +315,7 @@ install_or_update_action() {
     echo "已是最新版本，无需升级。"
   fi
 
-  if [ -f "$SN_CONFIG" ]; then
-    echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
-    cat "$SN_CONFIG"
-  fi
+  # 更新路径不展示配置，直接重启校验
   restart_and_verify
 }
 
