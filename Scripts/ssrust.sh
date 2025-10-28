@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -Euo pipefail
+set -euo pipefail
 
 SCRIPT_VERSION="1.5.6"
 SCRIPT_INSTALL="/usr/local/sbin/ssrust.sh"
