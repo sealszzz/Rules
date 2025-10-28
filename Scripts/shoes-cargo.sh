@@ -3,7 +3,7 @@ set -euo pipefail
 
 # ===== 0) 基础依赖（编译 Rust & 生成账户用）=====
 apt update
-apt install -y curl ca-certificates git build-essential pkg-config uuid-runtime openssl
+apt install -y curl ca-certificates git build-essential pkg-config uuid-runtime openssl jq
 
 # ===== 1) 安装 rustup/cargo（若尚未安装）=====
 if ! command -v cargo >/dev/null 2>&1; then
