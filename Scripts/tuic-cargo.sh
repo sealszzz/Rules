@@ -1,24 +1,26 @@
-bash -c '
+#!/usr/bin/env bash
 set -euo pipefail
 
 # ========= 依赖 =========
 apt update
 apt install -y --no-install-recommends \
-  curl ca-certificates git pkg-config build-essential xz-utils
+  curl ca-certificates git pkg-config build-essential xz-utils uuid-runtime xxd
 
 # ========= 安装/激活 Rust 工具链 =========
 if ! command -v cargo >/dev/null 2>&1; then
   curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
 fi
-# 加载 cargo 环境变量（当前 shell）
-# shellcheck disable=SC1091
-. "$HOME/.cargo/env"
+# 加载 cargo 环境变量（当前 shell），文件可能不存在，需容错
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 # ========= 用 cargo 从 Git 仓库安装最新版 tuic-server =========
 # 说明：--git 指向 Itsusinn/tuic 仓库（workspace），--locked 使用仓库的 Cargo.lock，
 #       --force 覆盖到最新提交（即使版本号没变也会更新）
-cargo install --git https://github.com/Itsusinn/tuic --locked --force tuic-server
+if ! cargo install --git https://github.com/Itsusinn/tuic --locked --force tuic-server; then
+  echo "[!] --locked 构建失败，回退为不带 --locked 再试一次……"
+  cargo install --git https://github.com/Itsusinn/tuic --force tuic-server
+fi
 
 # 安装到 /usr/local/bin（便于 systemd 调用）；备份旧二进制
 if [ -x /usr/local/bin/tuic-server ]; then
@@ -37,7 +39,7 @@ if [ ! -f /etc/tuic/config.json ]; then
   UUID="$(uuidgen)"
   PASS="$(head -c16 /dev/urandom | xxd -p)"
 
-cat >/etc/tuic/config.json <<'EOF'
+cat >/etc/tuic/config.json <<EOF
 {
   "server": "[::]:443",
   "users": {
@@ -105,4 +107,3 @@ echo "== tuic-server version =="
 echo
 echo "UDP/443 监听检查（注意与其它 QUIC/HTTP3 服务冲突）"
 ss -Hnplu | grep ":443 " || echo "未见 UDP/443 监听/占用"
-'
