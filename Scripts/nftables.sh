@@ -31,8 +31,8 @@ table inet filter {
   set blacklist6 { type ipv6_addr; timeout 7d; size 65535; gc-interval 5m; }
 
   # 允许端口（按你的环境）
-  set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 8443, 8448 }; }
-  set udp_allow { type inet_service; elements = { 443, 8443, 8448 }; }
+  set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }; }
+  set udp_allow { type inet_service; elements = { 443, 4443, 8443, 8448 }; }
 
   chain input {
     type filter hook input priority 0; policy drop;
