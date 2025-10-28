@@ -1,13 +1,20 @@
 #!/usr/bin/env bash
-# 1) 写入脚本
-cat >/usr/local/bin/port <<'EOF'
-#!/usr/bin/env bash
 # port - one-key port switcher for TUIC / Shoes / ShadowQUIC
-# - 仅检测“已安装”（unit+配置），不查运行状态/端口占用
-# - 每个已安装服务从 {443,4443,8443} 动态菜单选端口（已被占用的从菜单移除、序号重排）
-# - 仅改监听端口字段；改完统一 daemon-reload 并重启对应服务
+# 设计目标：
+# - 第一次用：bash <(curl -fsSL https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/port.sh)
+#   → 自动落盘到 /usr/local/sbin/port.sh，并创建启动器 /usr/local/bin/port
+#   → 以后直接在 shell 输入：port
+# - 仅检测“已安装”（unit+配置同时存在），不检查运行状态/端口占用
+# - 端口候选 {443,4443,8443}，被前面选走后从下一轮菜单移除，序号动态重排
+# - 仅修改监听端口字段；改完统一 daemon-reload 并重启对应服务
 
 set -euo pipefail
+
+# ---------- 自身安装信息 ----------
+SCRIPT_VERSION="1.0.0"
+SCRIPT_INSTALL="/usr/local/sbin/port.sh"
+SCRIPT_LAUNCHER="/usr/local/bin/port"
+SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/port.sh"
 
 # ---------- 端口候选 ----------
 avail_ports=(443 4443 8443)
@@ -30,11 +37,10 @@ UNIT[shadowquic]="shadowquic.service"
 order=(tuic shoes shadowquic)
 
 # ---------- 工具函数 ----------
-die() { echo "Error: $*" >&2; exit 1; }
-need_root() { [[ $EUID -eq 0 ]] || die "必须以 root 运行。"; }
+die(){ echo "Error: $*" >&2; exit 1; }
+need_root(){ [[ ${EUID:-$(id -u)} -eq 0 ]] || die "请用 root 运行"; }
 
 unit_exists() {
-  # 在常见的三处目录里找 unit（兼容不同发行版/安装方式）
   local u="$1"
   [[ -f "/etc/systemd/system/$u" ]] || [[ -f "/lib/systemd/system/$u" ]] || [[ -f "/usr/lib/systemd/system/$u" ]]
 }
@@ -64,6 +70,7 @@ current_port() {
 }
 
 update_config() {
+  # 仅替换监听端口字段
   local app="$1" newp="$2" file="${CONF[$app]}"
   [[ -f "$file" ]] || die "未找到配置文件：$file"
   case "$app" in
@@ -80,61 +87,50 @@ update_config() {
 }
 
 choose_port() {
-  # 根据当前 avail_ports 动态编号 1..N，返回 CHOSEN_PORT，并从 avail_ports 移除
+  # 动态编号 1..N；返回 CHOSEN_PORT，并从 avail_ports 中移除
   while :; do
     echo -n "  请选择端口： "
     local i=1
-    for p in "${avail_ports[@]}"; do
-      printf "%d)%d  " "$i" "$p"
-      ((i++))
-    done
+    for p in "${avail_ports[@]}"; do printf "%d)%d  " "$i" "$p"; ((i++)); done
     echo
     read -rp "  输入序号(1-${#avail_ports[@]}): " ans
     [[ "$ans" =~ ^[1-9][0-9]*$ ]] || { echo "  无效输入"; continue; }
     (( ans>=1 && ans<=${#avail_ports[@]} )) || { echo "  超出范围"; continue; }
-
     local idx=$((ans-1))
     CHOSEN_PORT="${avail_ports[$idx]}"
-
-    # 删除已选项
-    local newlist=()
-    for j in "${!avail_ports[@]}"; do
-      [[ $j -ne $idx ]] && newlist+=("${avail_ports[$j]}")
-    done
+    local newlist=(); for j in "${!avail_ports[@]}"; do [[ $j -ne $idx ]] && newlist+=("${avail_ports[$j]}"); done
     avail_ports=("${newlist[@]}")
     return 0
   done
 }
 
-restart_service() {
-  local unit="$1"
-  systemctl restart "$unit"
-}
+restart_service(){ systemctl restart "$1"; }
 
-print_usage() {
-  cat <<USAGE
-port - TUIC / Shoes / ShadowQUIC 端口切换工具
-用法：
-  port             进入交互式向导
-  port --install   安装为 /usr/local/bin/port （你当前就是这样运行的）
-USAGE
-}
-
-do_install() {
-  install -m 0755 "$0" /usr/local/bin/port
-  echo "已安装为 /usr/local/bin/port"
+ensure_launcher() {
+  # 将脚本本体落盘到 /usr/local/sbin/port.sh，并写启动器 /usr/local/bin/port
+  mkdir -p "$(dirname "$SCRIPT_INSTALL")" "$(dirname "$SCRIPT_LAUNCHER")"
+  local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
+  if [[ "$self" == /proc/*/fd/* || "$self" == /dev/fd/* ]]; then
+    # 通过 bash <(curl ...) 运行：从远端拉取一份到固定路径
+    curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
+    chmod +x "$SCRIPT_INSTALL"
+  else
+    # 本地文件运行：复制自身
+    if [[ "$self" != "$SCRIPT_INSTALL" ]]; then
+      cp -f "$self" "$SCRIPT_INSTALL"
+    fi
+    chmod +x "$SCRIPT_INSTALL"
+  fi
+  cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
+#!/usr/bin/env bash
+exec bash /usr/local/sbin/port.sh "$@"
+LAUNCH
+  chmod +x "$SCRIPT_LAUNCHER"
 }
 
 # ---------- 主流程 ----------
 need_root
-
-if [[ "${1:-}" == "--install" ]]; then
-  do_install
-  exit 0
-elif [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
-  print_usage
-  exit 0
-fi
+ensure_launcher
 
 installed=()
 echo "=== 检测安装（仅检查 unit+配置是否存在） ==="
@@ -175,9 +171,4 @@ for app in "${installed[@]}"; do
   restart_service "${UNIT[$app]}"
 done
 
-echo "完成。"
-EOF
-
-# 2) 赋权并刷新 shell 的可执行哈希
-chmod +x /usr/local/bin/port
-hash -r
+echo "完成。现在起可直接使用命令：port"
