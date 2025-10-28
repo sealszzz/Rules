@@ -19,7 +19,13 @@ case "$arch" in
 esac
 
 cd /tmp
-curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${ASSET}"
+if ! curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${ASSET}"; then
+  echo "[!] 下载失败：${ASSET}"
+  # 可选回退：尝试 unknown-linux-gnu 命名（有的版本用这个）
+  alt="${ASSET/linux/unknown-linux-gnu}"
+  echo "[*] 回退尝试：${alt}"
+  curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${alt}"
+fi
 chmod +x tuic-server
 mv tuic-server /usr/local/bin/tuic-server
 
@@ -27,7 +33,7 @@ mv tuic-server /usr/local/bin/tuic-server
 UUID="$(uuidgen)"
 PASS="$(openssl rand -hex 16)"
 
-cat >/etc/tuic/config.json <<'EOF'
+cat >/etc/tuic/config.json <<EOF
 {
   "server": "[::]:443",
   "users": {
@@ -44,7 +50,7 @@ cat >/etc/tuic/config.json <<'EOF'
   "auth_timeout": "3s",
   "task_negotiation_timeout": "3s",
   "max_external_packet_size": 1500,
-  "stream_timeout": "60s",
+  "max_idle_time": "60s",
   "log_level": "warn"
 }
 EOF
