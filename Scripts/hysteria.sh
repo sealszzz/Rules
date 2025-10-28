@@ -16,11 +16,10 @@ REPO_BASE="https://github.com/apernet/hysteria/releases/download/app"
 apt-get update -y
 apt-get install -y --no-install-recommends curl ca-certificates
 
-# 2. detect arch (Debian on VPS is usually x86_64; we also support arm64 just in case)
+# 2. detect arch
 arch="$(uname -m)"
 case "$arch" in
   x86_64|amd64)
-    # Prefer AVX build if CPU supports AVX; fallback to amd64 otherwise
     if grep -qiE 'avx' /proc/cpuinfo 2>/dev/null; then
       GOARCH="amd64-avx"
     else
@@ -30,7 +29,6 @@ case "$arch" in
   aarch64|arm64)  GOARCH="arm64" ;;
   armv7l|armv7)   GOARCH="arm" ;;
   s390x)          GOARCH="s390x" ;;
-  loongarch64)    GOARCH="loong64" ;;
   i386|i686)      GOARCH="386" ;;
   *)
     echo "FATAL: unsupported arch: $arch"
@@ -84,6 +82,8 @@ if ! id hysteria >/dev/null 2>&1; then
     --shell /usr/sbin/nologin \
     hysteria
 fi
+# ensure working directory exists even if user already existed
+install -d -o hysteria -g hysteria -m 0750 "${STATE_DIR}"
 
 # 6. generate /etc/hysteria/config.yaml once (keep existing if already there)
 if [ ! -e "$CONF_FILE" ]; then
@@ -149,4 +149,3 @@ echo "[✓] Hysteria2 ${TAG} is running and enabled."
 echo "[i] status : systemctl status hysteria-server.service"
 echo "[i] logs   : journalctl -fu hysteria-server.service"
 echo "[i] config : ${CONF_FILE}"
-echo
