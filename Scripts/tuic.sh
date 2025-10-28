@@ -2,7 +2,7 @@
 set -euo pipefail
 
 apt update
-apt install -y curl ca-certificates uuid-runtime openssl
+apt install -y curl ca-certificates uuid-runtime openssl iproute2
 
 # --- 用户与目录：root 管理 /etc，tuic 拥有 /var/lib ---
 getent group tuic >/dev/null || groupadd --system tuic
@@ -21,7 +21,6 @@ esac
 cd /tmp
 if ! curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${ASSET}"; then
   echo "[!] 下载失败：${ASSET}"
-  # 可选回退：尝试 unknown-linux-gnu 命名（有的版本用这个）
   alt="${ASSET/linux/unknown-linux-gnu}"
   echo "[*] 回退尝试：${alt}"
   curl -fLo tuic-server "https://github.com/Itsusinn/tuic/releases/latest/download/${alt}"
@@ -55,11 +54,9 @@ cat >/etc/tuic/config.json <<EOF
 }
 EOF
 
-# 配置文件：root 写，tuic 组读
 chown root:tuic /etc/tuic/config.json
 chmod 640 /etc/tuic/config.json
 
-# --- systemd unit（非 root 绑 443 用 AmbientCapabilities，不用 setcap）---
 cat >/etc/systemd/system/tuic-server.service <<EOF
 [Unit]
 Description=TUIC Server (Itsusinn)
@@ -95,4 +92,4 @@ echo "状态："
 systemctl --no-pager --full status tuic-server || true
 echo
 echo "UDP/443 占用检查（HTTP/3 会抢 UDP/443）："
-ss -u -lpn | grep ":443" || echo "未见 UDP/443 监听/占用"
+ss -u -lpn | grep -E ':(443)([^0-9]|$)' || echo "未见 UDP/443 监听/占用"
