@@ -3,14 +3,28 @@ set -euo pipefail
 
 # ========= 可调参数（可用环境变量覆盖）=========
 : "${TUIC_PORT:=443}"
-CERT="/etc/tls/cert.pem"
-KEY="/etc/tls/key.pem"
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
 
 # 随机凭据（可预先导出 TUIC_UUID/TUIC_PASS 覆盖）
 : "${TUIC_UUID:=$(uuidgen)}"
 : "${TUIC_PASS:=$(openssl rand -hex 16)}"
 
+
+# ========= 基础依赖（两种路径都需要）=========
 export DEBIAN_FRONTEND=noninteractive
+apt update
+apt install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
+
+# ========= 证书自检 =========
+[ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
+[ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
+
+# ========= TUIC 运行用户与目录 =========
+getent group tuic >/dev/null || groupadd --system tuic
+id -u tuic >/dev/null 2>&1 || useradd --system -g tuic -M -d /var/lib/tuic -s /usr/sbin/nologin tuic
+install -d -o tuic -g tuic -m 750 /var/lib/tuic
+install -d -o root -g tuic -m 750 /etc/tuic
 
 # ========= 询问安装方式（默认 N：Release 二进制；y/Y：cargo 源码）=========
 USE_CARGO=0
@@ -18,10 +32,6 @@ read -rp "使用 cargo 源码编译安装 tuic-server？[y/N] " _ans || true
 case "${_ans:-}" in
   y|Y) USE_CARGO=1 ;;
 esac
-
-# ========= 基础依赖 =========
-apt update
-apt install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
 
 # ========= 若选择 cargo，再补齐编译依赖并安装 rustup =========
 if [ "$USE_CARGO" -eq 1 ]; then
@@ -32,12 +42,6 @@ if [ "$USE_CARGO" -eq 1 ]; then
   [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
   export PATH="$HOME/.cargo/bin:$PATH"
 fi
-
-# ========= TUIC 运行用户与目录 =========
-getent group tuic >/dev/null || groupadd --system tuic
-id -u tuic >/dev/null 2>&1 || useradd --system -g tuic -M -d /var/lib/tuic -s /usr/sbin/nologin tuic
-install -d -o tuic -g tuic -m 750 /var/lib/tuic
-install -d -o root -g tuic -m 750 /etc/tuic
 
 # ========= 安装 tuic-server =========
 if [ "$USE_CARGO" -eq 1 ]; then
@@ -101,10 +105,6 @@ EOF
   echo "TUIC PASS: ${TUIC_PASS}"
 fi
 
-# ========= 简单证书可读性检查（仅提示，不阻断）=========
-[ -r "$CERT" ] || echo "[!] 警告：证书 ${CERT} 不存在或不可读"
-[ -r "$KEY"  ] || echo "[!] 警告：私钥 ${KEY} 不存在或不可读"
-
 # ========= systemd =========
 if [ ! -f /etc/systemd/system/tuic-server.service ]; then
   cat >/etc/systemd/system/tuic-server.service <<'EOF'
@@ -120,7 +120,7 @@ Group=tuic
 Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/tuic
-ExecStart="/usr/local/bin/tuic-server" -c "/etc/tuic/config.json"
+ExecStart=/usr/local/bin/tuic-server -c /etc/tuic/config.json
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
