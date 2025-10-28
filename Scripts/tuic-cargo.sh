@@ -32,7 +32,7 @@ install -m 0755 "$HOME/.cargo/bin/tuic-server" /usr/local/bin/tuic-server
 getent group tuic >/dev/null || groupadd --system tuic
 id -u tuic >/dev/null 2>&1 || useradd --system -g tuic -M -d /var/lib/tuic -s /usr/sbin/nologin tuic
 install -d -o tuic -g tuic -m 750 /var/lib/tuic
-install -d -o root  -g tuic -m 750 /etc/tuic
+install -d -o root -g tuic -m 750 /etc/tuic
 
 # ========= 首次生成配置（之后不改）=========
 if [ ! -f /etc/tuic/config.json ]; then
