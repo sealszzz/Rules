@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
-set -euo pipefail
+set -Euo pipefail
 
-SCRIPT_VERSION="1.3.8"
+SCRIPT_VERSION="1.3.9"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/snell.sh"
@@ -14,39 +14,55 @@ SN_BIN="/usr/local/bin/snell-server"
 SERVICE_NAME="snell"
 SERVICE_FILE="/etc/systemd/system/${SERVICE_NAME}.service"
 
-RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\033[0m"
+RED="\033[31m"
+GREEN="\033[32m"
+YELLOW="\033[33m"
+CYAN="\033[36m"
+RESET="\033[0m"
 
 need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo -e "${RED}请用 root 运行${RESET}"; exit 1
+    echo -e "${RED}请用 root 运行：sudo $0${RESET}"
+    exit 1
   fi
 }
 
 require_pkg() {
   local pkgs=("$@") miss=()
   for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || miss+=("$p"); done
-  if [ "${#miss[@]}" -gt 0 ]; then apt update && apt install -y --no-install-recommends "${miss[@]}"; fi
+  if [ "${#miss[@]}" -gt 0 ]; then
+    apt update && apt install -y --no-install-recommends "${miss[@]}"
+  fi
 }
 
 get_latest_version() {
   local url="https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell"
   local html v_beta v_stable
   html=$(curl -fsSL --connect-timeout 5 -m 10 "$url") || return 1
-  v_beta=$(printf '%s' "$html" | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+' \
-           | sed -E 's/^snell-server-v//' | sed -E 's/b([0-9]+)/-beta.\1/' | sort -V | tail -n1 | sed -E 's/-beta\.([0-9]+)/b\1/')
-  [ -n "$v_beta" ] && { echo "v${v_beta}"; return 0; }
-  v_stable=$(printf '%s' "$html" | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+' \
-             | sed -E 's/^snell-server-v//' | sort -V | tail -n1)
+  v_beta=$(printf '%s' "$html" \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+b[0-9]+' \
+    | sed -E 's/^snell-server-v//' \
+    | sed -E 's/b([0-9]+)/-beta.\1/' \
+    | sort -V | tail -n1 \
+    | sed -E 's/-beta\.([0-9]+)/b\1/')
+  if [ -n "$v_beta" ]; then
+    echo "v${v_beta}"; return 0
+  fi
+  v_stable=$(printf '%s' "$html" \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+' \
+    | sed -E 's/^snell-server-v//' \
+    | sort -V | tail -n1)
   [ -n "$v_stable" ] && echo "v${v_stable}"
 }
 
 get_download_url() {
-  local v="$1" arch; arch=$(uname -m)
-  case "$arch" in
-    x86_64|amd64)  echo "https://dl.nssurge.com/snell/snell-server-${v}-linux-amd64.zip" ;;
-    aarch64|arm64) echo "https://dl.nssurge.com/snell/snell-server-${v}-linux-aarch64.zip" ;;
-    armv7l|armv7)  echo "https://dl.nssurge.com/snell/snell-server-${v}-linux-armv7l.zip" ;;
-    i386|i686)     echo "https://dl.nssurge.com/snell/snell-server-${v}-linux-i386.zip" ;;
+  local version="$1"
+  local arch; arch=$(uname -m)
+  case ${arch} in
+    x86_64|amd64)  echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-amd64.zip" ;;
+    aarch64|arm64) echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-aarch64.zip" ;;
+    armv7l|armv7)  echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-armv7l.zip" ;;
+    i386|i686)     echo "https://dl.nssurge.com/snell/snell-server-${version}-linux-i386.zip" ;;
     *) echo -e "${RED}不支持的架构: ${arch}${RESET}" >&2; return 1 ;;
   esac
 }
@@ -60,19 +76,28 @@ detect_installed_version() {
 }
 
 normalize_ver(){ echo "$1" | sed 's/^v//'; }
-version_gt(){ [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]; }
+version_gt(){
+  [ "$(printf '%s\n%s\n' "$(normalize_ver "$1")" "$(normalize_ver "$2")" | sort -V | tail -n1)" != "$(normalize_ver "$2")" ]
+}
 
 is_active() {
-  if [ ! -x "$SN_BIN" ]; then echo "未安装"
-  elif systemctl is-active --quiet "$SERVICE_NAME"; then echo "运行中"
-  else echo "未运行"; fi
+  if [ ! -x "$SN_BIN" ]; then
+    echo "未安装"
+  elif systemctl is-active --quiet "$SERVICE_NAME"; then
+    echo "运行中"
+  else
+    echo "未运行"
+  fi
 }
 
 ensure_user_and_dirs() {
-  if ! id -u "$SN_USER" >/dev/null 2>&1; then useradd -r -M -d "$SN_STATE_DIR" -s /usr/sbin/nologin "$SN_USER"; fi
+  if ! id -u "$SN_USER" >/dev/null 2>&1; then
+    useradd -r -M -d "$SN_STATE_DIR" -s /usr/sbin/nologin "$SN_USER"
+  fi
   mkdir -p "$SN_STATE_DIR" "$SN_DIR"
   chown -R "$SN_USER:$SN_USER" "$SN_STATE_DIR"
-  chown root:"$SN_USER" "$SN_DIR"; chmod 750 "$SN_DIR"
+  chown root:"$SN_USER" "$SN_DIR"
+  chmod 750 "$SN_DIR"
 }
 
 write_service() {
@@ -82,6 +107,7 @@ Description=Snell Server
 Documentation=https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell
 After=network-online.target nss-lookup.target
 Wants=network-online.target
+
 [Service]
 User=$SN_USER
 Group=$SN_USER
@@ -95,6 +121,7 @@ NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=always
 RestartSec=3s
+
 [Install]
 WantedBy=multi-user.target
 EOF
@@ -103,30 +130,42 @@ EOF
 get_main_pid(){ systemctl show -p MainPID "$SERVICE_NAME" 2>/dev/null | cut -d= -f2; }
 
 port_used_by_others() {
-  local port="$1" pid_self pids; pid_self="$(get_main_pid || echo 0)"
+  local port="$1" pid_self pids
+  pid_self="$(get_main_pid || echo 0)"
   command -v ss >/dev/null 2>&1 || require_pkg iproute2
-  pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
+  pids="$(ss -lntupH 2>/dev/null | awk -v P=":$port" '$4 ~ P {print $NF}' \
+    | sed 's/[^0-9]/\n/g' | grep -E '^[0-9]+$' || true)"
   [ -z "$pids" ] && return 1
-  while read -r p; do [ -z "$p" ] && continue; if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then return 0; fi; done <<< "$pids"
+  while read -r p; do
+    [ -z "$p" ] && continue
+    if [ "$p" != "$pid_self" ] && [ "$p" != "0" ]; then return 0; fi
+  done <<< "$pids"
   return 1
 }
 
 random_unused_port() {
-  local port; for _ in {1..50}; do port=$(shuf -i 1024-65535 -n1); if ! port_used_by_others "$port"; then echo "$port"; return 0; fi; done; echo 0
+  local port
+  for i in {1..50}; do
+    port=$(shuf -i 1024-65535 -n1)
+    if ! port_used_by_others "$port"; then
+      echo "$port"; return 0
+    fi
+  done
+  echo 0
 }
 
 restart_and_verify() {
   systemctl daemon-reload || true
   systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
   if ! systemctl restart "$SERVICE_NAME" >/dev/null 2>&1; then
-    echo -e "${YELLOW}⚠️ 重启失败：journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
+    echo -e "${YELLOW}⚠️ Snell 重启失败，请查看日志： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
     return 0
   fi
   sleep 1
   if systemctl is-active --quiet "$SERVICE_NAME"; then
     echo -e "${GREEN}✅ Snell 已运行${RESET}"
   else
-    echo -e "${YELLOW}⚠️ Snell 未在运行：journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
+    echo -e "${YELLOW}⚠️ Snell 未在运行，请查看日志： journalctl -u ${SERVICE_NAME} -e --no-pager${RESET}"
   fi
 }
 
@@ -141,17 +180,17 @@ show_header() {
   echo "================================================"
 }
 
-pause(){ echo; read -rp "按回车键返回菜单..." _ || true; }
-
-safe_clear(){ command -v clear >/dev/null 2>&1 && clear || tput reset 2>/dev/null || printf '\033c'; }
+pause(){ echo; read -rp "按回车键返回菜单..." _; }
 
 ensure_launcher() {
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
   local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
   if [[ "$self" == /proc/*/fd/* || "$self" == /dev/fd/* ]]; then
-    curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"; chmod +x "$SCRIPT_INSTALL"
+    curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
+    chmod +x "$SCRIPT_INSTALL"
   else
-    [ "$self" != "$SCRIPT_INSTALL" ] && cp -f "$self" "$SCRIPT_INSTALL"; chmod +x "$SCRIPT_INSTALL"
+    if [ "$self" != "$SCRIPT_INSTALL" ]; then cp -f "$self" "$SCRIPT_INSTALL"; fi
+    chmod +x "$SCRIPT_INSTALL"
   fi
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
@@ -167,8 +206,9 @@ remote_script_version() {
 self_update() {
   require_pkg curl
   local remote; remote="$(remote_script_version || true)"
-  [ -z "${remote:-}" ] && { echo "获取远端脚本版本失败。"; return 1; }
-  echo "本地脚本版本：$SCRIPT_VERSION"; echo "远端脚本版本：$remote"
+  if [ -z "${remote:-}" ]; then echo "获取远端脚本版本失败。"; return 1; fi
+  echo "本地脚本版本：$SCRIPT_VERSION"
+  echo "远端脚本版本：$remote"
   if version_gt "$remote" "$SCRIPT_VERSION"; then
     echo "发现新版本，正在更新脚本..."
     local tmp="/tmp/snell.sh.$$"
@@ -184,32 +224,41 @@ self_update() {
 install_snell() {
   require_pkg wget unzip curl iproute2
   echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
-  local latest; latest="$(get_latest_version || true)"
-  [ -z "${latest:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
-  echo -e "${YELLOW}最新版本：${latest}${RESET}"
+  LATEST="$(get_latest_version || true)"
+  [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
+  echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
 
-  local url; url="$(get_download_url "$latest")"
-  [ -z "$url" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
+  local URL; URL="$(get_download_url "$LATEST")"
+  [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
 
   echo -e "${CYAN}下载 Snell 中...${RESET}"
-  wget -O /tmp/snell.zip "$url"
+  wget -O /tmp/snell.zip "$URL"
   unzip -o /tmp/snell.zip -d /tmp >/dev/null
 
-  local SN_SRC; SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+  SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
   if [ -z "$SN_SRC" ]; then
     echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
     unzip -l /tmp/snell.zip || true
     rm -f /tmp/snell.zip 2>/dev/null || true
     return 1
   fi
+
   install -m 0755 "$SN_SRC" "$SN_BIN"
   rm -f /tmp/snell.zip 2>/dev/null || true
   echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
-  ensure_user_and_dirs; mkdir -p "$SN_DIR"; chown root:"$SN_USER" "$SN_DIR"; chmod 750 "$SN_DIR"
+  ensure_user_and_dirs
+  ensure_launcher
+
+  mkdir -p "$SN_DIR"
+  chown root:"$SN_USER" "$SN_DIR"
+  chmod 750 "$SN_DIR"
 
   local def_port=8448
-  if port_used_by_others "$def_port"; then def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=8448; fi
+  if port_used_by_others "$def_port"; then
+    def_port=$(random_unused_port)
+    [ "$def_port" = 0 ] && def_port=8448
+  fi
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
   cat > "$SN_CONFIG" <<EOF
@@ -218,22 +267,25 @@ listen = ::0:${def_port}
 psk = ${PASS}
 ipv6 = true
 EOF
-  chown root:"$SN_USER" "$SN_CONFIG"; chmod 640 "$SN_CONFIG"
+  chown root:"$SN_USER" "$SN_CONFIG"
+  chmod 640 "$SN_CONFIG"
 
   write_service
   restart_and_verify
 
-  echo -e "\n${GREEN}✅ 安装完成${RESET}"
+  echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
   echo -e "${CYAN}—— 当前 Snell 配置 ——${RESET}"
   cat "$SN_CONFIG" || true
-  echo "———————————————–"
-  # 返回主菜单，由外层统一 pause
+  echo -e "${CYAN}——————————${RESET}"
   return 0
 }
 
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
-  if [ ! -x "$SN_BIN" ]; then install_snell; return 0; fi
+  if [ ! -x "$SN_BIN" ]; then
+    install_snell
+    return
+  fi
 
   local current latest
   current="$(detect_installed_version || echo '')"
@@ -245,38 +297,51 @@ install_or_update_action() {
 
   if [ -z "$current" ] || [ "$current" = "unknown" ] || version_gt "$latest" "$current"; then
     echo "开始安装/升级到 $latest ..."
-    local url; url="$(get_download_url "$latest")"
-    wget -O /tmp/snell.zip "$url"
+    local URL; URL="$(get_download_url "$latest")"
+    wget -O /tmp/snell.zip "$URL"
     unzip -o /tmp/snell.zip -d /tmp >/dev/null
-    local SN_SRC; SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+    local SN_SRC
+    SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
     if [ -n "$SN_SRC" ]; then
       install -m 0755 "$SN_SRC" "$SN_BIN"
       echo "✅ 完成 → $(detect_installed_version)"
     else
-      echo -e "${RED}❌ 解压后未找到 snell-server${RESET}"
+      echo -e "${RED}❌ 解压后未找到 snell-server，可用 unzip -l /tmp/snell.zip 查看内容${RESET}"
     fi
     rm -f /tmp/snell.zip 2>/dev/null || true
   else
     echo "已是最新版本，无需升级。"
   fi
+
+  if [ -f "$SN_CONFIG" ]; then
+    echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
+    cat "$SN_CONFIG"
+  fi
   restart_and_verify
-  return 0
 }
 
 modify_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
   local old_port new_port cur_psk new_psk
+
   old_port=$(awk -F ':' '/^[[:space:]]*listen[[:space:]]*=/{print $NF}' "$SN_CONFIG" | tr -dc '0-9')
   cur_psk="$(awk -F '=' '/^[[:space:]]*psk[[:space:]]*=/{gsub(/^[ \t]+|[ \t]+$/, "", $2); print $2}' "$SN_CONFIG")"
 
   echo -e "${YELLOW}当前监听端口：$old_port${RESET}"
   while true; do
     read -rp "输入新端口 [1024-65535，回车=不修改]：" new_port
-    if [ -z "$new_port" ]; then new_port="$old_port"; break; fi
+    if [ -z "$new_port" ]; then
+      new_port="$old_port"; break
+    fi
     if [[ "$new_port" =~ ^[0-9]+$ ]] && [ "$new_port" -ge 1024 ] && [ "$new_port" -le 65535 ]; then
-      if port_used_by_others "$new_port"; then echo -e "${RED}❌ 端口 $new_port 已被占用${RESET}"; continue; fi
+      if port_used_by_others "$new_port"; then
+        echo -e "${RED}❌ 端口 $new_port 已被占用，请重试${RESET}"
+        continue
+      fi
       break
-    else echo -e "${RED}❌ 端口必须在 1024-65535 范围内${RESET}"; fi
+    else
+      echo -e "${RED}❌ 端口必须在 1024-65535 范围内${RESET}"
+    fi
   done
 
   echo -e "${YELLOW}当前密码(PSK)：${cur_psk:-<空>}${RESET}"
@@ -296,14 +361,19 @@ listen = ::0:${new_port}
 psk = ${new_psk}
 ipv6 = true
 EOF
-  chown root:"$SN_USER" "$SN_CONFIG"; chmod 640 "$SN_CONFIG"
+
+  chown root:"$SN_USER" "$SN_CONFIG"
+  chmod 640 "$SN_CONFIG"
   restart_and_verify
-  echo -e "${CYAN}修改后的配置如下：${RESET}"; cat "$SN_CONFIG"
+  echo -e "${CYAN}修改后的配置如下：${RESET}"
+  cat "$SN_CONFIG"
 }
 
 show_config_action() {
   if [ ! -f "$SN_CONFIG" ]; then echo "未找到配置文件：$SN_CONFIG"; return; fi
-  echo "———————————————–"; cat "$SN_CONFIG"; echo "———————————————–"
+  echo "———————————————–"
+  cat "$SN_CONFIG"
+  echo "———————————————–"
 }
 
 uninstall_action() {
@@ -324,7 +394,11 @@ main_self_heal() {
     ensure_user_and_dirs
     [ -f "$SN_CONFIG" ] || {
       echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
-      local def_port=8448; port_used_by_others "$def_port" && def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=8448
+      local def_port=8448
+      if port_used_by_others "$def_port"; then
+        def_port=$(random_unused_port)
+        [ "$def_port" = 0 ] && def_port=8448
+      fi
       local PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
       cat > "$SN_CONFIG" <<EOF
 [snell-server]
@@ -332,9 +406,13 @@ listen = ::0:${def_port}
 psk = ${PASS}
 ipv6 = true
 EOF
-      chown root:"$SN_USER" "$SN_CONFIG"; chmod 640 "$SN_CONFIG"
+      chown root:"$SN_USER" "$SN_CONFIG"
+      chmod 640 "$SN_CONFIG"
     }
-    [ -f "$SERVICE_FILE" ] || { echo -e "${YELLOW}发现缺失 systemd 服务文件，自动补全...${RESET}"; write_service; }
+    [ -f "$SERVICE_FILE" ] || {
+      echo -e "${YELLOW}发现缺失 systemd 服务文件，自动补全...${RESET}"
+      write_service
+    }
   fi
 }
 
@@ -343,7 +421,7 @@ ensure_launcher
 
 while true; do
   main_self_heal
-  safe_clear
+  clear
   show_header
   echo "1) 安装或更新 Snell"
   echo "2) 查看配置文件"
@@ -356,10 +434,10 @@ while true; do
   echo
   case "${choice:-}" in
     1) install_or_update_action; pause ;;
-    2) show_config_action;        pause ;;
-    3) modify_config_action;      pause ;;
-    4) uninstall_action;          pause ;;
-    5) self_update;               pause ;;
+    2) show_config_action; pause ;;
+    3) modify_config_action; pause ;;
+    4) uninstall_action; pause ;;
+    5) self_update; pause ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
