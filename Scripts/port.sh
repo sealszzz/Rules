@@ -52,15 +52,11 @@ shoes_enumerate() {
     idx++
     inprot=0
     line=$0
-    # 切下 address: 之后的部分
     sub(/.*address:[ \t]*/, "", line)
-    # 去掉注释与尾部空白；若以引号开头，仅取到下一个引号
-    if (line ~ /^"/) { sub(/^"/, "", line); sub(/".*$/, "", line) } else { sub(/[ \t]*#.*/, "", line); sub(/[ \t]+$/, "", line) }
-    # 提取端口：取最后一个冒号后的字段
+    if (line ~ /^"/) { sub(/^"/, "", line); sub(/".*$/, "", line) }
+    else { sub(/[ \t]*#.*/, "", line); sub(/[ \t]+$/, "", line) }
     n=split(line, a, ":"); p=""
-    if (n>=2) {
-      p=a[n]; gsub(/[ \t\r\n]/, "", p)
-    }
+    if (n>=2) { p=a[n]; gsub(/[ \t\r\n]/, "", p) }
     port[idx]=p
     type[idx]="unknown"
     next
@@ -85,7 +81,6 @@ current_port_tuic() {
   sed -nE 's/.*"server"[[:space:]]*:[[:space:]]*"[^"]*:([0-9]+)".*/\1/p' "$1" | head -n1
 }
 current_port_shadowquic() {
-  # 支持可选引号
   sed -nE 's/^[[:space:]]*bind-addr:[[:space:]]*"?[^"]*:([0-9]+)"?.*/\1/p' "$1" | head -n1
 }
 current_port_shoes_n() {
@@ -97,41 +92,52 @@ current_port_shoes_n() {
 update_config() {
   local app="$1" newp="$2" index="${3:-}" file="${CONF[$app]}"
   [[ -f "$file" ]] || die "未找到配置文件：$file"
+
+  # 统一抓原属主与权限（数值 uid:gid 与八进制权限）
+  local owner mode
+  owner="$(stat -c '%u:%g' "$file")"
+  mode="$(stat -c '%a'    "$file")"
+
   case "$app" in
     tuic)
-      sed -E -i 's#("server"[[:space:]]*:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
+      LC_ALL=C sed -E 's#("server"[[:space:]]*:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' \
+        "$file" > "$file.tmp" && mv "$file.tmp" "$file"
       ;;
     shadowquic)
-      sed -E -i 's#(^[[:space:]]*bind-addr:[[:space:]]*"?)([^"]*):[0-9]+("?)(.*)$#\1\2:'"$newp"'\3\4#' "$file"
+      LC_ALL=C sed -E 's#(^[[:space:]]*bind-addr:[[:space:]]*"?)([^"]*):[0-9]+("?)(.*)$#\1\2:'"$newp"'\3\4#' \
+        "$file" > "$file.tmp" && mv "$file.tmp" "$file"
       ;;
     shoes)
       [[ "$index" =~ ^[0-9]+$ ]] || die "缺少 Shoes 的监听序号"
-      awk -v N="$index" -v NEWP="$newp" '
-      BEGIN{cnt=0}
-      /^[ \t]*-[ \t]*address:[ \t]*/ {
-        cnt++
-        if (cnt==N) {
-          line=$0
-          pre=line
-          # 定位到 address: 末尾，得到前缀
-          if (match(line, /address:[ \t]*/)) {
-            pre = substr(line, 1, RSTART+RLENGTH-1)
-            rest = substr(line, RSTART+RLENGTH)
-          } else { rest=line }
-          q = 0
-          if (rest ~ /^"/) { q=1; sub(/^"/, "", rest); sub(/".*$/, "", rest) } else { sub(/[ \t]*#.*/, "", rest); sub(/[ \t]+$/, "", rest) }
-          n=split(rest, a, ":"); host=""
-          if (n>=2) {
-            for (i=1; i<n; i++) { if (i>1) host=host ":"; host=host a[i] }
-          } else { host=rest }
-          if (q) printf "%s\"%s:%s\"\n", pre, host, NEWP
-          else   printf "%s%s:%s\n",    pre, host, NEWP
-          next
+      LC_ALL=C awk -v N="$index" -v NEWP="$newp" '
+        BEGIN{cnt=0}
+        /^[ \t]*-[ \t]*address:[ \t]*/ {
+          cnt++
+          if (cnt==N) {
+            line=$0
+            pre=line
+            if (match(line, /address:[ \t]*/)) {
+              pre  = substr(line, 1, RSTART+RLENGTH-1)
+              rest = substr(line, RSTART+RLENGTH)
+            } else { rest=line }
+            q = 0
+            if (rest ~ /^"/) { q=1; sub(/^"/, "", rest); sub(/".*$/, "", rest) }
+            else { sub(/[ \t]*#.*/, "", rest); sub(/[ \t]+$/, "", rest) }
+            n=split(rest, a, ":"); host=""
+            if (n>=2) { for (i=1; i<n; i++) { if (i>1) host=host ":"; host=host a[i] } }
+            else { host=rest }
+            if (q) printf "%s\"%s:%s\"\n", pre, host, NEWP
+            else   printf "%s%s:%s\n",    pre, host, NEWP
+            next
+          }
         }
-      }
-      { print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+        { print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
       ;;
   esac
+
+  # 恢复原属主与权限，避免 mv 导致的元数据漂移
+  chown "$owner" "$file"
+  chmod "$mode"  "$file"
 }
 
 choose_port() {
