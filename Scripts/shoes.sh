@@ -1,4 +1,4 @@
-bash -c '
+#!/usr/bin/env bash
 set -euo pipefail
 
 # ========== 依赖 ==========
