@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.3.1"
+SCRIPT_VERSION="1.3.2"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/snell.sh"
@@ -313,7 +313,7 @@ install_or_update_action() {
         install -m 0755 "$SN_SRC" "$SN_BIN"
         echo "✅ 升级完成 → $(detect_installed_version)"
       fi
-    } else {
+    else
       echo "已是最新版本，无需升级。"
     fi
     if [ -f "$SN_CONFIG" ]; then
