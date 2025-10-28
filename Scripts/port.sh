@@ -51,37 +51,41 @@ installed_service() {
 }
 
 current_port() {
+  # 兼容 "[::]:PORT" / "0.0.0.0:PORT" / 任意 "HOST:PORT" / ":PORT"
   local app="$1" file="${CONF[$app]}"
   [[ -f "$file" ]] || { echo ""; return; }
   case "$app" in
     tuic)
-      # "server": "[::]:443"
-      sed -nE 's/.*"server"[[:space:]]*:[[:space:]]*"\[::\]:([0-9]+)".*/\1/p' "$file" | head -n1
+      # 例："server": "[::]:443" / "server": "0.0.0.0:443" / "server": ":443"
+      sed -nE 's/.*"server"[[:space:]]*:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
     shoes)
-      # - address: "[::]:8443"
-      sed -nE 's/^[[:space:]]*-?[[:space:]]*address:[[:space:]]*"\[::\]:([0-9]+)".*/\1/p' "$file" | head -n1
+      # 例：- address: "[::]:8443" / "0.0.0.0:8443" / ":8443"
+      sed -nE 's/^[[:space:]]*-?[[:space:]]*address:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
     shadowquic)
-      # bind-addr: "[::]:443"
-      sed -nE 's/^[[:space:]]*bind-addr:[[:space:]]*"\[::\]:([0-9]+)".*/\1/p' "$file" | head -n1
+      # 例：bind-addr: "[::]:443" / "0.0.0.0:443" / ":443"
+      sed -nE 's/^[[:space:]]*bind-addr:[[:space:]]*"([^"]*):([0-9]+)".*/\2/p' "$file" | head -n1
       ;;
   esac
 }
 
 update_config() {
-  # 仅替换监听端口字段
+  # 仅替换监听端口字段；保留原 host（[::]/0.0.0.0/自定义等）
   local app="$1" newp="$2" file="${CONF[$app]}"
   [[ -f "$file" ]] || die "未找到配置文件：$file"
   case "$app" in
     tuic)
-      sed -E -i 's#("server"[[:space:]]*:[[:space:]]*")\[::\]:[0-9]+(")#\1[::]:'"$newp"'\2#' "$file"
+      # 把 "server": "HOST:OLD" → "server": "HOST:NEW"
+      sed -E -i 's#("server"[[:space:]]*:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
     shoes)
-      sed -E -i 's#(^[[:space:]]*-?[[:space:]]*address:[[:space:]]*")\[::\]:[0-9]+(")#\1[::]:'"$newp"'\2#' "$file"
+      # 把 address: "HOST:OLD" → address: "HOST:NEW"
+      sed -E -i 's#(^[[:space:]]*-?[[:space:]]*address:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
     shadowquic)
-      sed -E -i 's#(^[[:space:]]*bind-addr:[[:space:]]*")\[::\]:[0-9]+(")#\1[::]:'"$newp"'\2#' "$file"
+      # 把 bind-addr: "HOST:OLD" → bind-addr: "HOST:NEW"
+      sed -E -i 's#(^[[:space:]]*bind-addr:[[:space:]]*"[^"]*:)[0-9]+(")#\1'"$newp"'\2#' "$file"
       ;;
   esac
 }
