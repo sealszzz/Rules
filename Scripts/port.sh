@@ -156,7 +156,17 @@ for app in "${installed[@]}"; do
   oldp="$(current_port "$app")"; [[ -z "$oldp" ]] && oldp="未知"
   printf " - %-12s: %s -> %s\n" "${LABEL[$app]}" "$oldp" "${chosen[$app]}"
 done
-read -rp $'按回车执行修改并重启对应服务（Ctrl+C 取消）…'
+
+# 确认：回车默认 Y；只接受大小写 Y/N
+while :; do
+  read -rp $'确认应用修改并重启对应服务？[Y/n] ' ans
+  ans="${ans:-Y}"
+  case "$ans" in
+    [Yy]) break ;;
+    [Nn]) echo "已取消，不做更改。"; exit 0 ;;
+    *) echo "只接受 Y/n（回车默认Y）。";;
+  esac
+done
 
 for app in "${installed[@]}"; do
   update_config "$app" "${chosen[$app]}"
