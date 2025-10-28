@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes
+# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic
 set -euo pipefail
 
 # ----- 工具函数 -----
@@ -137,16 +137,29 @@ uninstall_shoes() {
   echo "[OK] Shoes 卸载完成。"
 }
 
+# ===== ShadowQUIC =====
+uninstall_shadowquic() {
+  echo ">>> 卸载 ShadowQUIC ..."
+  stop_disable_service "shadowquic"
+  remove_unit_files /etc/systemd/system/shadowquic.service
+  remove_paths \
+    /usr/local/bin/shadowquic \
+    /etc/shadowquic \
+    /var/lib/shadowquic
+  remove_user_group "shadowquic"
+  echo "[OK] ShadowQUIC 卸载完成。"
+}
+
 # ===== 卸载所有 =====
 uninstall_all() {
-  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes"
-  # 如需确认，取消下面注释：
+  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC"
   # read -rp "确认卸载全部？[y/N] " ans; [[ "${ans:-N}" =~ ^[Yy]$ ]] || { echo "已取消。"; return; }
   uninstall_hysteria
   uninstall_snell
   uninstall_tuic
   uninstall_ssrust
   uninstall_shoes
+  uninstall_shadowquic
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -161,19 +174,21 @@ main_menu() {
 3) 卸载 TUIC
 4) 卸载 Shadowsocks-Rust (ssrust)
 5) 卸载 Shoes
-6) 卸载以上所有
+6) 卸载 ShadowQUIC
+7) 卸载以上所有
 0) 退出
 =========================================
 MENU
-    read -rp "请选择 [0-6]: " choice
+    read -rp "请选择 [0-7]: " choice
     echo
     case "${choice:-}" in
-      1) uninstall_hysteria; pause ;;
-      2) uninstall_snell;    pause ;;
-      3) uninstall_tuic;     pause ;;
-      4) uninstall_ssrust;   pause ;;
-      5) uninstall_shoes;    pause ;;
-      6) uninstall_all;      pause ;;
+      1) uninstall_hysteria;    pause ;;
+      2) uninstall_snell;       pause ;;
+      3) uninstall_tuic;        pause ;;
+      4) uninstall_ssrust;      pause ;;
+      5) uninstall_shoes;       pause ;;
+      6) uninstall_shadowquic;  pause ;;
+      7) uninstall_all;         pause ;;
       0) echo "Bye."; exit 0 ;;
       *) echo "无效选择"; pause ;;
     esac
