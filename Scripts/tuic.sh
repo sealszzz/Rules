@@ -10,7 +10,6 @@ set -euo pipefail
 : "${TUIC_UUID:=$(uuidgen)}"
 : "${TUIC_PASS:=$(openssl rand -hex 16)}"
 
-
 # ========= 基础依赖（两种路径都需要）=========
 export DEBIAN_FRONTEND=noninteractive
 apt update
@@ -107,6 +106,7 @@ fi
 
 # ========= systemd =========
 if [ ! -f /etc/systemd/system/tuic-server.service ]; then
+  # 不需要变量展开 → 带引号的 EOF 更安全
   cat >/etc/systemd/system/tuic-server.service <<'EOF'
 [Unit]
 Description=TUIC Server (Itsusinn)
@@ -144,4 +144,4 @@ echo "== tuic-server version =="
 /usr/local/bin/tuic-server -V || true
 echo
 echo "UDP/${TUIC_PORT} 监听检查（注意与其它 QUIC/HTTP3 冲突）"
-ss -Hnplu | grep -E ":${TUIC_PORT}(\b| )" || echo "未见 UDP/${TUIC_PORT} 监听/占用"
+ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未见 UDP/${TUIC_PORT} 监听/占用"
