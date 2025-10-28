@@ -12,6 +12,7 @@ if ! command -v cargo >/dev/null 2>&1; then
   curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
 fi
 # 加载 cargo 环境（root 环境下安装）
+[ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 export PATH="$HOME/.cargo/bin:$PATH"
 
 # ===== 2) 用 cargo 从仓库默认分支安装/更新 Shoes =====
@@ -120,4 +121,4 @@ fi
 
 # ===== 6) 摘要 =====
 echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
-ss -Hnplu | grep -E ":443 |:8443 " || true
+ss -Hnplu | grep -E ':(443|8443)\b' || true
