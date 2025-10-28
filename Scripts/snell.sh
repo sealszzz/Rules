@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.3.2"
+SCRIPT_VERSION="1.3.3"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/snell.sh"
@@ -31,7 +31,7 @@ require_pkg() {
   local pkgs=("$@") miss=()
   for p in "${pkgs[@]}"; do dpkg -s "$p" >/dev/null 2>&1 || miss+=("$p"); done
   if [ "${#miss[@]}" -gt 0 ]; then
-    apt update && apt install -y "${miss[@]}"
+    apt update && apt install -y --no-install-recommends "${miss[@]}"
   fi
 }
 
@@ -95,9 +95,7 @@ ensure_user_and_dirs() {
     useradd -r -M -d "$SN_STATE_DIR" -s /usr/sbin/nologin "$SN_USER"
   fi
   mkdir -p "$SN_STATE_DIR" "$SN_DIR"
-
   chown -R "$SN_USER:$SN_USER" "$SN_STATE_DIR"
-
   chown root:"$SN_USER" "$SN_DIR"
   chmod 750 "$SN_DIR"
 }
@@ -171,11 +169,6 @@ restart_and_verify() {
   fi
 }
 
-generate_surge_config() {
-  local ip_addr="$1" port="$2" psk="$3" country="$4" ver="$5"
-  echo -e "${GREEN}${country} = snell, ${ip_addr}, ${port}, psk = ${psk}, version = ${ver#[vV]}, reuse = true, tfo = true${RESET}"
-}
-
 show_header() {
   local curver; curver="$(detect_installed_version || echo '-')" ; [ -z "$curver" ] && curver='-'
   local status; status="$(is_active)"
@@ -246,11 +239,12 @@ install_snell() {
   if [ -z "$SN_SRC" ]; then
     echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
     unzip -l /tmp/snell.zip || true
+    rm -f /tmp/snell.zip 2>/dev/null || true
     return 1
   fi
 
-  mv "$SN_SRC" "$SN_BIN"
-  chmod +x "$SN_BIN"
+  install -m 0755 "$SN_SRC" "$SN_BIN"
+  rm -f /tmp/snell.zip 2>/dev/null || true
   echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
   ensure_user_and_dirs
@@ -270,7 +264,7 @@ install_snell() {
   cat > "$SN_CONFIG" <<EOF
 [snell-server]
 listen = ::0:${def_port}
-psk = $PASS
+psk = ${PASS}
 ipv6 = true
 EOF
   chown root:"$SN_USER" "$SN_CONFIG"
@@ -281,47 +275,46 @@ EOF
 
   echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
   echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
-
-  local IP4=$(curl -s4 https://api.ipify.org || true)
-  local COUNTRY4=$(curl -s http://ipinfo.io/${IP4}/country 2>/dev/null || echo "-")
-  echo -e "${CYAN}—— Surge 配置示例 ——${RESET}"
-  [ -n "$IP4" ] && generate_surge_config "$IP4" "$def_port" "$PASS" "$COUNTRY4" "$LATEST"
-  echo -e "${CYAN}——————————${RESET}"
 }
 
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
   if [ ! -x "$SN_BIN" ]; then
     install_snell
-  else
-    local current latest
-    current="$(detect_installed_version || echo '')"
-    latest="$(get_latest_version || true)"
-    [ -z "$latest" ] && { echo "无法获取最新版本。"; return 1; }
-    echo "当前版本：$current"
-    echo "最新版本：$latest"
-    if version_gt "$latest" "$current"; then
-      echo "发现新版本，开始升级..."
-      local URL; URL="$(get_download_url "$latest")"
-      wget -O /tmp/snell.zip "$URL"
-      unzip -o /tmp/snell.zip -d /tmp >/dev/null
-      local SN_SRC
-      SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
-      if [ -z "$SN_SRC" ]; then
-        echo -e "${RED}❌ 解压后未找到 snell-server，可用 unzip -l /tmp/snell.zip 查看内容${RESET}"
-      else
-        install -m 0755 "$SN_SRC" "$SN_BIN"
-        echo "✅ 升级完成 → $(detect_installed_version)"
-      fi
-    else
-      echo "已是最新版本，无需升级。"
-    fi
-    if [ -f "$SN_CONFIG" ]; then
-      echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
-      cat "$SN_CONFIG"
-    fi
-    restart_and_verify
+    return
   fi
+
+  local current latest
+  current="$(detect_installed_version || echo '')"
+  latest="$(get_latest_version || true)"
+  [ -z "$latest" ] && { echo "无法获取最新版本。"; return 1; }
+
+  echo "当前版本：${current:-unknown}"
+  echo "最新版本：$latest"
+
+  if [ -z "$current" ] || [ "$current" = "unknown" ] || version_gt "$latest" "$current"; then
+    echo "开始安装/升级到 $latest ..."
+    local URL; URL="$(get_download_url "$latest")"
+    wget -O /tmp/snell.zip "$URL"
+    unzip -o /tmp/snell.zip -d /tmp >/dev/null
+    local SN_SRC
+    SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+    if [ -n "$SN_SRC" ]; then
+      install -m 0755 "$SN_SRC" "$SN_BIN"
+      echo "✅ 完成 → $(detect_installed_version)"
+    else
+      echo -e "${RED}❌ 解压后未找到 snell-server，可用 unzip -l /tmp/snell.zip 查看内容${RESET}"
+    fi
+    rm -f /tmp/snell.zip 2>/dev/null || true
+  else
+    echo "已是最新版本，无需升级。"
+  fi
+
+  if [ -f "$SN_CONFIG" ]; then
+    echo -e "${CYAN}当前 Snell 配置如下：${RESET}"
+    cat "$SN_CONFIG"
+  fi
+  restart_and_verify
 }
 
 modify_config_action() {
@@ -399,11 +392,15 @@ main_self_heal() {
     [ -f "$SN_CONFIG" ] || {
       echo -e "${YELLOW}发现缺失配置文件，自动补全...${RESET}"
       local def_port=8448
+      if port_used_by_others "$def_port"; then
+        def_port=$(random_unused_port)
+        [ "$def_port" = 0 ] && def_port=8448
+      fi
       local PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
       cat > "$SN_CONFIG" <<EOF
 [snell-server]
 listen = ::0:${def_port}
-psk = $PASS
+psk = ${PASS}
 ipv6 = true
 EOF
       chown root:"$SN_USER" "$SN_CONFIG"
