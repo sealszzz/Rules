@@ -22,7 +22,7 @@ RESET="\033[0m"
 
 need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo -e "${RED}请用 root 运行：sudo $0${RESET}"
+    echo -e "${RED}请用 root 运行${RESET}"
     exit 1
   fi
 }
@@ -192,7 +192,7 @@ pause(){ echo; read -rp "按回车键返回菜单..." _; }
 ensure_launcher() {
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
   local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-  if [[ "$self" == /proc/*/fd/* ]]; then
+  if [[ "$self" == /proc/*/fd/* || "$self" == /dev/fd/* ]]; then
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   else
@@ -201,7 +201,7 @@ ensure_launcher() {
   fi
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
-exec bash /usr/local/sbin/snell.sh
+exec bash /usr/local/sbin/snell.sh "$@"
 LAUNCH
   chmod +x "$SCRIPT_LAUNCHER"
 }
@@ -313,7 +313,7 @@ install_or_update_action() {
         install -m 0755 "$SN_SRC" "$SN_BIN"
         echo "✅ 升级完成 → $(detect_installed_version)"
       fi
-    else
+    } else {
       echo "已是最新版本，无需升级。"
     fi
     if [ -f "$SN_CONFIG" ]; then
