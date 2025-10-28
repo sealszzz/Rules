@@ -2,16 +2,16 @@
 set -euo pipefail
 
 # ========= 可调参数（可用环境变量覆盖）=========
-: "${TUIC_PORT:=443}"
-: "${HY2_PORT:=4443}"
-: "${RUST_LOG:=warn}"                # shoes 的日志等级
+: "${TUIC_PORT:=4443}"
+: "${HY2_PORT:=8443}"
+: "${RUST_LOG:=warn}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
 # 随机凭据（可预先导出 T_UUID/T_PASS/H_PASS 覆盖）
 : "${T_UUID:=$(uuidgen)}"
-: "${T_PASS:=$(openssl rand -hex 16)}"            # TUIC 密码：hex
-: "${H_PASS:=$(openssl rand -base64 18 | tr -d '\n')}"  # HY2 官方风格：base64 18 bytes
+: "${T_PASS:=$(openssl rand -hex 16)}"
+: "${H_PASS:=$(openssl rand -base64 18 | tr -d '\n')}"
 
 # ========= 基础依赖（两种路径都需要）=========
 export DEBIAN_FRONTEND=noninteractive
@@ -82,7 +82,6 @@ install_shoes_release() {
   binpath="$(find "$tmpd/unpack" -maxdepth 3 -type f -name shoes -perm -u+x | head -n1)"
   [ -n "$binpath" ] || { echo "shoes binary not found in asset"; exit 1; }
 
-  # 覆盖安装（不做备份）
   install -m 0755 "$binpath" /usr/local/bin/shoes
 }
 
