@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-SCRIPT_VERSION="1.3.5"
+SCRIPT_VERSION="1.3.7"
 SCRIPT_INSTALL="/usr/local/sbin/snell.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/snell"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/snell.sh"
@@ -224,40 +224,35 @@ self_update() {
 install_snell() {
   require_pkg wget unzip curl iproute2
   echo -e "${CYAN}获取 Snell 最新版本...${RESET}"
-  LATEST="$(get_latest_version || true)"
-  [ -z "${LATEST:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
-  echo -e "${YELLOW}最新版本：${LATEST}${RESET}"
+  local latest; latest="$(get_latest_version || true)"
+  [ -z "${latest:-}" ] && { echo -e "${RED}❌ 无法获取 Snell 最新版本。${RESET}"; return 1; }
+  echo -e "${YELLOW}最新版本：${latest}${RESET}"
 
-  local URL; URL="$(get_download_url "$LATEST")"
-  [ -z "$URL" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
+  local url; url="$(get_download_url "$latest")"
+  [ -z "$url" ] && { echo -e "${RED}❌ 无法生成下载链接${RESET}"; return 1; }
 
   echo -e "${CYAN}下载 Snell 中...${RESET}"
-  wget -O /tmp/snell.zip "$URL"
+  wget -O /tmp/snell.zip "$url"
   unzip -o /tmp/snell.zip -d /tmp >/dev/null
 
-  SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+  local SN_SRC; SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
   if [ -z "$SN_SRC" ]; then
     echo -e "${RED}❌ 未在 /tmp 下找到 snell-server 文件${RESET}"
     unzip -l /tmp/snell.zip || true
     rm -f /tmp/snell.zip 2>/dev/null || true
     return 1
   fi
-
   install -m 0755 "$SN_SRC" "$SN_BIN"
   rm -f /tmp/snell.zip 2>/dev/null || true
   echo -e "${GREEN}✅ 已安装 snell-server 到 $SN_BIN${RESET}"
 
   ensure_user_and_dirs
   ensure_launcher
-
-  mkdir -p "$SN_DIR"
-  chown root:"$SN_USER" "$SN_DIR"
-  chmod 750 "$SN_DIR"
+  mkdir -p "$SN_DIR"; chown root:"$SN_USER" "$SN_DIR"; chmod 750 "$SN_DIR"
 
   local def_port=8448
   if port_used_by_others "$def_port"; then
-    def_port=$(random_unused_port)
-    [ "$def_port" = 0 ] && def_port=8448
+    def_port=$(random_unused_port); [ "$def_port" = 0 ] && def_port=8448
   fi
   local PASS; PASS="$(tr -dc A-Za-z0-9 </dev/urandom | head -c 20)"
 
@@ -273,20 +268,19 @@ EOF
   write_service
   restart_and_verify
 
-  echo -e "\n${GREEN}✅ 安装完成${RESET}，监听端口：${def_port}，PSK：${PASS}"
-  echo -e "现在起可直接输入：${YELLOW}snell${RESET} 进入管理菜单。\n"
-
-  # 仅展示配置内容（首次安装）
+  echo -e "\n${GREEN}✅ 安装完成${RESET}"
   echo -e "${CYAN}—— 当前 Snell 配置 ——${RESET}"
   cat "$SN_CONFIG" || true
   echo "———————————————–"
+  # 不退出，由主菜单统一 pause
+  return 0
 }
 
 install_or_update_action() {
   require_pkg wget unzip curl iproute2
   if [ ! -x "$SN_BIN" ]; then
     install_snell
-    return
+    return 0
   fi
 
   local current latest
@@ -299,24 +293,23 @@ install_or_update_action() {
 
   if [ -z "$current" ] || [ "$current" = "unknown" ] || version_gt "$latest" "$current"; then
     echo "开始安装/升级到 $latest ..."
-    local URL; URL="$(get_download_url "$latest")"
-    wget -O /tmp/snell.zip "$URL"
+    local url; url="$(get_download_url "$latest")"
+    wget -O /tmp/snell.zip "$url"
     unzip -o /tmp/snell.zip -d /tmp >/dev/null
-    local SN_SRC
-    SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
+    local SN_SRC; SN_SRC=$(find /tmp -type f -name "snell-server" | head -n1)
     if [ -n "$SN_SRC" ]; then
       install -m 0755 "$SN_SRC" "$SN_BIN"
       echo "✅ 完成 → $(detect_installed_version)"
     else
-      echo -e "${RED}❌ 解压后未找到 snell-server，可用 unzip -l /tmp/snell.zip 查看内容${RESET}"
+      echo -e "${RED}❌ 解压后未找到 snell-server${RESET}"
     fi
     rm -f /tmp/snell.zip 2>/dev/null || true
   else
     echo "已是最新版本，无需升级。"
   fi
 
-  # 更新路径不展示配置，直接重启校验
   restart_and_verify
+  return 0
 }
 
 modify_config_action() {
@@ -433,10 +426,10 @@ while true; do
   echo
   case "${choice:-}" in
     1) install_or_update_action; pause ;;
-    2) show_config_action; pause ;;
-    3) modify_config_action; pause ;;
-    4) uninstall_action; pause ;;
-    5) self_update; pause ;;
+    2) show_config_action;        pause ;;
+    3) modify_config_action;      pause ;;
+    4) uninstall_action;          pause ;;
+    5) self_update;               pause ;;
     0) echo "Bye"; exit 0 ;;
     *) echo "无效选项"; pause ;;
   esac
