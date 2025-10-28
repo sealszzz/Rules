@@ -18,7 +18,7 @@ RED="\033[31m"; GREEN="\033[32m"; YELLOW="\033[33m"; CYAN="\033[36m"; RESET="\03
 
 need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo -e "${RED}请用 root 运行：sudo $0${RESET}"; exit 1
+    echo -e "${RED}请用 root 运行${RESET}"; exit 1
   fi
 }
 
@@ -157,7 +157,7 @@ pause(){ echo; read -rp "按回车键返回菜单..." _; }
 ensure_launcher() {
   mkdir -p "$(dirname "$SCRIPT_INSTALL")"
   local self; self="$(readlink -f "$0" 2>/dev/null || echo "$0")"
-  if [[ "$self" == /proc/*/fd/* ]]; then
+  if [[ "$self" == /proc/*/fd/* || "$self" == /dev/fd/* ]]; then
     curl -fsSL "$SCRIPT_REMOTE_RAW" -o "$SCRIPT_INSTALL"
     chmod +x "$SCRIPT_INSTALL"
   else
@@ -166,7 +166,7 @@ ensure_launcher() {
   fi
   cat > "$SCRIPT_LAUNCHER" <<'LAUNCH'
 #!/usr/bin/env bash
-exec bash /usr/local/sbin/ssrust.sh
+exec bash /usr/local/sbin/ssrust.sh "$@"
 LAUNCH
   chmod +x "$SCRIPT_LAUNCHER"
 }
