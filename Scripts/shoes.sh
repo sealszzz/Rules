@@ -4,16 +4,16 @@ set -euo pipefail
 # ========= 可调参数（可用环境变量覆盖）=========
 : "${TUIC_PORT:=443}"
 : "${HY2_PORT:=4443}"
-: "${RUST_LOG:=warn}"          # shoes 的日志等级
-CERT="/etc/tls/cert.pem"
-KEY="/etc/tls/key.pem"
+: "${RUST_LOG:=warn}"                # shoes 的日志等级
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
 
 # 随机凭据（可预先导出 T_UUID/T_PASS/H_PASS 覆盖）
 : "${T_UUID:=$(uuidgen)}"
-: "${T_PASS:=$(openssl rand -hex 16)}"              # TUIC 密码：16字节→32hex
-: "${H_PASS:=$(openssl rand -base64 18 | tr -d '\n')}" # HY2 密码：18字节→base64（官方推荐等价方案）
+: "${T_PASS:=$(openssl rand -hex 16)}"            # TUIC 密码：hex
+: "${H_PASS:=$(openssl rand -base64 18 | tr -d '\n')}"  # HY2 官方风格：base64 18 bytes
 
-# ========= 依赖 =========
+# ========= 基础依赖（两种路径都需要）=========
 export DEBIAN_FRONTEND=noninteractive
 apt update
 apt install -y --no-install-recommends \
@@ -23,36 +23,53 @@ apt install -y --no-install-recommends \
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ========= 获取 GitHub 最新发布 & 本地版本 =========
-json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
-latest_tag="$(echo "$json" | jq -r '.tag_name // empty')"
-[ -n "$latest_tag" ] || { echo "GitHub API error (no latest tag)"; exit 1; }
+# ========= 用户与目录 =========
+getent group shoes >/dev/null || groupadd --system shoes
+id -u shoes  >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
+install -d -o shoes -g shoes -m 750 /var/lib/shoes
+install -d -o root  -g shoes -m 750 /etc/shoes
 
-installed_tag=""
-if command -v /usr/local/bin/shoes >/dev/null 2>&1; then
-  installed_tag="$(/usr/local/bin/shoes -V 2>/dev/null \
-    | sed -nE 's/.*(v?[0-9]+(\.[0-9]+){1,3}).*/\1/p' | head -n1 || true)"
-fi
-strip_v(){ printf "%s" "$1" | sed 's/^v//'; }
+# ========= 只在选 cargo 时才装构建链 =========
+ensure_cargo_toolchain() {
+  apt install -y --no-install-recommends git build-essential pkg-config
+  if ! command -v cargo >/dev/null 2>&1; then
+    curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+  fi
+  [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+  export PATH="$HOME/.cargo/bin:$PATH"
+}
 
-# ========= 选择合适资产 =========
-arch="$(uname -m)"
-case "$arch" in
-  x86_64|amd64)  pat_arch="(x86_64|amd64)";;
-  aarch64|arm64) pat_arch="(aarch64|arm64)";;
-  *) echo "unsupported arch: $arch"; exit 1;;
-esac
-assets="$(echo "$json" | jq -r '.assets[].name')"
-asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*gnu.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
-[ -n "$asset" ] || asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*musl.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
-[ -n "$asset" ] || { echo "no suitable release asset"; exit 1; }
-url="$(echo "$json" | jq -r ".assets[] | select(.name==\"$asset\") | .browser_download_url")"
+# ========= 方案 A：从源码编译（cargo）=========
+install_shoes_cargo() {
+  ensure_cargo_toolchain
+  # 不锁定：始终拉取默认分支最新提交
+  cargo install --git https://github.com/cfal/shoes --force
+  install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
+}
 
-# ========= 有新才安装 =========
-if [ -n "$installed_tag" ] && [ "$(strip_v "$installed_tag")" = "$(strip_v "$latest_tag")" ]; then
-  echo "[✓] shoes already up-to-date ($installed_tag)"
-else
+# ========= 方案 B：下载最新 release 二进制 =========
+install_shoes_release() {
+  local json latest_tag assets asset url pat_arch arch tmpd binpath
+  json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
+  latest_tag="$(echo "$json" | jq -r '.tag_name // empty')"
+  [ -n "$latest_tag" ] || { echo "GitHub API error (no latest tag)"; exit 1; }
+
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64|amd64)  pat_arch="(x86_64|amd64)";;
+    aarch64|arm64) pat_arch="(aarch64|arm64)";;
+    *) echo "unsupported arch: $arch"; exit 1;;
+  esac
+
+  assets="$(echo "$json" | jq -r '.assets[].name')"
+  # 偏好 gnu，失败再尝试 musl；支持 .tar.gz/.tar.xz/.zip
+  asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*gnu.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
+  [ -n "$asset" ] || asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*musl.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
+  [ -n "$asset" ] || { echo "no suitable release asset"; exit 1; }
+
+  url="$(echo "$json" | jq -r ".assets[] | select(.name==\"$asset\") | .browser_download_url")"
   echo "[*] Installing Shoes $latest_tag via asset: $asset"
+
   tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
   curl -fL "$url" -o "$tmpd/pkg"
   mkdir -p "$tmpd/unpack"
@@ -61,17 +78,31 @@ else
     *.tar.xz) tar -xJf "$tmpd/pkg" -C "$tmpd/unpack" ;;
     *.zip)    unzip -q  "$tmpd/pkg" -d "$tmpd/unpack" ;;
   esac
+
   binpath="$(find "$tmpd/unpack" -maxdepth 3 -type f -name shoes -perm -u+x | head -n1)"
   [ -n "$binpath" ] || { echo "shoes binary not found in asset"; exit 1; }
-  install -m 0755 "$binpath" /usr/local/bin/shoes
-  hash -r 2>/dev/null || true
-fi
 
-# ========= 用户与目录 =========
-getent group shoes >/dev/null || groupadd --system shoes
-id -u shoes  >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
-install -d -o shoes -g shoes -m 750 /var/lib/shoes
-install -d -o root  -g shoes -m 750 /etc/shoes
+  # 覆盖安装（不做备份）
+  install -m 0755 "$binpath" /usr/local/bin/shoes
+}
+
+# ========= 交互选择安装路径（默认 N=release）=========
+echo
+while :; do
+  read -rp "是否用 cargo 从源码编译 Shoes？[y/N] " ans
+  ans="${ans:-N}"
+  case "$ans" in
+    [Yy]) use_cargo=1; break ;;
+    [Nn]) use_cargo=0; break ;;
+    *) echo "只接受 y/N（回车默认 N）。";;
+  esac
+done
+
+if [ "${use_cargo}" -eq 1 ]; then
+  install_shoes_cargo
+else
+  install_shoes_release
+fi
 
 # ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f /etc/shoes/config.yml ]; then
@@ -98,17 +129,19 @@ if [ ! -f /etc/shoes/config.yml ]; then
   protocol:
     type: hysteria2
     password: "${H_PASS}"
+
   rules:
     - allow-all-direct
 EOF
   chown root:shoes /etc/shoes/config.yml
   chmod 640      /etc/shoes/config.yml
+
   echo "TUIC UUID: ${T_UUID}"
   echo "TUIC PASS: ${T_PASS}"
   echo "HY2  PASS: ${H_PASS}"
 fi
 
-# ========= systemd 单元（允许变量展开以使用 RUST_LOG）=========
+# ========= systemd 单元（需要变量展开，故不加引号）=========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
   cat >/etc/systemd/system/shoes.service <<EOF
 [Unit]
@@ -146,4 +179,4 @@ echo
 echo "== shoes version: $(/usr/local/bin/shoes -V 2>/dev/null || echo unknown) =="
 echo
 echo "UDP 监听检查："
-ss -Hnplu | grep -E ":(${TUIC_PORT}|${HY2_PORT})\b" || true
+ss -Hnplu | grep -E ":${TUIC_PORT} |:${HY2_PORT} " || true
