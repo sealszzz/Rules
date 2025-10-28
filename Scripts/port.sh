@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 # port - one-key port switcher for TUIC / Shoes / ShadowQUIC
+# - 自动落盘 /usr/local/sbin/port.sh，并创建 /usr/local/bin/port
+# - 支持 Shoes 同一配置里出现多个监听块：每个监听单独显示/单独改端口
+# - 仅修改监听端口字段；改完统一 daemon-reload，并对去重后的 unit 重启一次
 set -euo pipefail
 
 # ---------- 自身安装信息 ----------
@@ -7,17 +10,22 @@ SCRIPT_INSTALL="/usr/local/sbin/port.sh"
 SCRIPT_LAUNCHER="/usr/local/bin/port"
 SCRIPT_REMOTE_RAW="https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/port.sh"
 
-# ---------- awk 选择（优先 gawk，回落 awk/mawk） ----------
-AWK="$(command -v gawk || command -v awk)"
-
 # ---------- 端口候选 ----------
 avail_ports=(443 4443 8443)
 
 # ---------- 服务元数据 ----------
 declare -A LABEL CONF UNIT
-LABEL[tuic]="TUIC";         CONF[tuic]="/etc/tuic/config.json";                 UNIT[tuic]="tuic-server.service"
-LABEL[shoes]="Shoes";       CONF[shoes]="/etc/shoes/config.yml";                UNIT[shoes]="shoes.service"
-LABEL[shadowquic]="ShadowQUIC"; CONF[shadowquic]="/etc/shadowquic/server.yaml"; UNIT[shadowquic]="shadowquic.service"
+LABEL[tuic]="TUIC"
+CONF[tuic]="/etc/tuic/config.json"
+UNIT[tuic]="tuic-server.service"
+
+LABEL[shoes]="Shoes"
+CONF[shoes]="/etc/shoes/config.yml"
+UNIT[shoes]="shoes.service"
+
+LABEL[shadowquic]="ShadowQUIC"
+CONF[shadowquic]="/etc/shadowquic/server.yaml"
+UNIT[shadowquic]="shadowquic.service"
 
 # ---------- 工具函数 ----------
 die(){ echo "Error: $*" >&2; exit 1; }
@@ -38,33 +46,38 @@ installed_service() {
 shoes_enumerate() {
   local file="${CONF[shoes]}"
   [[ -f "$file" ]] || return 0
-  "$AWK" '
-  function trim(s){ sub(/^[ \t]+/,"",s); sub(/[ \t]+$/,"",s); return s }
-  /^[[:space:]]*-[[:space:]]*address:[[:space:]]*/ {
-    idx++; inprot=0
+  awk '
+  BEGIN { idx=0; inprot=0 }
+  /^[ \t]*-[ \t]*address:[ \t]*/ {
+    idx++
+    inprot=0
     line=$0
-    match(line, /address:[[:space:]]*/)
-    rest = substr(line, RSTART+RLENGTH)
-    # 去首尾引号/注释/空白
-    if (rest ~ /^"/) { sub(/^"/,"",rest); sub(/"([ \t]*#.*)?$/,"",rest) } else { sub(/[ \t]*#.*$/,"",rest); sub(/[ \t]+$/, "", rest) }
-    # 提取端口：兼容 mawk（不能用 match(..., ..., arr)）
-    port[idx]=""
-    if (match(rest, /:[0-9]+([ \t]*$|$)/)) {
-      p = substr(rest, RSTART+1)      # 从冒号后开始
-      sub(/[ \t]+$/, "", p)           # 去掉尾部空白
-      sub(/[^0-9].*$/, "", p)         # 截断非数字（防注释/尾巴）
-      port[idx]=p
+    # 切下 address: 之后的部分
+    sub(/.*address:[ \t]*/, "", line)
+    # 去掉注释与尾部空白；若以引号开头，仅取到下一个引号
+    if (line ~ /^"/) { sub(/^"/, "", line); sub(/".*$/, "", line) } else { sub(/[ \t]*#.*/, "", line); sub(/[ \t]+$/, "", line) }
+    # 提取端口：取最后一个冒号后的字段
+    n=split(line, a, ":"); p=""
+    if (n>=2) {
+      p=a[n]; gsub(/[ \t\r\n]/, "", p)
     }
+    port[idx]=p
     type[idx]="unknown"
     next
   }
-  /^[[:space:]]*protocol:[[:space:]]*$/ { inprot=1; next }
-  inprot && /^[[:space:]]*type:[[:space:]]*/ {
-    tmp=$0; sub(/^[[:space:]]*type:[[:space:]]*/, "", tmp); tmp=trim(tmp); gsub(/"/, "", tmp); type[idx]=tmp; inprot=0
-    next
+  /^[ \t]*protocol:[ \t]*$/ { inprot=1; next }
+  inprot && /^[ \t]*type:[ \t]*/ {
+    t=$0; sub(/^[ \t]*type:[ \t]*/, "", t)
+    gsub(/"/, "", t); gsub(/^[ \t]+|[ \t]+$/, "", t)
+    type[idx]=t; inprot=0; next
   }
-  END { for (i=1; i<=idx; i++) printf "%d\t%s\t%s\n", i, type[i], port[i] }
-  ' "$file"
+  END {
+    for (i=1; i<=idx; i++) {
+      if (port[i] == "") port[i] = "未知"
+      if (type[i] == "") type[i] = "unknown"
+      printf "%d\t%s\t%s\n", i, type[i], port[i]
+    }
+  }' "$file"
 }
 
 # ----- 当前端口读取（按条目） -----
@@ -72,11 +85,12 @@ current_port_tuic() {
   sed -nE 's/.*"server"[[:space:]]*:[[:space:]]*"[^"]*:([0-9]+)".*/\1/p' "$1" | head -n1
 }
 current_port_shadowquic() {
+  # 支持可选引号
   sed -nE 's/^[[:space:]]*bind-addr:[[:space:]]*"?[^"]*:([0-9]+)"?.*/\1/p' "$1" | head -n1
 }
 current_port_shoes_n() {
   local n="$1" file="${CONF[shoes]}"
-  shoes_enumerate | "$AWK" -v N="$n" -F'\t' '$1==N{print $3; exit}'
+  shoes_enumerate | awk -F'\t' -v N="$n" '$1==N{print $3; exit}'
 }
 
 # ----- 写回（仅改端口；Shoes 支持“第 N 个” address 定点替换） -----
@@ -92,25 +106,30 @@ update_config() {
       ;;
     shoes)
       [[ "$index" =~ ^[0-9]+$ ]] || die "缺少 Shoes 的监听序号"
-      "$AWK" -v N="$index" -v NEWP="$newp" '
+      awk -v N="$index" -v NEWP="$newp" '
       BEGIN{cnt=0}
-      /^[[:space:]]*-[[:space:]]*address:[[:space:]]*/ {
+      /^[ \t]*-[ \t]*address:[ \t]*/ {
         cnt++
         if (cnt==N) {
           line=$0
-          match(line, /address:[[:space:]]*/)
-          pre = substr(line, 1, RSTART+RLENGTH-1)
-          rest = substr(line, RSTART+RLENGTH)
-          q = (rest ~ /^"/) ? 1 : 0
-          if (q){ sub(/^"/,"",rest); sub(/"([ \t]*#.*)?$/,"",rest) } else { sub(/[ \t]*#.*$/,"",rest); sub(/[ \t]+$/, "", rest) }
-          host = rest; sub(/:[0-9]+[ \t]*$/, "", host)
+          pre=line
+          # 定位到 address: 末尾，得到前缀
+          if (match(line, /address:[ \t]*/)) {
+            pre = substr(line, 1, RSTART+RLENGTH-1)
+            rest = substr(line, RSTART+RLENGTH)
+          } else { rest=line }
+          q = 0
+          if (rest ~ /^"/) { q=1; sub(/^"/, "", rest); sub(/".*$/, "", rest) } else { sub(/[ \t]*#.*/, "", rest); sub(/[ \t]+$/, "", rest) }
+          n=split(rest, a, ":"); host=""
+          if (n>=2) {
+            for (i=1; i<n; i++) { if (i>1) host=host ":"; host=host a[i] }
+          } else { host=rest }
           if (q) printf "%s\"%s:%s\"\n", pre, host, NEWP
           else   printf "%s%s:%s\n",    pre, host, NEWP
           next
         }
       }
-      { print }
-      ' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
+      { print }' "$file" > "$file.tmp" && mv "$file.tmp" "$file"
       ;;
   esac
 }
@@ -153,6 +172,7 @@ LAUNCH
 need_root
 ensure_launcher
 
+# 构建条目列表：每个监听都是一个条目
 ITEM_LABEL=()   # 展示名
 ITEM_APP=()     # tuic / shoes / shadowquic
 ITEM_IDX=()     # shoes 的第 N 个监听；其它为空
@@ -162,7 +182,11 @@ ITEM_CURP=()    # 当前端口
 # TUIC
 if installed_service "tuic"; then
   cur="$(current_port_tuic "${CONF[tuic]}")"; [[ -z "$cur" ]] && cur="未知"
-  ITEM_LABEL+=("TUIC"); ITEM_APP+=("tuic"); ITEM_IDX+=(""); ITEM_UNIT+=("${UNIT[tuic]}"); ITEM_CURP+=("$cur")
+  ITEM_LABEL+=("TUIC")
+  ITEM_APP+=("tuic")
+  ITEM_IDX+=("")
+  ITEM_UNIT+=("${UNIT[tuic]}")
+  ITEM_CURP+=("$cur")
 fi
 
 # Shoes（多监听）
@@ -173,18 +197,29 @@ if installed_service "shoes"; then
       idx="${line%%$'\t'*}"; rest="${line#*$'\t'}"
       type="${rest%%$'\t'*}"; port="${rest##*$'\t'}"; [[ -z "$port" ]] && port="未知"
       ITEM_LABEL+=("Shoes: ${type:-unknown} (#${idx})")
-      ITEM_APP+=("shoes"); ITEM_IDX+=("$idx"); ITEM_UNIT+=("${UNIT[shoes]}"); ITEM_CURP+=("$port")
+      ITEM_APP+=("shoes")
+      ITEM_IDX+=("$idx")
+      ITEM_UNIT+=("${UNIT[shoes]}")
+      ITEM_CURP+=("$port")
     done
   else
     cur="$(current_port_shoes_n 1)"; [[ -z "$cur" ]] && cur="未知"
-    ITEM_LABEL+=("Shoes (#1)"); ITEM_APP+=("shoes"); ITEM_IDX+=("1"); ITEM_UNIT+=("${UNIT[shoes]}"); ITEM_CURP+=("$cur")
+    ITEM_LABEL+=("Shoes (#1)")
+    ITEM_APP+=("shoes")
+    ITEM_IDX+=("1")
+    ITEM_UNIT+=("${UNIT[shoes]}")
+    ITEM_CURP+=("$cur")
   fi
 fi
 
 # ShadowQUIC
 if installed_service "shadowquic"; then
   cur="$(current_port_shadowquic "${CONF[shadowquic]}")"; [[ -z "$cur" ]] && cur="未知"
-  ITEM_LABEL+=("ShadowQUIC"); ITEM_APP+=("shadowquic"); ITEM_IDX+=(""); ITEM_UNIT+=("${UNIT[shadowquic]}"); ITEM_CURP+=("$cur")
+  ITEM_LABEL+=("ShadowQUIC")
+  ITEM_APP+=("shadowquic")
+  ITEM_IDX+=("")
+  ITEM_UNIT+=("${UNIT[shadowquic]}")
+  ITEM_CURP+=("$cur")
 fi
 
 # 没发现条目就退出
@@ -196,34 +231,51 @@ for i in "${!ITEM_LABEL[@]}"; do
 done
 echo
 
-# 逐条选择端口
+# 逐条选择端口（端口不足时提示）
 declare -A chosen_port
 for i in "${!ITEM_LABEL[@]}"; do
-  if ((${#avail_ports[@]}==0)); then echo "可选端口已用尽，剩余条目将跳过。"; break; fi
-  echo "为 ${ITEM_LABEL[$i]} 选择端口："; choose_port
+  if ((${#avail_ports[@]}==0)); then
+    echo "可选端口已用尽，剩余条目将跳过。"
+    break
+  fi
+  echo "为 ${ITEM_LABEL[$i]} 选择端口："
+  choose_port
   chosen_port["$i"]="$CHOSEN_PORT"
 done
 
 echo
 echo "=== 将要应用的修改（仅监听端口字段） ==="
 for i in "${!chosen_port[@]}"; do
-  printf " - %-22s: %s -> %s\n" "${ITEM_LABEL[$i]}" "${ITEM_CURP[$i]}" "${chosen_port[$i]}"
+  oldp="${ITEM_CURP[$i]}"
+  newp="${chosen_port[$i]}"
+  printf " - %-22s: %s -> %s\n" "${ITEM_LABEL[$i]}" "$oldp" "$newp"
 done
 
-# 确认
+# 确认：回车默认 Y；只接受大小写 Y/N
 while :; do
   read -rp $'确认应用修改并重启对应服务？[Y/n] ' ans
   ans="${ans:-Y}"
-  case "$ans" in [Yy]) break ;; [Nn]) echo "已取消，不做更改。"; exit 0 ;; *) echo "只接受 Y/n（回车默认Y）。";; esac
+  case "$ans" in
+    [Yy]) break ;;
+    [Nn]) echo "已取消，不做更改。"; exit 0 ;;
+    *) echo "只接受 Y/n（回车默认Y）。";;
+  esac
 done
 
-# 写回配置
+# 写回配置（避免 set -u 下缺失下标崩溃）
 for i in "${!chosen_port[@]}"; do
-  update_config "${ITEM_APP[$i]}" "${chosen_port[$i]}" "${ITEM_IDX[$i]:-}"
+  [[ -v ITEM_APP[$i] ]]  || { echo "索引异常：$i（跳过）"; continue; }
+  app="${ITEM_APP[$i]}"
+  idx="${ITEM_IDX[$i]-}"
+  update_config "$app" "${chosen_port[$i]}" "${idx}"
 done
 
-# 统一重启（unit 去重）
-declare -A uniq_unit; for i in "${!chosen_port[@]}"; do uniq_unit["${ITEM_UNIT[$i]}"]=1; done
+# 统一重启（unit 去重，同样做存在性判断）
+declare -A uniq_unit
+for i in "${!chosen_port[@]}"; do
+  [[ -v ITEM_UNIT[$i] ]] || continue
+  uniq_unit["${ITEM_UNIT[$i]}"]=1
+done
 systemctl daemon-reload
 for u in "${!uniq_unit[@]}"; do systemctl restart "$u"; done
 
