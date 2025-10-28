@@ -14,9 +14,26 @@ export PATH="$HOME/.cargo/bin:$PATH"
 
 # ===== 2) 用 cargo 从仓库默认分支安装/更新 Shoes =====
 repo="https://github.com/cfal/shoes"
-default_branch="$(curl -fsSL https://api.github.com/repos/cfal/shoes | jq -r .default_branch)"
-# 强制装到最新提交（避免缓存不更新）
+default_branch="$(curl -fsSL https://api.github.com/repos/cfal/shoes | jq -r .default_branch 2>/dev/null || true)"
+# 取不到分支名时保底用 master（避免 API 限频/异常导致安装失败）
+if [ -z "${default_branch:-}" ] || [ "${default_branch}" = "null" ]; then
+  default_branch="master"
+fi
+
+# 强制装到最新提交（避免缓存不更新），优先 --locked
+set +e
 cargo install --git "$repo" --branch "$default_branch" --locked --force
+rc=$?
+if [ $rc -ne 0 ]; then
+  cargo install --git "$repo" --branch "$default_branch" --force
+  rc=$?
+fi
+set -e
+if [ $rc -ne 0 ]; then
+  echo "cargo install shoes 失败（分支：$default_branch）" >&2
+  exit 1
+fi
+
 # 安装到 /usr/local/bin（systemd 更稳妥）
 install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
 
@@ -28,11 +45,10 @@ install -d -o root  -g shoes -m 750 /etc/shoes
 
 # ===== 4) 首次生成最小配置（之后不改你的配置）=====
 if [ ! -f /etc/shoes/config.yml ]; then
-  # 证书：你已有 /etc/tls/cert.pem /etc/tls/key.pem
   T_UUID="$(uuidgen)"
   T_PASS="$(openssl rand -hex 16)"
   H_PASS="$(openssl rand -hex 16)"
-  cat >/etc/shoes/config.yml <<EOF
+  cat >/etc/shoes/config.yml <<'EOF'
 - address: "[::]:443"
   transport: quic
   quic_settings:
@@ -42,8 +58,8 @@ if [ ! -f /etc/shoes/config.yml ]; then
     congestion_control: bbr
   protocol:
     type: tuic
-    uuid: "$T_UUID"
-    password: "$T_PASS"
+    uuid: "__T_UUID__"
+    password: "__T_PASS__"
 
 - address: "[::]:8443"
   transport: quic
@@ -54,10 +70,13 @@ if [ ! -f /etc/shoes/config.yml ]; then
     congestion_control: bbr
   protocol:
     type: hysteria2
-    password: "$H_PASS"
+    password: "__H_PASS__"
+
   rules:
     - allow-all-direct
 EOF
+  sed -i "s#__T_UUID__#${T_UUID}#g; s#__T_PASS__#${T_PASS}#g; s#__H_PASS__#${H_PASS}#g" /etc/shoes/config.yml
+
   chown root:shoes /etc/shoes/config.yml
   chmod 640      /etc/shoes/config.yml
   echo "TUIC UUID: $T_UUID"
@@ -67,11 +86,12 @@ fi
 
 # ===== 5) systemd 服务（首次创建；之后只重载/重启）=====
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<EOF
+  cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
 Description=Shoes Server
 After=network-online.target nss-lookup.target
 Wants=network-online.target
+
 [Service]
 User=shoes
 Group=shoes
@@ -86,6 +106,7 @@ LimitNOFILE=262144
 Restart=on-failure
 RestartSec=3s
 Environment=RUST_LOG=warn
+
 [Install]
 WantedBy=multi-user.target
 EOF
