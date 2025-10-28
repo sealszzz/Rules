@@ -239,7 +239,7 @@ json_get() {
 }
 
 install_ss() {
-  require_pkg wget xz-utils openssl curl jq iproute2
+  require_pkg wget xz-utils tar openssl curl jq iproute2
   echo -e "${CYAN}获取最新版...${RESET}"
   LATEST="$(get_latest_version || true)"
   [ -z "${LATEST:-}" ] && { echo -e "${RED}获取最新版本失败（GitHub API）。${RESET}"; return 1; }
@@ -290,7 +290,7 @@ EOF
 }
 
 install_or_update_action() {
-  require_pkg wget xz-utils openssl curl jq iproute2
+  require_pkg wget xz-utils tar openssl curl jq iproute2
   if [ ! -x "$SS_BIN" ]; then
     install_ss; return
   fi
