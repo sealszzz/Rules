@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 完整卸载脚本（不清理依赖，不做备份）
 # 覆盖：hysteria2 / snell / tuic / ss-rust / shoes
-set -u -o pipefail
+set -euo pipefail
 
 # ----- 工具函数 -----
 need_root() {
