@@ -22,12 +22,6 @@ id -u shadowquic >/dev/null 2>&1 || useradd --system -g shadowquic -M -d /var/li
 install -d -o shadowquic -g shadowquic -m 750 /var/lib/shadowquic
 install -d -o root -g shadowquic -m 750 /etc/shadowquic
 
-# ====== 证书预检 ======
-if [[ ! -r /etc/tls/cert.pem || ! -r /etc/tls/key.pem ]]; then
-  echo "FATAL: 缺少 /etc/tls/cert.pem 或 /etc/tls/key.pem（或不可读）。" >&2
-  exit 1
-fi
-
 # ====== 架构检测：GNU/glibc 优先，musl 兜底（仅列常见 VPS 架构） ======
 arch="$(uname -m)"
 case "$arch" in
@@ -40,20 +34,12 @@ esac
 cd /tmp
 URL_BASE="https://github.com/spongebob888/shadowquic/releases/latest/download"
 echo "下载 ${ASSET} （GNU/glibc 优先）..."
-set +e
-curl -fL --retry 3 --retry-delay 1 -o shadowquic "$URL_BASE/${ASSET}"
-rc=$?
-if [ $rc -ne 0 ]; then
-  echo "glibc 资产不存在或下载失败（rc=$rc），回退到 musl：${FALLBACK}"
-  curl -fL --retry 3 --retry-delay 1 -o shadowquic "$URL_BASE/${FALLBACK}" || {
-    echo "FATAL: musl 回退下载也失败。" >&2
-    exit 1
-  }
+if ! curl -fL -o shadowquic "$URL_BASE/${ASSET}"; then
+  echo "glibc 资产不存在或下载失败，回退到 musl：${FALLBACK}"
+  curl -fL -o shadowquic "$URL_BASE/${FALLBACK}"
 fi
-set -e
 chmod +x shadowquic
-install -m 0755 shadowquic /usr/local/bin/shadowquic
-rm -f shadowquic
+mv shadowquic /usr/local/bin/shadowquic
 
 # ====== 生成服务端配置（YAML）=====
 cat >/etc/shadowquic/server.yaml <<EOF
@@ -101,11 +87,6 @@ LimitNOFILE=262144
 NoNewPrivileges=true
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
-# 如需更强加固，可按需开启（确保不影响证书目录读写）：
-# PrivateTmp=true
-# ProtectSystem=full
-# ProtectHome=true
-# RestrictAddressFamilies=AF_INET AF_INET6 AF_UNIX
 
 [Install]
 WantedBy=multi-user.target
@@ -124,4 +105,4 @@ echo "状态："
 systemctl --no-pager --full status shadowquic || true
 echo
 echo "UDP/${BIND_PORT} 监听检查："
-ss -u -lpn | grep -E "[:.]${BIND_PORT}[[:space:]]" || echo "未见 UDP/${BIND_PORT} 监听/占用（若刚启动，稍等 1~2 秒再查）"
+ss -u -lpn | grep ":${BIND_PORT} " || echo "未见 UDP/${BIND_PORT} 监听/占用（若刚启动，稍等 1~2 秒再查）"
