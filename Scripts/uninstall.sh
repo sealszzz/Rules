@@ -14,21 +14,36 @@ need_root() {
 exists_cmd(){ command -v "$1" >/dev/null 2>&1; }
 
 stop_disable_service() {
-  local base="$1"   # 不带 .service 的基名
+  local base="$1"
   local svc="${base}.service"
 
   # 停止主服务
   systemctl stop "$svc" 2>/dev/null || true
-  # 停止模板实例（如 hysteria-server@xxx.service）
-  systemctl list-units --all --type=service --no-legend \
-    | awk '{print $1}' | grep -E "^${base}@.+\.service$" \
-    | while read -r u; do systemctl stop "$u" 2>/dev/null || true; done
 
-  # 禁用主服务与模板
+  # 停止模板实例（如 hysteria-server@xxx.service）
+  local units=()
+  mapfile -t units < <(
+    systemctl list-units --all --type=service --no-legend \
+      | awk '{print $1}' \
+      | grep -E "^${base}@.+\.service$" || true
+  )
+  for u in "${units[@]}"; do
+    systemctl stop "$u" 2>/dev/null || true
+  done
+
+  # 禁用主服务
   systemctl disable "$svc" 2>/dev/null || true
-  systemctl list-unit-files --type=service --no-legend \
-    | awk '{print $1}' | grep -E "^${base}@.+\.service$" \
-    | while read -r uf; do systemctl disable "$uf" 2>/dev/null || true; done
+
+  # 禁用模板实例
+  local unitfiles=()
+  mapfile -t unitfiles < <(
+    systemctl list-unit-files --type=service --no-legend \
+      | awk '{print $1}' \
+      | grep -E "^${base}@.+\.service$" || true
+  )
+  for uf in "${unitfiles[@]}"; do
+    systemctl disable "$uf" 2>/dev/null || true
+  done
 
   # 清理 wants 目录中的残留软链
   rm -f "/etc/systemd/system/multi-user.target.wants/${svc}" 2>/dev/null || true
@@ -48,16 +63,12 @@ remove_paths() { for p in "$@"; do [ -e "$p" ] && rm -rf "$p" || true; done; }
 
 remove_user_group() {
   local user="$1" group="${2:-$1}"
-  # 先拿 home，便于兜底清理
   local home
   home="$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || true)"
-  # 删用户（包含家目录）
   if id -u "$user" >/dev/null 2>&1; then
     userdel -r "$user" 2>/dev/null || true
   fi
-  # 兜底清理 home
   [ -n "${home:-}" ] && [ -d "$home" ] && rm -rf "$home" || true
-  # 删组
   if getent group "$group" >/dev/null 2>&1; then
     groupdel "$group" 2>/dev/null || true
   fi
@@ -153,7 +164,6 @@ uninstall_shadowquic() {
 # ===== 卸载所有 =====
 uninstall_all() {
   echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC"
-  # read -rp "确认卸载全部？[y/N] " ans; [[ "${ans:-N}" =~ ^[Yy]$ ]] || { echo "已取消。"; return; }
   uninstall_hysteria
   uninstall_snell
   uninstall_tuic
