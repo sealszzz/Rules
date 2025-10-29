@@ -2,9 +2,9 @@
 set -euo pipefail
 
 # ========= 可调路径/参数（如无必要别改）=========
-: "${TUIC_PORT:=443}"
-: "${CERT:=/etc/tls/cert.pem}"
-: "${KEY:=/etc/tls/key.pem}"
+: "${TUIC_PORT:=443}"                   # tuic-server 监听的 UDP 端口
+: "${CERT:=/etc/tls/cert.pem}"          # TLS 证书路径
+: "${KEY:=/etc/tls/key.pem}"            # TLS 私钥路径
 
 TUIC_USER="tuic"
 TUIC_GROUP="tuic"
@@ -12,8 +12,10 @@ TUIC_GROUP="tuic"
 TUIC_STATE_DIR="/var/lib/tuic"
 TUIC_CONF_DIR="/etc/tuic"
 TUIC_CONF_FILE="${TUIC_CONF_DIR}/config.json"
+
 TUIC_BIN="/usr/local/bin/tuic-server"
-TUIC_SERVICE="/etc/systemd/system/tuic-server.service"
+TUIC_SERVICE_NAME="tuic-server"
+TUIC_SERVICE="/etc/systemd/system/${TUIC_SERVICE_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -40,7 +42,10 @@ case "$arch" in
   x86_64|amd64)   wanted_arch="x86_64"   ;;
   aarch64|arm64)  wanted_arch="aarch64"  ;;
   i686|i386)      wanted_arch="i686"     ;;
-  *) echo "不支持的架构: $arch" >&2; exit 1 ;;
+  *)
+    echo "不支持的架构: $arch" >&2
+    exit 1
+    ;;
 esac
 
 echo "[*] 获取 tuic 最新 Release 信息..."
@@ -50,16 +55,16 @@ rel_json="$(curl -fsSL --retry 3 --retry-delay 1 https://api.github.com/repos/It
 tag="$(echo "$rel_json" | jq -r '.tag_name')"
 assets="$(echo "$rel_json" | jq -r '.assets[].name')"
 
-pick_asset_glibc="tuic-server-${wanted_arch}-linux"
-pick_asset_musl="tuic-server-${wanted_arch}-linux-musl"
+pick_glibc="tuic-server-${wanted_arch}-linux"
+pick_musl="tuic-server-${wanted_arch}-linux-musl"
 
 chosen_asset=""
-if echo "$assets" | grep -qx "$pick_asset_glibc"; then
-  chosen_asset="$pick_asset_glibc"
-elif echo "$assets" | grep -qx "$pick_asset_musl"; then
-  chosen_asset="$pick_asset_musl"
+if echo "$assets" | grep -qx "$pick_glibc"; then
+  chosen_asset="$pick_glibc"
+elif echo "$assets" | grep -qx "$pick_musl"; then
+  chosen_asset="$pick_musl"
 else
-  echo "没有匹配的 Release 资产 (${pick_asset_glibc} / ${pick_asset_musl})"
+  echo "没有匹配的 Release 资产 (${pick_glibc} / ${pick_musl})"
   echo "可用资产列表："
   echo "$assets"
   exit 1
@@ -74,10 +79,10 @@ echo "[*] 选择资产: $chosen_asset"
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
 
-curl -fL "$download_url" -o "$tmpd/tuic-server"
-chmod +x "$tmpd/tuic-server"
+curl -fL --retry 3 --retry-delay 1 -o "$tmpd/tuic-server.bin" "$download_url"
+chmod +x "$tmpd/tuic-server.bin"
 
-install -m 0755 "$tmpd/tuic-server" "$TUIC_BIN"
+install -m 0755 "$tmpd/tuic-server.bin" "$TUIC_BIN"
 
 # ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f "$TUIC_CONF_FILE" ]; then
@@ -144,10 +149,10 @@ fi
 
 # ========= 启动 / 重载 =========
 systemctl daemon-reload
-if systemctl is-enabled tuic-server >/dev/null 2>&1; then
-  systemctl try-reload-or-restart tuic-server || systemctl restart tuic-server
+if systemctl is-enabled "$TUIC_SERVICE_NAME" >/dev/null 2>&1; then
+  systemctl try-reload-or-restart "$TUIC_SERVICE_NAME" || systemctl restart "$TUIC_SERVICE_NAME"
 else
-  systemctl enable --now tuic-server || true
+  systemctl enable --now "$TUIC_SERVICE_NAME" || true
 fi
 
 # ========= 摘要 =========
