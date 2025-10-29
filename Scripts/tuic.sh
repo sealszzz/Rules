@@ -6,9 +6,9 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-# 构建特性：默认用 aws-lc-rs；如需 ring：导出 TUIC_FEATURES=ring 并保持 TUIC_NO_DEFAULT=0
+# 构建特性：默认走 ring（轻量内存占用）。如需 aws-lc-rs：导出 TUIC_FEATURES=aws-lc-rs 且去掉 NO_DEFAULT。
 : "${TUIC_FEATURES:=aws-lc-rs}"
-: "${TUIC_NO_DEFAULT:=0}"   # 1 => --no-default-features；0 => 使用默认特性
+: "${TUIC_NO_DEFAULT:=0}"   # 0 => 使用默认特性（默认就包含 aws-lc-rs）
 
 # 随机凭据（可预设 TUIC_UUID/TUIC_PASS 覆盖）
 : "${TUIC_UUID:=$(uuidgen)}"
@@ -18,7 +18,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 apt update
 apt install -y --no-install-recommends \
-  git build-essential pkg-config curl ca-certificates uuid-runtime openssl xz-utils lld iproute2
+  git build-essential pkg-config curl jq ca-certificates uuid-runtime openssl xz-utils
 
 # ========= 证书自检 =========
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
@@ -30,46 +30,82 @@ id -u tuic >/dev/null 2>&1 || useradd --system -g tuic -M -d /var/lib/tuic -s /u
 install -d -o tuic -g tuic -m 750 /var/lib/tuic
 install -d -o root -g tuic -m 750 /etc/tuic
 
-# ========= 构建环境（把缓存与产物放磁盘，避免 /tmp 爆）=========
+# ========= 构建环境（把缓存与产物放磁盘，避免 /tmp 崩溃） =========
 export CARGO_HOME=/var/lib/tuic/cargo
 export CARGO_TARGET_DIR=/var/lib/tuic/target
 export TMPDIR=/var/tmp
 export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
-# 降低资源占用；2G 机子更稳
-export RUSTFLAGS="${RUSTFLAGS:-} -C lto=off -C codegen-units=8"
-export CARGO_BUILD_JOBS="${CARGO_BUILD_JOBS:-1}"
 
-# ========= 安装 rustup/cargo（若未安装）=========
+# 可适当降低内存占用（覆盖 Cargo.toml 里的 LTO/FAT 等）
+export RUSTFLAGS="${RUSTFLAGS:-} -C lto=off -C codegen-units=8"
+
+# 安装 rustup/cargo（若未安装）
 if ! command -v cargo >/dev/null 2>&1; then
   curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
   [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-  export PATH="$HOME/.cargo/bin:$PATH"
 fi
 
-# ========= 获取 main 最新提交（不用 GitHub API，避免 403）=========
-echo "[*] 解析 main 最新提交..."
-sha="$(git ls-remote https://github.com/Itsusinn/tuic.git refs/heads/main | awk '{print $1}')"
-[ -n "${sha:-}" ] || { echo "无法获取 main 最新提交"; exit 1; }
-echo "[*] 将编译 Itsusinn/tuic @ ${sha:0:12}（HEAD of main）"
+# ========= 是否用 cargo 源码安装？（默认 N：Release 二进制）=========
+USE_CARGO=0
+read -rp "使用 cargo 源码安装 tuic-server（不锁依赖，只跑一次失败即退出）？[y/N] " _ans || true
+case "${_ans:-}" in y|Y) USE_CARGO=1 ;; esac
 
-# ========= 源码安装（只跑一次，不锁依赖）=========
-FEAT_ARGS=()
-[ "${TUIC_NO_DEFAULT}" = "1" ] && FEAT_ARGS+=(--no-default-features)
-[ -n "${TUIC_FEATURES:-}" ] && FEAT_ARGS+=(--features "${TUIC_FEATURES}")
+# ========= 源码安装（显示 commit；只跑一次，不回退）=========
+if [ "$USE_CARGO" -eq 1 ]; then
+  echo "[*] 解析 main 最新提交..."
+  sha="$(git ls-remote https://github.com/Itsusinn/tuic.git refs/heads/main | awk '{print $1}')"
+  [ -n "${sha:-}" ] || { echo "无法获取 main 最新提交"; exit 1; }
+  echo "[*] 将编译 Itsusinn/tuic @ ${sha:0:12}"
 
-set -x
-cargo install \
-  --git https://github.com/Itsusinn/tuic.git \
-  --rev "$sha" \
-  --root "$CARGO_HOME" \
-  --force \
-  "${FEAT_ARGS[@]}" \
-  tuic-server
-set +x
+  # 确保 cargo/rustup 可用（沿用你前面准备好的环境变量/CARGO_HOME/CARGO_TARGET_DIR）
+  if ! command -v cargo >/dev/null 2>&1; then
+    curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
+    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
+    export PATH="$HOME/.cargo/bin:$PATH"
+  fi
 
-# 安装到 PATH
-install -m 0755 "$CARGO_HOME/bin/tuic-server" /usr/local/bin/tuic-server
+  FEAT_ARGS=()
+  [ "${TUIC_NO_DEFAULT}" = "1" ] && FEAT_ARGS+=(--no-default-features)
+  [ -n "${TUIC_FEATURES:-}" ] && FEAT_ARGS+=(--features "${TUIC_FEATURES}")
+
+  # 关键：用 cargo install --git --rev，一次性，不加 --locked
+  set -x
+  cargo install \
+    --git https://github.com/Itsusinn/tuic.git \
+    --rev "$sha" \
+    tuic-server \
+    --force \
+    --root "$CARGO_HOME" \
+    "${FEAT_ARGS[@]}"
+  set +x
+
+  # 安装到 /usr/local/bin
+  install -m 0755 "$CARGO_HOME/bin/tuic-server" /usr/local/bin/tuic-server
+  echo "== Built tuic-server @ ${sha}（HEAD of main），deps: 最新兼容范围 =="
+fi
+
+  set +x
+
+  install -m 0755 "$CARGO_TARGET_DIR/release/tuic-server" /usr/local/bin/tuic-server
+  echo "== Built tuic-server @ ${sha}（HEAD of main），deps: 最新兼容范围 =="
+else
+  echo "[*] 安装 Release 二进制（只尝试一次，不回退）..."
+  arch="$(uname -m)"
+  case "$arch" in
+    x86_64|amd64)  asset="tuic-server-x86_64-unknown-linux-gnu" ;;
+    aarch64|arm64) asset="tuic-server-aarch64-unknown-linux-gnu" ;;
+    *) echo "不支持的架构: $arch"; exit 1 ;;
+  esac
+  rel_json="$(curl -fsSL https://api.github.com/repos/Itsusinn/tuic/releases/latest)"
+  url="$(echo "$rel_json" | jq -r ".assets[] | select(.name==\"$asset\") | .browser_download_url")"
+  [ -n "$url" ] || { echo "没有匹配的 Release 资产: $asset"; exit 1; }
+
+  tmpd="$(mktemp -d)"
+  trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' EXIT
+  curl -fL "$url" -o "$tmpd/tuic-server"
+  install -m 0755 "$tmpd/tuic-server" /usr/local/bin/tuic-server
+fi
 
 # ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f /etc/tuic/config.json ]; then
@@ -134,9 +170,7 @@ systemctl daemon-reload
 systemctl enable --now tuic-server || true
 systemctl try-reload-or-restart tuic-server || systemctl restart tuic-server
 
-# ========= 摘要 =========
 echo
 /usr/local/bin/tuic-server -V 2>/dev/null || /usr/local/bin/tuic-server --version 2>/dev/null || true
-echo "已构建提交：${sha:0:12}"
 echo "UDP/${TUIC_PORT} 监听检查："
 ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未见 UDP/${TUIC_PORT} 占用"
