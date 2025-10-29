@@ -6,9 +6,11 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-# 构建特性：默认走 ring（轻量内存占用）。如需 aws-lc-rs：导出 TUIC_FEATURES=aws-lc-rs 且去掉 NO_DEFAULT。
+# 构建特性：默认使用 aws-lc-rs（性能更强）。若要改为 ring：
+#   export TUIC_NO_DEFAULT=1
+#   export TUIC_FEATURES=ring
 : "${TUIC_FEATURES:=aws-lc-rs}"
-: "${TUIC_NO_DEFAULT:=0}"   # 0 => 使用默认特性（默认就包含 aws-lc-rs）
+: "${TUIC_NO_DEFAULT:=0}"   # 0 => 使用默认特性（仓库默认含 aws-lc-rs）；1 => --no-default-features
 
 # 随机凭据（可预设 TUIC_UUID/TUIC_PASS 覆盖）
 : "${TUIC_UUID:=$(uuidgen)}"
@@ -36,9 +38,9 @@ export CARGO_TARGET_DIR=/var/lib/tuic/target
 export TMPDIR=/var/tmp
 export PATH="$HOME/.cargo/bin:$PATH"
 export CARGO_NET_GIT_FETCH_WITH_CLI=true
-
 # 可适当降低内存占用（覆盖 Cargo.toml 里的 LTO/FAT 等）
 export RUSTFLAGS="${RUSTFLAGS:-} -C lto=off -C codegen-units=8"
+# 如需进一步控并行（内存更紧张再开）： export CARGO_BUILD_JOBS=1
 
 # 安装 rustup/cargo（若未安装）
 if ! command -v cargo >/dev/null 2>&1; then
@@ -58,18 +60,10 @@ if [ "$USE_CARGO" -eq 1 ]; then
   [ -n "${sha:-}" ] || { echo "无法获取 main 最新提交"; exit 1; }
   echo "[*] 将编译 Itsusinn/tuic @ ${sha:0:12}"
 
-  # 确保 cargo/rustup 可用（沿用你前面准备好的环境变量/CARGO_HOME/CARGO_TARGET_DIR）
-  if ! command -v cargo >/dev/null 2>&1; then
-    curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
-    [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
-    export PATH="$HOME/.cargo/bin:$PATH"
-  fi
-
   FEAT_ARGS=()
   [ "${TUIC_NO_DEFAULT}" = "1" ] && FEAT_ARGS+=(--no-default-features)
-  [ -n "${TUIC_FEATURES:-}" ] && FEAT_ARGS+=(--features "${TUIC_FEATURES}")
+  [ -n "${TUIC_FEATURES:-}" ]    && FEAT_ARGS+=(--features "${TUIC_FEATURES}")
 
-  # 关键：用 cargo install --git --rev，一次性，不加 --locked
   set -x
   cargo install \
     --git https://github.com/Itsusinn/tuic.git \
@@ -82,12 +76,6 @@ if [ "$USE_CARGO" -eq 1 ]; then
 
   # 安装到 /usr/local/bin
   install -m 0755 "$CARGO_HOME/bin/tuic-server" /usr/local/bin/tuic-server
-  echo "== Built tuic-server @ ${sha}（HEAD of main），deps: 最新兼容范围 =="
-fi
-
-  set +x
-
-  install -m 0755 "$CARGO_TARGET_DIR/release/tuic-server" /usr/local/bin/tuic-server
   echo "== Built tuic-server @ ${sha}（HEAD of main），deps: 最新兼容范围 =="
 else
   echo "[*] 安装 Release 二进制（只尝试一次，不回退）..."
@@ -132,7 +120,6 @@ if [ ! -f /etc/tuic/config.json ]; then
 EOF
   chown root:tuic /etc/tuic/config.json
   chmod 640      /etc/tuic/config.json
-
   echo "TUIC UUID: ${TUIC_UUID}"
   echo "TUIC PASS: ${TUIC_PASS}"
 fi
