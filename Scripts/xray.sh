@@ -77,7 +77,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
   "inbounds": [
     {
       "port": ${XRAY_PORT},
-      "listen": "0.0.0.0",
+      "listen": "127.0.0.1:8888",
       "protocol": "vless",
       "settings": {
         "decryption": "none",
@@ -97,6 +97,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
           "xver": 0,
           "serverNames": ["${XRAY_SNI}"],
           "privateKey": "${XRAY_PRIV}",
+          "publicKey": "${XRAY_PUB}",
           "shortIds": ["${XRAY_SHORTID}"]
         }
       }
