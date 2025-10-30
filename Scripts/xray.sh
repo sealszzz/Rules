@@ -31,7 +31,6 @@ install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
 
 # ===== Resolve latest tag via redirect (no API / no jq) =====
 get_latest_tag() {
-  # 通过 302 重定向拿到最终 URL，末尾就是 tag（如 v25.10.15）
   local final
   final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
            https://github.com/XTLS/Xray-core/releases/latest)" || return 1
@@ -124,7 +123,7 @@ fi
 if [ ! -f "$XRAY_SERVICE" ]; then
   cat >"$XRAY_SERVICE" <<EOF
 [Unit]
-Description=Xray (VLESS+Vision+Reality)
+Description=Xray Server
 Documentation=https://github.com/XTLS/Xray-core
 After=network-online.target nss-lookup.target
 Wants=network-online.target
