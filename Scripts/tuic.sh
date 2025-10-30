@@ -1,10 +1,11 @@
 #!/usr/bin/env bash
+# tuic-min: no-API latest tag, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-# ========= 可调路径/参数（如无必要别改）=========
-: "${TUIC_PORT:=443}"                   # tuic-server 监听的 UDP 端口
-: "${CERT:=/etc/tls/cert.pem}"          # TLS 证书路径
-: "${KEY:=/etc/tls/key.pem}"            # TLS 私钥路径
+# ========= 可调参数 =========
+: "${TUIC_PORT:=443}"                   # tuic-server 监听 UDP 端口
+: "${CERT:=/etc/tls/cert.pem}"          # TLS 证书
+: "${KEY:=/etc/tls/key.pem}"            # TLS 私钥
 
 TUIC_USER="tuic"
 TUIC_GROUP="tuic"
@@ -21,14 +22,13 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ========= 依赖 =========
 apt update
-apt install -y --no-install-recommends \
-  curl jq ca-certificates uuid-runtime openssl iproute2
+apt install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
 
-# ========= 证书自检 =========
+# ========= 证书检查 =========
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ========= 系统用户与目录（第一次会创建，之后复用）=========
+# ========= 系统用户与目录 =========
 getent group "$TUIC_GROUP" >/dev/null || groupadd --system "$TUIC_GROUP"
 id -u "$TUIC_USER" >/dev/null 2>&1 || \
   useradd --system -g "$TUIC_GROUP" -M -d "$TUIC_STATE_DIR" -s /usr/sbin/nologin "$TUIC_USER"
@@ -36,53 +36,36 @@ id -u "$TUIC_USER" >/dev/null 2>&1 || \
 install -d -o "$TUIC_USER" -g "$TUIC_GROUP" -m 750 "$TUIC_STATE_DIR"
 install -d -o root        -g "$TUIC_GROUP" -m 750 "$TUIC_CONF_DIR"
 
-# ========= 选取 release 里的正确二进制 (glibc优先, musl兜底) =========
-arch="$(uname -m)"
-case "$arch" in
-  x86_64|amd64)   wanted_arch="x86_64"   ;;
-  aarch64|arm64)  wanted_arch="aarch64"  ;;
-  i686|i386)      wanted_arch="i686"     ;;
-  *)
-    echo "不支持的架构: $arch" >&2
-    exit 1
-    ;;
+# ========= 通过重定向解析最新 tag =========
+get_latest_tag() {
+  local final
+  final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+           https://github.com/Itsusinn/tuic/releases/latest)" || return 1
+  printf '%s\n' "${final##*/}"
+}
+
+echo "[*] Query latest TUIC release (no-API)…"
+tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
+
+case "$(uname -m)" in
+  x86_64|amd64)  ARK="x86_64"  ;;
+  aarch64|arm64) ARK="aarch64" ;;
+  *) echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)">&2; exit 1 ;;
 esac
 
-echo "[*] 获取 tuic 最新 Release 信息..."
-rel_json="$(curl -fsSL --retry 3 --retry-delay 1 https://api.github.com/repos/Itsusinn/tuic/releases/latest)"
-[ -n "$rel_json" ] || { echo "获取 release 信息失败"; exit 1; }
+asset_name="tuic-server-${ARK}-linux"
+dl_url="https://github.com/Itsusinn/tuic/releases/download/${tag}/${asset_name}"
 
-tag="$(echo "$rel_json" | jq -r '.tag_name')"
-assets="$(echo "$rel_json" | jq -r '.assets[].name')"
+echo "[*] Install version: ${tag}"
+echo "[*] Asset:           ${asset_name}"
 
-pick_glibc="tuic-server-${wanted_arch}-linux"
-pick_musl="tuic-server-${wanted_arch}-linux-musl"
+# ========= 下载并安装（资产是裸二进制）=========
+tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
+bin_dl="${tmpd}/${asset_name}"
 
-chosen_asset=""
-if echo "$assets" | grep -qx "$pick_glibc"; then
-  chosen_asset="$pick_glibc"
-elif echo "$assets" | grep -qx "$pick_musl"; then
-  chosen_asset="$pick_musl"
-else
-  echo "没有匹配的 Release 资产 (${pick_glibc} / ${pick_musl})"
-  echo "可用资产列表："
-  echo "$assets"
-  exit 1
-fi
-
-download_url="$(echo "$rel_json" | jq -r ".assets[] | select(.name==\"$chosen_asset\") | .browser_download_url")"
-[ -n "$download_url" ] || { echo "解析下载链接失败"; exit 1; }
-
-echo "[*] 将安装版本: $tag"
-echo "[*] 选择资产: $chosen_asset"
-
-tmpd="$(mktemp -d)"
-trap 'rm -rf "$tmpd"' EXIT
-
-curl -fL --retry 3 --retry-delay 1 -o "$tmpd/tuic-server.bin" "$download_url"
-chmod +x "$tmpd/tuic-server.bin"
-
-install -m 0755 "$tmpd/tuic-server.bin" "$TUIC_BIN"
+curl -fL --retry 3 --retry-delay 1 -o "$bin_dl" "$dl_url"
+chmod +x "$bin_dl"
+install -m 0755 "$bin_dl" "$TUIC_BIN"
 
 # ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f "$TUIC_CONF_FILE" ]; then
@@ -110,15 +93,13 @@ if [ ! -f "$TUIC_CONF_FILE" ]; then
   "log_level": "warn"
 }
 EOF
-
   chown root:"$TUIC_GROUP" "$TUIC_CONF_FILE"
-  chmod 640           "$TUIC_CONF_FILE"
-
+  chmod 640 "$TUIC_CONF_FILE"
   echo "TUIC UUID: ${TUIC_UUID}"
   echo "TUIC PASS: ${TUIC_PASS}"
 fi
 
-# ========= systemd service（只在第一次创建）=========
+# ========= systemd unit（create-once）=========
 if [ ! -f "$TUIC_SERVICE" ]; then
   cat >"$TUIC_SERVICE" <<EOF
 [Unit]
@@ -145,6 +126,7 @@ Environment=RUST_LOG=warn
 [Install]
 WantedBy=multi-user.target
 EOF
+  chmod 644 "$TUIC_SERVICE"
 fi
 
 # ========= 启动 / 重载 =========
