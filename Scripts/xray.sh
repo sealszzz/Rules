@@ -5,7 +5,8 @@ set -euo pipefail
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"   # must exist in dest's cert
-: "${XRAY_DEST:=127.0.0.1:99}"        # upstream TLS endpoint
+: "${XRAY_DEST:=127.0.0.1:8888}"      # upstream TLS endpoint
+: "${XRAY_FALL:=127.0.0.1:9999}"
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
 
@@ -96,7 +97,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
           { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" }
         ],
         "fallbacks": [
-          { "dest": "127.0.0.1:9999", "xver": 0 }
+          { "dest": "${XRAY_FALL}", "xver": 0 }
         ]
       },
       "streamSettings": {
