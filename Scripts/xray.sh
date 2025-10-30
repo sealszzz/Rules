@@ -78,38 +78,49 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
     echo "--------- raw end ---------" >&2
     return 1
   }
-  gen_reality_keys
+  # ---- 强健的 Reality 密钥生成（无“兜底”，解析不到就硬失败）----
+gen_reality_keys() {
+  # 支持通过环境变量直接注入
+  if [ -n "${XRAY_PRIV:-}" ] && [ -n "${XRAY_PUB:-}" ]; then
+    return 0
+  fi
 
-  XRAY_SHORTID="${XRAY_SHORTID:-$(openssl rand -hex 8)}"
+  # 运行并清理颜色/回车
+  local out priv pub
+  out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r' | sed 's/\x1B\[[0-9;]*[A-Za-z]//g')" || true
 
-  cat >"$XRAY_CONF_FILE" <<EOF
-{
-  "inbounds": [
-    {
-      "listen": "127.0.0.1",
-      "port": ${XRAY_PORT},
-      "protocol": "vless",
-      "settings": {
-        "decryption": "none",
-        "clients": [
-          { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" }
-        ]
-      },
-      "streamSettings": {
-        "network": "tcp",
-        "security": "reality",
-        "realitySettings": {
-          "show": false,
-          "dest": "${XRAY_DEST}",
-          "xver": 0,
-          "serverNames": ["${XRAY_SNI}"],
-          "privateKey": "${XRAY_PRIV}",
-          "publicKey": "${XRAY_PUB}",
-          "shortIds": ["${XRAY_SHORTID}"]
-        }
-      }
-    }
-  ],
+  # 兼容三种标签：Private[ ]Key / Public[ ]Key / Password（你的构建即为 Password）
+  priv="$(printf '%s\n' "$out" \
+          | awk -F':' 'tolower($1) ~ /^ *private ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}')"
+  pub="$( printf '%s\n' "$out" \
+          | awk -F':' 'tolower($1) ~ /^ *public ?key *$/  {gsub(/^ +| +$/,"",$2); print $2; exit}')"
+
+  # 没有 PublicKey 标签时，接受 Password 作为“公钥”输出
+  if [ -z "$pub" ]; then
+    pub="$(printf '%s\n' "$out" \
+           | awk -F':' 'tolower($1) ~ /^ *password *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}')"
+  fi
+
+  # 简单格式校验（Reality 使用的 base64url，通常 43~64 长度）
+  case "$priv" in
+    ""|*[!A-Za-z0-9_-]*) priv="";; *) [ ${#priv} -lt 40 ] && priv="";;
+  esac
+  case "$pub" in
+    ""|*[!A-Za-z0-9_-]*)  pub="";;  *) [ ${#pub}  -lt 40 ] && pub="";;
+  esac
+
+  if [ -n "$priv" ] && [ -n "$pub" ]; then
+    XRAY_PRIV="$priv"
+    XRAY_PUB="$pub"
+    return 0
+  fi
+
+  echo "[FATAL] cannot parse xray x25519 output:" >&2
+  echo "-------- raw begin --------" >&2
+  printf '%s\n' "$out" >&2
+  echo "--------- raw end ---------" >&2
+  exit 1
+}
   "outbounds": [
     { "protocol": "freedom",  "tag": "direct" },
     { "protocol": "blackhole","tag": "blocked" }
