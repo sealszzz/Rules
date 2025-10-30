@@ -48,7 +48,7 @@ pick_asset() {
   local name url
   # jq 输出: "<name>\t<url>"
   echo "$rel_json" | jq -r '.assets[] | "\(.name)\t\(.browser_download_url)"' \
-  | grep -iE 'linux' \
+  | grep -iE '^Xray-linux-' \
   | grep -ivE '\.(asc|sig|sha256|sha256sum|md5|txt)(\.|$)' \
   | while IFS=$'\t' read -r name url; do
       for k in "${ARCH_KEYS[@]}"; do
