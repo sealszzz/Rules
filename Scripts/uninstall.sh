@@ -1,67 +1,75 @@
 #!/usr/bin/env bash
-# 完整卸载（不清理依赖/不做备份）
+# 完整卸载脚本（不清理依赖、不做备份）
 # 覆盖：xray / tuic / shadowquic / shoes / hysteria2 / snell / sing-box
 set -euo pipefail
 
 need_root(){ [[ ${EUID:-$(id -u)} -eq 0 ]] || { echo "请用 root 运行"; exit 1; }; }
-need_systemd(){ command -v systemctl >/dev/null 2>&1 || { echo "需要 systemd 环境"; exit 1; }; }
+exists_cmd(){ command -v "$1" >/dev/null 2>&1; }
 
-# ---- systemd 停止/禁用（含模板实例）----
+# ---- systemd 停止/禁用（含模板实例，安全防早退）----
 stop_disable_unit(){
-  local base="$1"   # 不带 .service 的基名
+  local base="$1"                 # 不带 .service 的基名
   local svc="${base}.service"
 
+  # 1) 停止主服务
   systemctl stop "$svc" 2>/dev/null || true
 
-  # 停止所有实例 xxx@*.service
-  systemctl list-units --all --type=service --no-legend \
-    | awk '{print $1}' | grep -E "^${base}@.+\.service$" \
-    | while read -r inst; do systemctl stop "$inst" 2>/dev/null || true; done
+  # 2) 停止模板实例（如 xxx@name.service）
+  local insts=()
+  mapfile -t insts < <(systemctl list-units --all --type=service --no-legend \
+                        | awk '{print $1}' | grep -E "^${base}@.+\.service$" || true)
+  for inst in "${insts[@]:-}"; do
+    systemctl stop "$inst" 2>/dev/null || true
+  done
 
-  # 禁用主/模板
+  # 3) 禁用主/模板服务
   systemctl disable "$svc" 2>/dev/null || true
-  systemctl list-unit-files --type=service --no-legend \
-    | awk '{print $1}' | grep -E "^${base}@\.service$" \
-    | while read -r tplt; do systemctl disable "$tplt" 2>/dev/null || true; done
+  local tmpls=()
+  mapfile -t tmpls < <(systemctl list-unit-files --type=service --no-legend \
+                        | awk '{print $1}' | grep -E "^${base}@\.service$" || true)
+  for t in "${tmpls[@]:-}"; do
+    systemctl disable "$t" 2>/dev/null || true
+  done
 
-  # NEW: 清理 wants 目录中残留实例/主服务软链
+  # 4) reset-failed
+  systemctl reset-failed "$svc" 2>/dev/null || true
+
+  # 5) 清理 wants 残链（补齐老脚本优点）
   rm -f "/etc/systemd/system/multi-user.target.wants/${svc}" 2>/dev/null || true
   rm -f /etc/systemd/system/multi-user.target.wants/"${base}"@*.service 2>/dev/null || true
-
-  systemctl reset-failed "$svc" 2>/dev/null || true
 }
 
-# ---- 删除 unit 文件（含模板）----
+# ---- 删除 unit 文件（含模板、drop-in）----
 rm_units(){
   local base="$1"
   local paths=(
     "/etc/systemd/system/${base}.service"
     "/lib/systemd/system/${base}.service"
     "/usr/lib/systemd/system/${base}.service"
-  )
-  for f in "${paths[@]}"; do rm -f "$f" 2>/dev/null || true; done
-
-  local templates=(
     "/etc/systemd/system/${base}@.service"
     "/lib/systemd/system/${base}@.service"
     "/usr/lib/systemd/system/${base}@.service"
   )
-  for f in "${templates[@]}"; do rm -f "$f" 2>/dev/null || true; done
-
+  for f in "${paths[@]}"; do rm -f "$f" 2>/dev/null || true; done
   rm -rf "/etc/systemd/system/${base}.service.d" "/etc/systemd/system/${base}@.service.d" 2>/dev/null || true
 }
 
-# ---- 删除用户/组 ----
+# ---- 尝试删除系统用户/组（若存在）----
 del_user_group(){
   local user="$1" group="$2"
   getent passwd "$user" >/dev/null 2>&1 && userdel -r "$user" 2>/dev/null || true
   getent group  "$group" >/dev/null 2>&1 && groupdel    "$group" 2>/dev/null || true
 }
 
-# ---- 删除路径 ----
-rm_paths(){ for p in "$@"; do [ -e "$p" ] && rm -rf "$p" 2>/dev/null || true; done; }
+# ---- 通用删路径 ----
+rm_paths(){
+  local p
+  for p in "$@"; do
+    [ -e "$p" ] && rm -rf "$p"
+  done
+}
 
-# ================= 实现 =================
+# ================= 每个软件的卸载实现 =================
 
 uninstall_xray(){
   echo "[Xray] 停止并禁用..."
@@ -71,9 +79,9 @@ uninstall_xray(){
   rm_units "xray"
   rm_paths \
     /usr/local/bin/xray \
-    /etc/xray /var/lib/xray /var/log/xray \
+    /etc/xray /var/lib/xray \
+    /var/log/xray \
     /usr/local/share/xray \
-    /usr/local/etc/xray \              # NEW: 常见第二路径
     /etc/logrotate.d/xray
 
   echo "[Xray] 删除用户/组..."
@@ -88,7 +96,6 @@ uninstall_tuic(){
   rm_units "tuic-server"
   rm_paths \
     /usr/local/bin/tuic-server \
-    /usr/local/bin/tuic \              # NEW: 有些安装名是 tuic
     /etc/tuic /var/lib/tuic
 
   echo "[TUIC] 删除用户/组..."
@@ -125,6 +132,7 @@ uninstall_shoes(){
 
 uninstall_hysteria2(){
   echo "[Hysteria2] 停止并禁用..."
+  # 兼容：hysteria2.service / hysteria-server@.service
   stop_disable_unit "hysteria2"
   stop_disable_unit "hysteria-server"
 
@@ -133,8 +141,7 @@ uninstall_hysteria2(){
   rm_units "hysteria-server"
   rm_paths \
     /usr/local/bin/hysteria \
-    /etc/hysteria /var/lib/hysteria \
-    /etc/logrotate.d/hysteria           # NEW: 常见 logrotate
+    /etc/hysteria /var/lib/hysteria
 
   echo "[Hysteria2] 删除用户/组..."
   del_user_group "hysteria" "hysteria" || true
@@ -151,8 +158,7 @@ uninstall_snell(){
   rm_units "snell-server"
   rm_paths \
     /usr/local/bin/snell /usr/local/bin/snell-server \
-    /etc/snell /var/lib/snell \
-    /etc/logrotate.d/snell
+    /etc/snell /var/lib/snell
 
   echo "[Snell] 删除用户/组..."
   del_user_group "snell" "snell" || true
@@ -167,9 +173,7 @@ uninstall_singbox(){
   rm_units "sing-box"
   rm_paths \
     /usr/local/bin/sing-box \
-    /etc/sing-box /etc/singbox \       # NEW: 两种目录写法
-    /var/lib/sing-box /var/lib/singbox \
-    /etc/logrotate.d/sing-box
+    /etc/sing-box /var/lib/sing-box
 
   echo "[sing-box] 删除用户/组..."
   del_user_group "sing-box" "sing-box"
@@ -221,6 +225,7 @@ MENU
   done
 }
 
+# 入口
 need_root
-need_systemd
+exists_cmd systemctl || { echo "需要 systemd 环境"; exit 1; }
 main_menu
