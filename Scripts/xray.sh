@@ -79,8 +79,9 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
     return 1
   }
   # ---- 强健的 Reality 密钥生成（无“兜底”，解析不到就硬失败）----
+# ---- 强健的 Reality 密钥生成（解析不到就直接失败）----
 gen_reality_keys() {
-  # 支持通过环境变量直接注入
+  # 允许通过环境变量注入
   if [ -n "${XRAY_PRIV:-}" ] && [ -n "${XRAY_PUB:-}" ]; then
     return 0
   fi
@@ -89,25 +90,19 @@ gen_reality_keys() {
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r' | sed 's/\x1B\[[0-9;]*[A-Za-z]//g')" || true
 
-  # 兼容三种标签：Private[ ]Key / Public[ ]Key / Password（你的构建即为 Password）
+  # 兼容标签：PrivateKey / PublicKey / Password（有些构建把公钥写成 Password）
   priv="$(printf '%s\n' "$out" \
           | awk -F':' 'tolower($1) ~ /^ *private ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}')"
   pub="$( printf '%s\n' "$out" \
           | awk -F':' 'tolower($1) ~ /^ *public ?key *$/  {gsub(/^ +| +$/,"",$2); print $2; exit}')"
-
-  # 没有 PublicKey 标签时，接受 Password 作为“公钥”输出
   if [ -z "$pub" ]; then
     pub="$(printf '%s\n' "$out" \
-           | awk -F':' 'tolower($1) ~ /^ *password *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}')"
+          | awk -F':' 'tolower($1) ~ /^ *password *$/     {gsub(/^ +| +$/,"",$2); print $2; exit}')"
   fi
 
-  # 简单格式校验（Reality 使用的 base64url，通常 43~64 长度）
-  case "$priv" in
-    ""|*[!A-Za-z0-9_-]*) priv="";; *) [ ${#priv} -lt 40 ] && priv="";;
-  esac
-  case "$pub" in
-    ""|*[!A-Za-z0-9_-]*)  pub="";;  *) [ ${#pub}  -lt 40 ] && pub="";;
-  esac
+  # 粗校验（Reality 用 base64url，通常 40+）
+  case "$priv" in ""|*[!A-Za-z0-9_-]*) priv="";; *) [ ${#priv} -lt 40 ] && priv="";; esac
+  case "$pub"  in ""|*[!A-Za-z0-9_-]*)  pub="";;  *) [ ${#pub}  -lt 40 ] &&  pub="";; esac
 
   if [ -n "$priv" ] && [ -n "$pub" ]; then
     XRAY_PRIV="$priv"
@@ -137,6 +132,7 @@ EOF
 fi
 
 # ===== systemd (create once) =====
+# ========= systemd service（只在第一次创建）=========
 if [ ! -f "$XRAY_SERVICE" ]; then
   cat >"$XRAY_SERVICE" <<EOF
 [Unit]
