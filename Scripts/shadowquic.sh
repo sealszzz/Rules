@@ -2,7 +2,6 @@
 # shadowquic-min: no-API latest/download, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-# ========= 可调参数 =========
 : "${SHQ_PORT:=443}"                        # ShadowQUIC 对外监听 UDP 端口
 : "${SHQ_UPSTREAM_HOST:=www.debian.org}"    # 回源/伪装主机
 : "${SHQ_UPSTREAM_PORT:=443}"               # 回源/伪装端口
@@ -21,11 +20,9 @@ SHQ_SERVICE="/etc/systemd/system/${SHQ_SERVICE_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ========= 依赖 =========
 apt update
 apt install -y --no-install-recommends curl ca-certificates openssl iproute2
 
-# ========= 系统用户与目录 =========
 getent group "$SHQ_GROUP" >/dev/null || groupadd --system "$SHQ_GROUP"
 id -u "$SHQ_USER" >/dev/null 2>&1 || \
   useradd --system -g "$SHQ_GROUP" -M -d "$SHQ_STATE_DIR" -s /usr/sbin/nologin "$SHQ_USER"
@@ -33,7 +30,6 @@ id -u "$SHQ_USER" >/dev/null 2>&1 || \
 install -d -o "$SHQ_USER" -g "$SHQ_GROUP" -m 750 "$SHQ_STATE_DIR"
 install -d -o root        -g "$SHQ_GROUP" -m 750 "$SHQ_CONF_DIR"
 
-# ========= 资产名（仅 glibc，不回退 musl）=========
 case "$(uname -m)" in
   x86_64|amd64)  ASSET="shadowquic-x86_64-linux"  ;;
   aarch64|arm64) ASSET="shadowquic-aarch64-linux" ;;
@@ -49,12 +45,10 @@ curl -fL --retry 3 --retry-delay 1 -o "$bin_dl" "${BASE_URL}/${ASSET}"
 chmod +x "$bin_dl"
 install -m 0755 "$bin_dl" "$SHQ_BIN"
 
-# ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f "$SHQ_CONF_FILE" ]; then
   SHQ_GEN_USER="${SHQ_GEN_USER:-$(openssl rand -hex 8)}"     # ~64bit
   SHQ_GEN_PASS="${SHQ_GEN_PASS:-$(openssl rand -hex 16)}"    # ~128bit
 
-  # 注：以下 YAML 是基于你现有可用模板；如上游项目字段有变更，按需再调
   cat >"$SHQ_CONF_FILE" <<EOF
 inbound:
   type: shadowquic
@@ -80,7 +74,6 @@ EOF
   echo "ShadowQUIC 密码:   ${SHQ_GEN_PASS}"
 fi
 
-# ========= systemd unit（仅首次写入）=========
 if [ ! -f "$SHQ_SERVICE" ]; then
   cat >"$SHQ_SERVICE" <<EOF
 [Unit]
@@ -109,7 +102,6 @@ EOF
   chmod 644 "$SHQ_SERVICE"
 fi
 
-# ========= 启动 / 重载 =========
 systemctl daemon-reload
 if systemctl is-enabled "$SHQ_SERVICE_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$SHQ_SERVICE_NAME" || systemctl restart "$SHQ_SERVICE_NAME"
@@ -117,7 +109,6 @@ else
   systemctl enable --now "$SHQ_SERVICE_NAME" || true
 fi
 
-# ========= 摘要 =========
 echo
 "$SHQ_BIN" -V 2>/dev/null || "$SHQ_BIN" --version 2>/dev/null || true
 echo "UDP/${SHQ_PORT} 监听检查："
