@@ -2,10 +2,9 @@
 # tuic-min: no-API latest tag, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-# ========= 可调参数 =========
-: "${TUIC_PORT:=443}"                   # tuic-server 监听 UDP 端口
-: "${CERT:=/etc/tls/cert.pem}"          # TLS 证书
-: "${KEY:=/etc/tls/key.pem}"            # TLS 私钥
+: "${TUIC_PORT:=443}"
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
 
 TUIC_USER="tuic"
 TUIC_GROUP="tuic"
@@ -20,15 +19,12 @@ TUIC_SERVICE="/etc/systemd/system/${TUIC_SERVICE_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ========= 依赖 =========
 apt update
 apt install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
 
-# ========= 证书检查 =========
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ========= 系统用户与目录 =========
 getent group "$TUIC_GROUP" >/dev/null || groupadd --system "$TUIC_GROUP"
 id -u "$TUIC_USER" >/dev/null 2>&1 || \
   useradd --system -g "$TUIC_GROUP" -M -d "$TUIC_STATE_DIR" -s /usr/sbin/nologin "$TUIC_USER"
@@ -36,7 +32,6 @@ id -u "$TUIC_USER" >/dev/null 2>&1 || \
 install -d -o "$TUIC_USER" -g "$TUIC_GROUP" -m 750 "$TUIC_STATE_DIR"
 install -d -o root        -g "$TUIC_GROUP" -m 750 "$TUIC_CONF_DIR"
 
-# ========= 通过重定向解析最新 tag =========
 get_latest_tag() {
   local final
   final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
@@ -59,7 +54,6 @@ dl_url="https://github.com/Itsusinn/tuic/releases/download/${tag}/${asset_name}"
 echo "[*] Install version: ${tag}"
 echo "[*] Asset:           ${asset_name}"
 
-# ========= 下载并安装（资产是裸二进制）=========
 tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
 bin_dl="${tmpd}/${asset_name}"
 
@@ -67,7 +61,6 @@ curl -fL --retry 3 --retry-delay 1 -o "$bin_dl" "$dl_url"
 chmod +x "$bin_dl"
 install -m 0755 "$bin_dl" "$TUIC_BIN"
 
-# ========= 首次生成配置（存在则不覆盖）=========
 if [ ! -f "$TUIC_CONF_FILE" ]; then
   TUIC_UUID="${TUIC_UUID:-$(uuidgen)}"
   TUIC_PASS="${TUIC_PASS:-$(openssl rand -hex 16)}"
@@ -99,7 +92,6 @@ EOF
   echo "TUIC PASS: ${TUIC_PASS}"
 fi
 
-# ========= systemd unit（create-once）=========
 if [ ! -f "$TUIC_SERVICE" ]; then
   cat >"$TUIC_SERVICE" <<EOF
 [Unit]
@@ -129,7 +121,6 @@ EOF
   chmod 644 "$TUIC_SERVICE"
 fi
 
-# ========= 启动 / 重载 =========
 systemctl daemon-reload
 if systemctl is-enabled "$TUIC_SERVICE_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$TUIC_SERVICE_NAME" || systemctl restart "$TUIC_SERVICE_NAME"
@@ -137,7 +128,6 @@ else
   systemctl enable --now "$TUIC_SERVICE_NAME" || true
 fi
 
-# ========= 摘要 =========
 echo
 "$TUIC_BIN" -V 2>/dev/null || "$TUIC_BIN" --version 2>/dev/null || true
 echo "UDP/${TUIC_PORT} 监听检查："
