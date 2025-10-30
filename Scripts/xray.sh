@@ -2,7 +2,7 @@
 set -euo pipefail
 
 # ========= 可调路径/参数（如无必要别改）=========
-: "${XRAY_PORT:=443}"
+: "${XRAY_PORT:=8888}"
 : "${XRAY_SNI:=www.cloudflare.com}"      # 伪装域名 / ServerName
 : "${XRAY_DEST:=www.cloudflare.com:443}" # Reality 回源目标
 : "${XRAY_USER:=xray}"
@@ -77,7 +77,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
   "inbounds": [
     {
       "port": ${XRAY_PORT},
-      "listen": "127.0.0.1:8888",
+      "listen": "127.0.0.1",
       "protocol": "vless",
       "settings": {
         "decryption": "none",
