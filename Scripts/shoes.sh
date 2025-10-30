@@ -1,54 +1,51 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# ========= 可调参数（可用环境变量覆盖）=========
+# ========= Tunables (override via env) =========
 : "${TUIC_PORT:=4443}"
 : "${HY2_PORT:=8443}"
 : "${RUST_LOG:=warn}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-# 随机凭据（可预先导出 T_UUID/T_PASS/H_PASS 覆盖）
+# Random creds (override with T_UUID/T_PASS/H_PASS if desired)
 : "${T_UUID:=$(uuidgen)}"
 : "${T_PASS:=$(openssl rand -hex 16)}"
 : "${H_PASS:=$(openssl rand -base64 18 | tr -d '\n')}"
 
-# ========= 基础依赖（两种路径都需要）=========
 export DEBIAN_FRONTEND=noninteractive
+
+# ========= Base deps =========
 apt update
 apt install -y --no-install-recommends \
   curl jq ca-certificates tar unzip xz-utils uuid-runtime openssl iproute2
 
-# ========= 证书自检 =========
+# ========= Cert check =========
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ========= 用户与目录 =========
+# ========= User & dirs =========
 getent group shoes >/dev/null || groupadd --system shoes
 id -u shoes  >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
 install -d -o shoes -g shoes -m 750 /var/lib/shoes
 install -d -o root  -g shoes -m 750 /etc/shoes
 
-# ========= 只在选 cargo 时才装构建链 =========
+# ========= Optional cargo toolchain =========
 ensure_cargo_toolchain() {
-  apt install -y --no-install-recommends \
-    git build-essential pkg-config cmake clang llvm-dev libclang-dev
-
+  apt install -y --no-install-recommends git build-essential pkg-config cmake clang llvm-dev libclang-dev
   if ! command -v cargo >/dev/null 2>&1; then
     curl -fsSL https://sh.rustup.rs | sh -s -- -y --profile minimal
   fi
   [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
   export PATH="$HOME/.cargo/bin:$PATH"
-
-  # 某些环境下避免 cargo 内置 git 受限
   export CARGO_NET_GIT_FETCH_WITH_CLI=true
 }
 
-# ========= 方案 A：从源码编译（cargo，固定到 master 最新 SHA + 最新兼容依赖）=========
+# ========= Build from source (cargo) =========
 install_shoes_cargo() {
   ensure_cargo_toolchain
 
-  # 优先 GitHub API（若存在 GITHUB_TOKEN 自动使用），失败则 git 原生兜底
+  # Prefer API (with optional token), fallback to git
   local sha=""
   if [ -n "${GITHUB_TOKEN-}" ]; then
     sha="$(curl -fsSL -H "Authorization: Bearer ${GITHUB_TOKEN}" \
@@ -58,84 +55,81 @@ install_shoes_cargo() {
     sha="$(curl -fsSL https://api.github.com/repos/cfal/shoes/commits/master \
             | jq -r '.sha // empty' || true)"
   fi
-
   if [ -z "$sha" ]; then
     sha="$(git ls-remote https://github.com/cfal/shoes master 2>/dev/null | awk '{print $1}')" || true
   fi
-
   [ -n "$sha" ] || { echo "无法获取 shoes/master 最新提交（API 与 git 皆失败）"; exit 1; }
 
-  # 不加 --locked => 依赖按 Cargo.toml 解析为“最新兼容”
+  # GNU only (Cargo will target host toolchain; no musl)
   cargo install --git https://github.com/cfal/shoes --rev "$sha" --force
   install -m 0755 "$HOME/.cargo/bin/shoes" /usr/local/bin/shoes
-  echo "== Built shoes @ ${sha} (HEAD of master), deps = latest allowed by Cargo.toml =="
+  echo "== Built shoes @ ${sha} =="
 }
 
-# ========= 方案 B：下载最新 release 二进制 =========
+# ========= Install latest release (no API; GNU only) =========
 install_shoes_release() {
-  local json latest_tag assets asset url pat_arch arch tmpd binpath
-
-  json="$(curl -fsSL https://api.github.com/repos/cfal/shoes/releases/latest)"
-  latest_tag="$(echo "$json" | jq -r '.tag_name // empty')"
-  [ -n "$latest_tag" ] || { echo "GitHub API error (no latest tag)"; exit 1; }
-
-  arch="$(uname -m)"
-  case "$arch" in
-    x86_64|amd64)  pat_arch="(x86_64|amd64)";;
-    aarch64|arm64) pat_arch="(aarch64|arm64)";;
-    *) echo "unsupported arch: $arch"; exit 1;;
+  case "$(uname -m)" in
+    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
+    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu.tar.gz" ;;
+    *) echo "unsupported arch: $(uname -m)（仅 x86_64 / aarch64）" >&2; exit 1 ;;
   esac
 
-  assets="$(echo "$json" | jq -r '.assets[].name')"
-  # 偏好 gnu，失败再尝试 musl；支持 .tar.gz/.tar.xz/.zip
-  asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*gnu.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
-  [ -n "$asset" ] || asset="$(echo "$assets" | grep -i -E "${pat_arch}.*(linux|unknown-linux).*musl.*(\.tar\.(gz|xz)|\.zip)$" | head -n1 || true)"
-  [ -n "$asset" ] || { echo "no suitable release asset"; exit 1; }
-
-  url="$(echo "$json" | jq -r ".assets[] | select(.name==\"$asset\") | .browser_download_url")"
-  echo "[*] Installing Shoes $latest_tag via asset: $asset"
-
+  local BASE="https://github.com/cfal/shoes/releases/latest/download"
   local tmpd; tmpd="$(mktemp -d)"
-  # 函数返回即清理 tmpd；兼容 set -u
   trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
 
-  curl -fL "$url" -o "$tmpd/pkg"
+  echo "[*] 下载 ${ASSET} ..."
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
+
   mkdir -p "$tmpd/unpack"
-  case "$asset" in
-    *.tar.gz) tar -xzf "$tmpd/pkg" -C "$tmpd/unpack" ;;
-    *.tar.xz) tar -xJf "$tmpd/pkg" -C "$tmpd/unpack" ;;
-    *.zip)    unzip -q  "$tmpd/pkg" -d "$tmpd/unpack" ;;
-  esac
+  tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
-  binpath="$(find "$tmpd/unpack" -maxdepth 3 -type f -name shoes -perm -u+x | head -n1)"
-  [ -n "$binpath" ] || { echo "shoes binary not found in asset"; exit 1; }
+  local bin
+  bin="$(find "$tmpd/unpack" -type f -name shoes -perm -u+x | head -n1 || true)"
+  [ -n "$bin" ] || { echo "未在资产中找到可执行文件 shoes"; exit 1; }
 
-  install -m 0755 "$binpath" /usr/local/bin/shoes
-
-  # 清掉本函数的 RETURN trap，防止后续函数也触发
+  install -m 0755 "$bin" /usr/local/bin/shoes
   trap - RETURN
 }
 
-# ========= 交互选择安装路径（默认 N=release；给默认值以防 stdin 异常）=========
-echo
+# ========= Choose install path (args/env/interactive; default: release) =========
 use_cargo=0
-while :; do
-  read -rp "是否用 cargo 从源码编译 Shoes？[y/N] " ans || { echo; break; }
-  ans="${ans:-N}"
-  case "$ans" in
-    [Yy]) use_cargo=1; break ;;
-    [Nn]) use_cargo=0; break ;;
-    *) echo "只接受 y/N（回车默认 N）。";;
+
+# Args override
+for arg in "${@:-}"; do
+  case "$arg" in
+    --cargo)   use_cargo=1 ;;
+    --release) use_cargo=0 ;;
   esac
 done
 
-if [ "${use_cargo}" -eq 1 ]; then
+# Env override
+if [ -n "${SHOES_INSTALL:-}" ]; then
+  case "${SHOES_INSTALL}" in
+    cargo|CARGO)     use_cargo=1 ;;
+    release|RELEASE) use_cargo=0 ;;
+  esac
+fi
+
+# Interactive prompt only if no args/env & TTY
+if [ -t 0 ] && [ -z "${SHOES_INSTALL:-}" ] && ! printf '%s' "$*" | grep -qE -- '--(cargo|release)'; then
+  printf '\n是否用 cargo 从源码编译 Shoes？[y/N] (默认 N): '
+  read -r ans || ans=""
+  case "${ans}" in
+    [Yy]) use_cargo=1 ;;
+    *)    use_cargo=0 ;;
+  esac
+fi
+
+if [ "$use_cargo" -eq 1 ]; then
+  echo "[选择] 使用 cargo 从源码编译"
   install_shoes_cargo
 else
+  echo "[选择] 使用 release 预编译二进制"
   install_shoes_release
 fi
 
-# ========= 首次生成配置（存在则不覆盖）=========
+# ========= First-time config (idempotent) =========
 if [ ! -f /etc/shoes/config.yml ]; then
   cat >/etc/shoes/config.yml <<EOF
 - address: "[::]:${TUIC_PORT}"
@@ -174,7 +168,7 @@ fi
 
 # ========= systemd =========
 if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<EOF
+  cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
 Description=Shoes Server
 After=network-online.target nss-lookup.target
@@ -193,19 +187,19 @@ NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=on-failure
 RestartSec=3s
-Environment=RUST_LOG=${RUST_LOG}
+Environment=RUST_LOG=warn
 
 [Install]
 WantedBy=multi-user.target
 EOF
 fi
 
-# ========= 启动 / 重载 =========
+# ========= Start / Reload =========
 systemctl daemon-reload
 systemctl enable --now shoes || true
 systemctl try-reload-or-restart shoes || systemctl restart shoes
 
-# ========= 摘要 =========
+# ========= Summary =========
 echo
 ver="$(
   /usr/local/bin/shoes -V 2>/dev/null \
