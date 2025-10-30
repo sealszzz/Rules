@@ -19,7 +19,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 # ===== Deps =====
 apt update
-apt install -y --no-install-recommends curl jq ca-certificates uuid-runtime unzip xz-utils tar openssl
+apt install -y --no-install-recommends curl ca-certificates uuid-runtime unzip openssl
 
 # ===== User & Dirs =====
 getent group "$XRAY_GROUP" >/dev/null || groupadd --system "$XRAY_GROUP"
@@ -29,68 +29,38 @@ id -u "$XRAY_USER" >/dev/null 2>&1 || \
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
 
-# ===== Fetch latest release & install binary (assets-driven, no hardcoded suffix) =====
+# ===== Resolve latest tag via redirect (no API / no jq) =====
+get_latest_tag() {
+  # 通过 302 重定向拿到最终 URL，末尾就是 tag（如 v25.10.15）
+  local final
+  final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+           https://github.com/XTLS/Xray-core/releases/latest)" || return 1
+  printf '%s\n' "${final##*/}"
+}
+
+echo "[*] Query latest Xray release (no-API)..."
+tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
 case "$(uname -m)" in
-  x86_64|amd64)  ARCH_KEYS=("64") ;;
-  aarch64|arm64) ARCH_KEYS=("arm64-v8a" "arm64") ;;
+  x86_64|amd64)  MACHINE="64" ;;
+  aarch64|arm64) MACHINE="arm64-v8a" ;;
   *) echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)" >&2; exit 1 ;;
 esac
 
-echo "[*] Query latest Xray release..."
-rel_json="$(curl -fsSL --retry 3 --retry-delay 1 https://api.github.com/repos/XTLS/Xray-core/releases/latest)" \
-  || { echo "Failed to query release info"; exit 1; }
-tag="$(echo "$rel_json" | jq -r '.tag_name')"
-[ -n "$tag" ] || { echo "Empty tag_name"; exit 1; }
-
-# Build a list of candidate assets: linux + arch, exclude sig/sha/checksums
-# Select the first match by ARCH_KEYS priority.
-pick_asset() {
-  local name url
-  # jq 输出: "<name>\t<url>"
-  echo "$rel_json" | jq -r '.assets[] | "\(.name)\t\(.browser_download_url)"' \
-  | grep -iE '^Xray-linux-' \
-  | grep -ivE '\.(asc|sig|sha256|sha256sum|md5|txt)(\.|$)' \
-  | while IFS=$'\t' read -r name url; do
-      for k in "${ARCH_KEYS[@]}"; do
-        if echo "$name" | grep -qi -- "$k"; then
-          printf '%s\t%s\n' "$name" "$url"
-          break
-        fi
-      done
-    done | head -n1
-}
-
-picked="$(pick_asset)"
-[ -n "$picked" ] || { echo "No matching linux asset found for arch keys: ${ARCH_KEYS[*]}"; exit 1; }
-asset_name="${picked%%$'\t'*}"
-asset_url="${picked#*$'\t'}"
-
-echo "[*] Install version: $tag"
-echo "[*] Asset:          $asset_name"
+asset_name="Xray-linux-${MACHINE}.zip"
+dl_url="https://github.com/XTLS/Xray-core/releases/download/${tag}/${asset_name}"
+echo "[*] Install version: ${tag}"
+echo "[*] Asset:          ${asset_name}"
 
 tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
-dl_file="$tmpd/${asset_name}"
-curl -fL "$asset_url" -o "$dl_file"
+dl_file="${tmpd}/${asset_name}"
+curl -fL "$dl_url" -o "$dl_file"
 
-extract_and_install() {
-  local f="$1"
-  local udir="$tmpd/u"
-  mkdir -p "$udir"
-  case "$f" in
-    *.zip)     unzip -q "$f" -d "$udir" ;;
-    *.tar.gz|*.tgz) tar -xzf "$f" -C "$udir" ;;
-    *.tar.xz|*.txz) tar -xJf "$f" -C "$udir" ;;
-    *)         # 尝试直接当 zip 解（已有历史发布仅 zip）
-               if unzip -q "$f" -d "$udir" 2>/dev/null; then :; else
-                 echo "Unknown archive format: $f" >&2; exit 1
-               fi ;;
-  esac
-  binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 || true)"
-  [ -n "$binpath" ] || { echo "xray binary not found in asset: $asset_name"; exit 1; }
-  install -m 0755 "$binpath" "$XRAY_BIN"
-}
-
-extract_and_install "$dl_file"
+# ===== Extract & install =====
+udir="${tmpd}/u"; mkdir -p "$udir"
+unzip -q "$dl_file" -d "$udir"
+binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 || true)"
+[ -n "$binpath" ] || { echo "xray binary not found in asset: $asset_name"; exit 1; }
+install -m 0755 "$binpath" "$XRAY_BIN"
 
 # ===== Reality keypair (single-shot parse; fail fast) =====
 parse_reality_keys() {
