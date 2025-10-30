@@ -2,10 +2,10 @@
 set -euo pipefail
 
 # ===== Tunables =====
-: "${XRAY_PORT:=8888}"                         # default for Nginx stream -> 127.0.0.1:8888
-: "${XRAY_LISTEN:=127.0.0.1}"                  # set to 0.0.0.0 for public listen when not using Nginx
-: "${XRAY_SNI:=www.cloudflare.com}"            # must exist in dest's cert
-: "${XRAY_DEST:=www.cloudflare.com:443}"       # upstream TLS endpoint
+: "${XRAY_PORT:=443}"
+: "${XRAY_LISTEN:=[::]}"
+: "${XRAY_SNI:=www.cloudflare.com}"   # must exist in dest's cert
+: "${XRAY_DEST:=127.0.0.1:99}"        # upstream TLS endpoint
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
 
@@ -92,7 +92,12 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
       "protocol": "vless",
       "settings": {
         "decryption": "none",
-        "clients": [ { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" } ]
+        "clients": [
+          { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" }
+        ]
+        "fallbacks": [
+          { "dest": "127.0.0.1:9999", "xver": 0 }
+        ]
       },
       "streamSettings": {
         "network": "tcp",
