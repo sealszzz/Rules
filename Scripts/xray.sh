@@ -94,7 +94,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "decryption": "none",
         "clients": [
           { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" }
-        ]
+        ],
         "fallbacks": [
           { "dest": "127.0.0.1:9999", "xver": 0 }
         ]
