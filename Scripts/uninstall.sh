@@ -1,210 +1,226 @@
 #!/usr/bin/env bash
-# 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic
+# 完整卸载（不清理依赖/不做备份）
+# 覆盖：xray / tuic / shadowquic / shoes / hysteria2 / snell / sing-box
 set -euo pipefail
 
-# ----- 工具函数 -----
-need_root() {
-  if [ "${EUID:-$(id -u)}" -ne 0 ]; then
-    echo "请用 root 运行：sudo $0"
-    exit 1
-  fi
-}
+need_root(){ [[ ${EUID:-$(id -u)} -eq 0 ]] || { echo "请用 root 运行"; exit 1; }; }
+need_systemd(){ command -v systemctl >/dev/null 2>&1 || { echo "需要 systemd 环境"; exit 1; }; }
 
-exists_cmd(){ command -v "$1" >/dev/null 2>&1; }
-
-stop_disable_service() {
-  local base="$1"
+# ---- systemd 停止/禁用（含模板实例）----
+stop_disable_unit(){
+  local base="$1"   # 不带 .service 的基名
   local svc="${base}.service"
 
-  # 停止主服务
   systemctl stop "$svc" 2>/dev/null || true
 
-  # 停止模板实例（如 hysteria-server@xxx.service）
-  local units=()
-  mapfile -t units < <(
-    systemctl list-units --all --type=service --no-legend \
-      | awk '{print $1}' \
-      | grep -E "^${base}@.+\.service$" || true
-  )
-  for u in "${units[@]}"; do
-    systemctl stop "$u" 2>/dev/null || true
-  done
+  # 停止所有实例 xxx@*.service
+  systemctl list-units --all --type=service --no-legend \
+    | awk '{print $1}' | grep -E "^${base}@.+\.service$" \
+    | while read -r inst; do systemctl stop "$inst" 2>/dev/null || true; done
 
-  # 禁用主服务
+  # 禁用主/模板
   systemctl disable "$svc" 2>/dev/null || true
+  systemctl list-unit-files --type=service --no-legend \
+    | awk '{print $1}' | grep -E "^${base}@\.service$" \
+    | while read -r tplt; do systemctl disable "$tplt" 2>/dev/null || true; done
 
-  # 禁用模板实例
-  local unitfiles=()
-  mapfile -t unitfiles < <(
-    systemctl list-unit-files --type=service --no-legend \
-      | awk '{print $1}' \
-      | grep -E "^${base}@.+\.service$" || true
-  )
-  for uf in "${unitfiles[@]}"; do
-    systemctl disable "$uf" 2>/dev/null || true
-  done
-
-  # 清理 wants 目录中的残留软链
+  # NEW: 清理 wants 目录中残留实例/主服务软链
   rm -f "/etc/systemd/system/multi-user.target.wants/${svc}" 2>/dev/null || true
   rm -f /etc/systemd/system/multi-user.target.wants/"${base}"@*.service 2>/dev/null || true
+
+  systemctl reset-failed "$svc" 2>/dev/null || true
 }
 
-remove_unit_files() {
-  # 传入若干 unit 的完整路径
-  for f in "$@"; do
-    [ -e "$f" ] && rm -f "$f" || true
-  done
-  systemctl daemon-reload 2>/dev/null || true
-  systemctl reset-failed 2>/dev/null || true
+# ---- 删除 unit 文件（含模板）----
+rm_units(){
+  local base="$1"
+  local paths=(
+    "/etc/systemd/system/${base}.service"
+    "/lib/systemd/system/${base}.service"
+    "/usr/lib/systemd/system/${base}.service"
+  )
+  for f in "${paths[@]}"; do rm -f "$f" 2>/dev/null || true; done
+
+  local templates=(
+    "/etc/systemd/system/${base}@.service"
+    "/lib/systemd/system/${base}@.service"
+    "/usr/lib/systemd/system/${base}@.service"
+  )
+  for f in "${templates[@]}"; do rm -f "$f" 2>/dev/null || true; done
+
+  rm -rf "/etc/systemd/system/${base}.service.d" "/etc/systemd/system/${base}@.service.d" 2>/dev/null || true
 }
 
-remove_paths() { for p in "$@"; do [ -e "$p" ] && rm -rf "$p" || true; done; }
-
-remove_user_group() {
-  local user="$1" group="${2:-$1}"
-  local home
-  home="$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || true)"
-  if id -u "$user" >/dev/null 2>&1; then
-    userdel -r "$user" 2>/dev/null || true
-  fi
-  [ -n "${home:-}" ] && [ -d "$home" ] && rm -rf "$home" || true
-  if getent group "$group" >/dev/null 2>&1; then
-    groupdel "$group" 2>/dev/null || true
-  fi
+# ---- 删除用户/组 ----
+del_user_group(){
+  local user="$1" group="$2"
+  getent passwd "$user" >/dev/null 2>&1 && userdel -r "$user" 2>/dev/null || true
+  getent group  "$group" >/dev/null 2>&1 && groupdel    "$group" 2>/dev/null || true
 }
 
-pause() { echo; read -rp "按回车返回主菜单..." _; }
+# ---- 删除路径 ----
+rm_paths(){ for p in "$@"; do [ -e "$p" ] && rm -rf "$p" 2>/dev/null || true; done; }
 
-# ===== Hysteria2 =====
-uninstall_hysteria() {
-  echo ">>> 卸载 Hysteria2 ..."
-  stop_disable_service "hysteria-server"
-  remove_unit_files \
-    /etc/systemd/system/hysteria-server.service \
-    /etc/systemd/system/hysteria-server@.service
-  remove_paths \
-    /usr/local/bin/hysteria \
-    /etc/hysteria \
-    /var/lib/hysteria
-  remove_user_group "hysteria"
-  echo "[OK] Hysteria2 卸载完成。"
+# ================= 实现 =================
+
+uninstall_xray(){
+  echo "[Xray] 停止并禁用..."
+  stop_disable_unit "xray"
+
+  echo "[Xray] 删除文件..."
+  rm_units "xray"
+  rm_paths \
+    /usr/local/bin/xray \
+    /etc/xray /var/lib/xray /var/log/xray \
+    /usr/local/share/xray \
+    /usr/local/etc/xray \              # NEW: 常见第二路径
+    /etc/logrotate.d/xray
+
+  echo "[Xray] 删除用户/组..."
+  del_user_group "xray" "xray"
 }
 
-# ===== Snell =====
-uninstall_snell() {
-  echo ">>> 卸载 Snell ..."
-  stop_disable_service "snell"
-  remove_unit_files /etc/systemd/system/snell.service
-  remove_paths \
-    /usr/local/bin/snell-server \
-    /usr/local/sbin/snell.sh \
-    /usr/local/bin/snell \
-    /etc/snell \
-    /var/lib/snell
-  remove_user_group "snell"
-  echo "[OK] Snell 卸载完成。"
-}
+uninstall_tuic(){
+  echo "[TUIC] 停止并禁用..."
+  stop_disable_unit "tuic-server"
 
-# ===== TUIC =====
-uninstall_tuic() {
-  echo ">>> 卸载 TUIC ..."
-  stop_disable_service "tuic-server"
-  remove_unit_files /etc/systemd/system/tuic-server.service
-  remove_paths \
+  echo "[TUIC] 删除文件..."
+  rm_units "tuic-server"
+  rm_paths \
     /usr/local/bin/tuic-server \
-    /etc/tuic \
-    /var/lib/tuic
-  remove_user_group "tuic"
-  echo "[OK] TUIC 卸载完成。"
+    /usr/local/bin/tuic \              # NEW: 有些安装名是 tuic
+    /etc/tuic /var/lib/tuic
+
+  echo "[TUIC] 删除用户/组..."
+  del_user_group "tuic" "tuic"
 }
 
-# ===== Shadowsocks-Rust =====
-uninstall_ssrust() {
-  echo ">>> 卸载 Shadowsocks-Rust ..."
-  stop_disable_service "ssrust"
-  remove_unit_files /etc/systemd/system/ssrust.service
-  remove_paths \
-    /usr/local/bin/ssserver \
-    /usr/local/sbin/ssrust.sh \
-    /usr/local/bin/ssrust \
-    /etc/ssrust \
-    /var/lib/ssrust
-  remove_user_group "ssrust"
-  echo "[OK] SSRust 卸载完成。"
-}
+uninstall_shadowquic(){
+  echo "[ShadowQUIC] 停止并禁用..."
+  stop_disable_unit "shadowquic"
 
-# ===== Shoes =====
-uninstall_shoes() {
-  echo ">>> 卸载 Shoes ..."
-  stop_disable_service "shoes"
-  remove_unit_files /etc/systemd/system/shoes.service
-  remove_paths \
-    /usr/local/bin/shoes \
-    /usr/local/bin/shoes.bak.* \
-    /etc/shoes \
-    /var/lib/shoes
-  remove_user_group "shoes"
-  echo "[OK] Shoes 卸载完成。"
-}
-
-# ===== ShadowQUIC =====
-uninstall_shadowquic() {
-  echo ">>> 卸载 ShadowQUIC ..."
-  stop_disable_service "shadowquic"
-  remove_unit_files /etc/systemd/system/shadowquic.service
-  remove_paths \
+  echo "[ShadowQUIC] 删除文件..."
+  rm_units "shadowquic"
+  rm_paths \
     /usr/local/bin/shadowquic \
-    /etc/shadowquic \
-    /var/lib/shadowquic
-  remove_user_group "shadowquic"
-  echo "[OK] ShadowQUIC 卸载完成。"
+    /etc/shadowquic /var/lib/shadowquic
+
+  echo "[ShadowQUIC] 删除用户/组..."
+  del_user_group "shadowquic" "shadowquic"
 }
 
-# ===== 卸载所有 =====
-uninstall_all() {
-  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC"
-  uninstall_hysteria
-  uninstall_snell
+uninstall_shoes(){
+  echo "[Shoes] 停止并禁用..."
+  stop_disable_unit "shoes"
+
+  echo "[Shoes] 删除文件..."
+  rm_units "shoes"
+  rm_paths \
+    /usr/local/bin/shoes /usr/local/bin/shoes-server \
+    /etc/shoes /var/lib/shoes
+
+  echo "[Shoes] 删除用户/组..."
+  del_user_group "shoes" "shoes"
+}
+
+uninstall_hysteria2(){
+  echo "[Hysteria2] 停止并禁用..."
+  stop_disable_unit "hysteria2"
+  stop_disable_unit "hysteria-server"
+
+  echo "[Hysteria2] 删除文件..."
+  rm_units "hysteria2"
+  rm_units "hysteria-server"
+  rm_paths \
+    /usr/local/bin/hysteria \
+    /etc/hysteria /var/lib/hysteria \
+    /etc/logrotate.d/hysteria           # NEW: 常见 logrotate
+
+  echo "[Hysteria2] 删除用户/组..."
+  del_user_group "hysteria" "hysteria" || true
+  del_user_group "hysteria2" "hysteria2" || true
+}
+
+uninstall_snell(){
+  echo "[Snell] 停止并禁用..."
+  stop_disable_unit "snell"
+  stop_disable_unit "snell-server"
+
+  echo "[Snell] 删除文件..."
+  rm_units "snell"
+  rm_units "snell-server"
+  rm_paths \
+    /usr/local/bin/snell /usr/local/bin/snell-server \
+    /etc/snell /var/lib/snell \
+    /etc/logrotate.d/snell
+
+  echo "[Snell] 删除用户/组..."
+  del_user_group "snell" "snell" || true
+  del_user_group "snell-server" "snell-server" || true
+}
+
+uninstall_singbox(){
+  echo "[sing-box] 停止并禁用..."
+  stop_disable_unit "sing-box"
+
+  echo "[sing-box] 删除文件..."
+  rm_units "sing-box"
+  rm_paths \
+    /usr/local/bin/sing-box \
+    /etc/sing-box /etc/singbox \       # NEW: 两种目录写法
+    /var/lib/sing-box /var/lib/singbox \
+    /etc/logrotate.d/sing-box
+
+  echo "[sing-box] 删除用户/组..."
+  del_user_group "sing-box" "sing-box"
+}
+
+uninstall_all(){
+  uninstall_xray
   uninstall_tuic
-  uninstall_ssrust
-  uninstall_shoes
   uninstall_shadowquic
-  echo "[OK] 所有组件已卸载。"
+  uninstall_shoes
+  uninstall_hysteria2
+  uninstall_snell
+  uninstall_singbox
 }
 
-# ----- 主菜单循环 -----
-main_menu() {
-  while true; do
+# ================= 菜单 =================
+
+pause(){ read -rp "按回车返回主菜单..." _; }
+
+main_menu(){
+  while :; do
     clear
     cat <<'MENU'
-================ 卸载菜单 ================
-1) 卸载 Hysteria2
-2) 卸载 Snell
-3) 卸载 TUIC
-4) 卸载 Shadowsocks-Rust (ssrust)
-5) 卸载 Shoes
-6) 卸载 ShadowQUIC
-7) 卸载以上所有
-0) 退出
+============ 代理组件卸载菜单 ============
+ 1) 卸载 Xray
+ 2) 卸载 TUIC
+ 3) 卸载 ShadowQUIC
+ 4) 卸载 Shoes
+ 5) 卸载 Hysteria2
+ 6) 卸载 Snell
+ 7) 卸载 sing-box
+ 8) 卸载以上全部
+ 0) 退出
 =========================================
 MENU
-    read -rp "请选择 [0-7]: " choice
-    echo
-    case "${choice:-}" in
-      1) uninstall_hysteria;    pause ;;
-      2) uninstall_snell;       pause ;;
-      3) uninstall_tuic;        pause ;;
-      4) uninstall_ssrust;      pause ;;
-      5) uninstall_shoes;       pause ;;
-      6) uninstall_shadowquic;  pause ;;
-      7) uninstall_all;         pause ;;
+    read -rp "选择操作: " ans
+    case "${ans:-}" in
+      1) uninstall_xray;       systemctl daemon-reload; echo "Xray 已卸载。";       pause ;;
+      2) uninstall_tuic;       systemctl daemon-reload; echo "TUIC 已卸载。";       pause ;;
+      3) uninstall_shadowquic; systemctl daemon-reload; echo "ShadowQUIC 已卸载。"; pause ;;
+      4) uninstall_shoes;      systemctl daemon-reload; echo "Shoes 已卸载。";      pause ;;
+      5) uninstall_hysteria2;  systemctl daemon-reload; echo "Hysteria2 已卸载。";  pause ;;
+      6) uninstall_snell;      systemctl daemon-reload; echo "Snell 已卸载。";      pause ;;
+      7) uninstall_singbox;    systemctl daemon-reload; echo "sing-box 已卸载。";   pause ;;
+      8) uninstall_all;        systemctl daemon-reload; echo "全部已卸载。";        pause ;;
       0) echo "Bye."; exit 0 ;;
-      *) echo "无效选择"; pause ;;
+      *) echo "无效选择"; sleep 1 ;;
     esac
   done
 }
 
 need_root
-exists_cmd systemctl || { echo "需要 systemd 环境"; exit 1; }
+need_systemd
 main_menu
