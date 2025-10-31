@@ -5,7 +5,7 @@ set -euo pipefail
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"   # must exist in dest's cert
-: "${XRAY_DEST:=127.0.0.1:8888}"      # upstream TLS endpoint
+: "${XRAY_DEST:=127.0.0.1:9999}"      # upstream TLS endpoint
 : "${XRAY_FALL:=127.0.0.1:9999}"
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
