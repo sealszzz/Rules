@@ -1,42 +1,25 @@
 #!/usr/bin/env bash
-# keep2kernels.sh
-# 只保留 cloud-amd64 与 xanmod 两条线中“已安装的版本化镜像包”的最新版本；清理其余并扫残片；
-# 自动检测 UEFI/BIOS，刷新 initramfs 与 GRUB；
-# 支持一键把默认启动设置为 cloud/xanmod 最新。
-#
-# 非交互用法：
-#   PLAN_ONLY=1 ./keep2kernels.sh          # 只演练，显示计划
-#   ./keep2kernels.sh                       # 清理至“两线最新”，并刷新引导
-#   CHOOSE_BOOT=cloud ./keep2kernels.sh     # 仅设置默认启动到 cloud 最新（不清理）
-#   CHOOSE_BOOT=xanmod ./keep2kernels.sh    # 仅设置默认启动到 xanmod 最新（不清理）
-#
-# 交互菜单：直接 ./keep2kernels.sh 会出现菜单（TTY 环境）
+# keep2kernels-mini.sh
+# 目标：仅保留已安装中的 "xanmod 最新" + "cloud 最新"，其余全部清理；
+# 菜单：1) 清理并切换到 xanmod 后重启；2) 清理并切换到 cloud 后重启；0) 退出
+# 备注：不考虑/不保留正在运行内核；假定使用 GRUB（无 GRUB 时仅清理，不切换默认项）。
 
 set -euo pipefail
-
-: "${PLAN_ONLY:=0}"           # 1=只演练；0=执行
-: "${CHOOSE_BOOT:=none}"      # none|cloud|xanmod
-: "${NO_MENU:=0}"             # 1=禁止显示菜单（即使是 TTY）
 
 log()  { printf '>>> %s\n' "$*"; }
 warn() { printf '!!! %s\n' "$*" >&2; }
 
-detect_boot_env() { [[ -d /sys/firmware/efi ]] && echo UEFI || echo BIOS; }
-BOOT_ENV="$(detect_boot_env)"
-log "Boot environment: ${BOOT_ENV}"
-
-# ---------------- core state (globals) ----------------
-declare -A PKG_VER PKG_FAM PKG_REL   # 已安装版本化镜像包 -> {版本号, 家族, uname -r 风格}
-CLOUD_KEEP=""                        # cloud 家族保留的包名
-XANMOD_KEEP=""                       # xanmod 家族保留的包名
-declare -A KEEP_MAP KEEP_VER         # 保留的包名集合 / 保留的 uname -r 版本集合
-TO_PURGE=()                          # 待清理的包名数组
+# --------- 枚举 & 挑最新（两条线） ---------
+declare -A PKG_VER PKG_FAM PKG_REL
+CLOUD_KEEP=""; XANMOD_KEEP=""
+KEEP_PKGS=(); KEEP_VERS=()
+PURGE_PKGS=()
 
 collect_packages() {
   PKG_VER=(); PKG_FAM=(); PKG_REL=()
   while IFS=$'\t' read -r pkg ver; do
     [[ -z "${pkg:-}" || -z "${ver:-}" ]] && continue
-    [[ "$pkg" =~ ^linux-image(-unsigned)?-[0-9] ]] || continue     # 仅版本化镜像包
+    [[ "$pkg" =~ ^linux-image(-unsigned)?-[0-9] ]] || continue
     fam="OTHER"
     [[ "$pkg" == *cloud-amd64 ]] && fam="CLOUD"
     [[ "$pkg" == *xanmod*      ]] && fam="XANMOD"
@@ -59,77 +42,61 @@ pick_latest_pkg() {
   [[ -n "$best" ]] && echo "$best" || true
 }
 
-compute_plan() {
+compute_keep_and_purge() {
   CLOUD_KEEP="$(pick_latest_pkg CLOUD || true)"
   XANMOD_KEEP="$(pick_latest_pkg XANMOD || true)"
-  KEEP_MAP=(); KEEP_VER=(); TO_PURGE=()
 
-  [[ -n "${CLOUD_KEEP:-}"  ]] && { KEEP_MAP["$CLOUD_KEEP"]=1;  KEEP_VER["${PKG_REL[$CLOUD_KEEP]}"]=1; }
-  [[ -n "${XANMOD_KEEP:-}" ]] && { KEEP_MAP["$XANMOD_KEEP"]=1; KEEP_VER["${PKG_REL[$XANMOD_KEEP]}"]=1; }
+  KEEP_PKGS=(); KEEP_VERS=(); PURGE_PKGS=()
+  [[ -n "$CLOUD_KEEP"  ]] && { KEEP_PKGS+=("$CLOUD_KEEP");  KEEP_VERS+=("${PKG_REL[$CLOUD_KEEP]}"); }
+  [[ -n "$XANMOD_KEEP" ]] && { KEEP_PKGS+=("$XANMOD_KEEP"); KEEP_VERS+=("${PKG_REL[$XANMOD_KEEP]}"); }
 
   for p in "${!PKG_VER[@]}"; do
-    [[ -n "${KEEP_MAP[$p]:-}" ]] || TO_PURGE+=("$p")
+    local keep=0
+    for k in "${KEEP_PKGS[@]:-}"; do [[ "$p" == "$k" ]] && { keep=1; break; }; done
+    (( keep == 0 )) && PURGE_PKGS+=("$p")
   done
 
   log "Cloud latest : ${CLOUD_KEEP:-<none>}"
   log "XanMod latest: ${XANMOD_KEEP:-<none>}"
-  if ((${#KEEP_MAP[@]})); then
-    log "Keep images  : $(printf '%s ' "${!KEEP_MAP[@]}")"
-  else
-    log "Keep images  : <none>"
-  fi
-  log "Purge images : ${TO_PURGE[*]:-<none>}"
+  log "Keep images  : ${KEEP_PKGS[*]:-<none>}"
+  log "Purge images : ${PURGE_PKGS[*]:-<none>}"
 }
 
 purge_unkept() {
-  ((${#TO_PURGE[@]})) && apt-get purge -y "${TO_PURGE[@]}"
+  ((${#PURGE_PKGS[@]})) && apt-get purge -y "${PURGE_PKGS[@]}" || true
 }
 
 sweep_leftovers() {
-  # 扫描系统仍可见的版本（/boot 与 /lib/modules）
+  # 找系统中残留的版本（/boot 与 /lib/modules），凡是不在 KEEP_VERS 里都删
   mapfile -t seen < <(
     { ls -1 /boot/vmlinuz-* 2>/dev/null || true; ls -1d /lib/modules/* 2>/dev/null || true; } |
     sed -E 's@.*/(vmlinuz-|modules/)?@@' | sed 's@^initrd\.img-@@' |
     grep -E '^[0-9]+\.' | sort -u
   )
-  local strays=()
-  for v in "${seen[@]}"; do
-    [[ -z "${KEEP_VER[$v]:-}" ]] && strays+=("$v")
+  for v in "${seen[@]:-}"; do
+    local keep=0
+    for kv in "${KEEP_VERS[@]:-}"; do [[ "$v" == "$kv" ]] && { keep=1; break; }; done
+    (( keep == 1 )) && continue
+    log "Leftover cleanup: $v"
+    update-initramfs -d -k "$v" || true
+    rm -f  "/boot/vmlinuz-$v" "/boot/initrd.img-$v" 2>/dev/null || true
+    rm -rf "/lib/modules/$v" 2>/dev/null || true
+    rm -f  "/var/lib/initramfs-tools/$v" 2>/dev/null || true
   done
-  if ((${#strays[@]})); then
-    log "Extra cleanup versions: ${strays[*]}"
-    # 双保险：若仍有对应包，先 purge
-    local maybe=()
-    for v in "${strays[@]}"; do
-      for n in "linux-image-$v" "linux-image-unsigned-$v"; do
-        dpkg -s "$n" >/dev/null 2>&1 && maybe+=("$n")
-      done
-    done
-    ((${#maybe[@]})) && apt-get purge -y "${maybe[@]}"
-
-    # 删除 initramfs 记录与文件残片
-    for v in "${strays[@]}"; do
-      update-initramfs -d -k "$v" || true
-      rm -f  "/boot/vmlinuz-$v" "/boot/initrd.img-$v" 2>/dev/null || true
-      rm -rf "/lib/modules/$v" 2>/dev/null || true
-      rm -f  "/var/lib/initramfs-tools/$v" 2>/dev/null || true
-    done
-  fi
 }
 
-rebuild_and_update() {
-  log "Rebuilding initramfs for remaining kernels ..."
-  update-initramfs -u -k all
+rebuild_initramfs_and_grub() {
+  log "Rebuilding initramfs (remaining kernels) ..."
+  update-initramfs -u -k all || true
   if command -v update-grub >/dev/null 2>&1; then
     log "Updating GRUB ..."
     update-grub
+  elif command -v grub-mkconfig >/dev/null 2>&1; then
+    grub-mkconfig -o /boot/grub/grub.cfg
   else
-    if command -v grub-mkconfig >/dev/null 2>&1; then
-      grub-mkconfig -o /boot/grub/grub.cfg
-    else
-      warn "No update-grub/grub-mkconfig found; skip GRUB refresh."
-    fi
+    warn "No GRUB refresher found (update-grub/grub-mkconfig)."
   fi
+  apt-get autoremove -y --purge || true
 }
 
 ensure_grub_saved_default() {
@@ -139,118 +106,75 @@ ensure_grub_saved_default() {
     grep -q '^GRUB_DEFAULT=saved' "$cfg" || sed -i 's/^GRUB_DEFAULT=.*/GRUB_DEFAULT=saved/;t; $aGRUB_DEFAULT=saved' "$cfg"
     grep -q '^GRUB_SAVEDEFAULT=true' "$cfg" || sed -i 's/^#\?GRUB_SAVEDEFAULT=.*/GRUB_SAVEDEFAULT=true/;t; $aGRUB_SAVEDEFAULT=true' "$cfg"
   fi
-  update-grub
+  update-grub 2>/dev/null || true
 }
 
+# 在 /boot/grub/grub.cfg 中把默认项设为指定版本（非 recovery）
 grub_set_default_by_version() {
   local ver="$1" grubcfg="/boot/grub/grub.cfg"
   [[ -f "$grubcfg" ]] || { warn "Missing $grubcfg"; return 1; }
 
-  # 优先 submenu（Advanced options），匹配非 recovery 的条目
   local submenu entry
   submenu="$(awk -F\" '/^submenu /{print $2; exit}' "$grubcfg")"
   if [[ -n "$submenu" ]]; then
     entry="$(awk -v v="$ver" -F\" '
       /^[[:space:]]*menuentry /{t=$2; if (t !~ /recovery/ && t ~ ("Linux " v)) {print t; exit}}
     ' "$grubcfg")"
-    [[ -n "$entry" ]] || { warn "No menuentry with Linux $ver"; return 1; }
+    [[ -z "$entry" ]] && { warn "No menuentry with Linux $ver"; return 1; }
     log "grub-set-default: ${submenu}>${entry}"
     grub-set-default "${submenu}>${entry}"
   else
     entry="$(awk -v v="$ver" -F\" '/^menuentry /{t=$2; if (t !~ /recovery/ && t ~ ("Linux " v)) {print t; exit}}' "$grubcfg")"
-    [[ -n "$entry" ]] || { warn "No top-level menuentry with Linux $ver"; return 1; }
+    [[ -z "$entry" ]] && { warn "No top-level menuentry with Linux $ver"; return 1; }
     log "grub-set-default: ${entry}"
     grub-set-default "${entry}"
   fi
-  update-grub
+  update-grub 2>/dev/null || true
 }
 
-choose_default_boot() {
-  local family="$1" target=""
-  [[ "$family" == "cloud"  ]] && target="$CLOUD_KEEP"
-  [[ "$family" == "xanmod" ]] && target="$XANMOD_KEEP"
-  [[ -n "$target" ]] || { warn "No $family latest kernel installed; skip setting default."; return 1; }
-  ensure_grub_saved_default
-  grub_set_default_by_version "${PKG_REL[$target]}" || return 1
-  log "Default boot set to $family (${PKG_REL[$target]})."
-}
-
-# ---------------- non-interactive flow ----------------
-if [[ "$PLAN_ONLY" == "1" || "$CHOOSE_BOOT" != "none" || "$NO_MENU" == "1" || ! -t 0 || ! -t 1 ]]; then
+do_cleanup_and_switch() {
+  local target_family="$1" target_pkg="" target_ver=""
   collect_packages
-  compute_plan
-  if [[ "$PLAN_ONLY" == "1" ]]; then
-    log "PLAN_ONLY=1 -> dry-run only."
-    exit 0
-  fi
-  # 仅切换默认启动，不清理
-  if [[ "$CHOOSE_BOOT" == "cloud" || "$CHOOSE_BOOT" == "xanmod" ]]; then
-    choose_default_boot "$CHOOSE_BOOT" || true
-    exit 0
-  fi
-  # 默认行为：清理 & 刷新
+  compute_keep_and_purge
+
   purge_unkept
   sweep_leftovers
-  rebuild_and_update
-  log "Done."
-  exit 0
-fi
+  rebuild_initramfs_and_grub
 
-# ---------------- interactive menu ----------------
+  # 重新收集一次，以获取最终存在的版本号
+  collect_packages
+  compute_keep_and_purge
+
+  if [[ "$target_family" == "xanmod" ]]; then
+    target_pkg="$XANMOD_KEEP"
+  else
+    target_pkg="$CLOUD_KEEP"
+  fi
+
+  if [[ -z "$target_pkg" ]]; then
+    warn "No ${target_family^^} kernel installed; cannot switch default."
+    return 1
+  fi
+  target_ver="${PKG_REL[$target_pkg]}"
+  ensure_grub_saved_default || true
+  grub_set_default_by_version "$target_ver" || warn "Failed to set GRUB default to $target_ver"
+
+  log "Default boot set to ${target_family^^} ($target_ver). Rebooting ..."
+  sleep 1
+  systemctl reboot
+}
+
+# ---------------- 简单菜单 ----------------
 while :; do
   echo
-  echo "====== Keep2Kernels — 菜单 ======"
-  echo "1) 仅显示计划（演练）"
-  echo "2) 清理至：仅保留 cloud 最新 + xanmod 最新"
-  echo "3) 一键：将默认启动设为 cloud 最新"
-  echo "4) 一键：将默认启动设为 xanmod 最新"
-  echo "5) 清理 + 将默认启动设为 cloud 最新"
-  echo "6) 清理 + 将默认启动设为 xanmod 最新"
+  echo "====== Keep2Kernels Mini ======"
+  echo "1) 清理 -> 切换到 XanMod 最新 -> 重启"
+  echo "2) 清理 -> 切换到 Cloud 最新 -> 重启"
   echo "0) 退出"
   read -rp "选择: " ans
-  case "$ans" in
-    1)
-      collect_packages
-      compute_plan
-      echo "（演练模式，不做修改）"
-      ;;
-    2)
-      collect_packages
-      compute_plan
-      purge_unkept
-      sweep_leftovers
-      rebuild_and_update
-      ;;
-    3)
-      collect_packages
-      compute_plan
-      choose_default_boot cloud || true
-      ;;
-    4)
-      collect_packages
-      compute_plan
-      choose_default_boot xanmod || true
-      ;;
-    5)
-      collect_packages
-      compute_plan
-      purge_unkept
-      sweep_leftovers
-      rebuild_and_update
-      collect_packages
-      compute_plan
-      choose_default_boot cloud || true
-      ;;
-    6)
-      collect_packages
-      compute_plan
-      purge_unkept
-      sweep_leftovers
-      rebuild_and_update
-      collect_packages
-      compute_plan
-      choose_default_boot xanmod || true
-      ;;
+  case "${ans:-}" in
+    1) do_cleanup_and_switch xanmod || read -rp "操作失败，按回车返回菜单..." _ ;;
+    2) do_cleanup_and_switch cloud  || read -rp "操作失败，按回车返回菜单..." _ ;;
     0) echo "Bye."; exit 0 ;;
     *) echo "无效选择";;
   esac
