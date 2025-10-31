@@ -56,8 +56,8 @@ table inet filter {
 
     # 3) 未开放端口策略：
     #   TCP：仅对“初始 SYN 且未在允许列表”的连接加黑
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 update @blacklist4 { ip saddr }  counter drop
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      update @blacklist6 { ip6 saddr } counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
 
     #   UDP：未开放端口仅丢弃，不加黑
     udp dport != @udp_allow ct state new counter drop
