@@ -106,7 +106,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "realitySettings": {
           "show": false,
           "dest": "${XRAY_DEST}",
-          "xver": 0,
+          "xver": 2,
           "serverNames": ["${XRAY_SNI}"],
           "privateKey": "${XRAY_PRIV}",
           "publicKey": "${XRAY_PUB}",
