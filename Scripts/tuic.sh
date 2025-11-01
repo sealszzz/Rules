@@ -11,6 +11,7 @@ TUIC_GROUP="tuic"
 
 TUIC_STATE_DIR="/var/lib/tuic"
 TUIC_CONF_DIR="/etc/tuic"
+TUIC_CONF_FILE="${TUIC_CONF_DIR}/config.json"
 
 TUIC_BIN="/usr/local/bin/tuic-server"
 TUIC_SERVICE_NAME="tuic-server"
