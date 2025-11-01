@@ -97,7 +97,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
           { "id": "${XRAY_UUID}", "flow": "xtls-rprx-vision" }
         ],
         "fallbacks": [
-          { "dest": "${XRAY_FALL}", "xver": 0 }
+          { "dest": "${XRAY_FALL}", "xver": 2 }
         ]
       },
       "streamSettings": {
