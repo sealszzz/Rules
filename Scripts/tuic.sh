@@ -11,7 +11,6 @@ TUIC_GROUP="tuic"
 
 TUIC_STATE_DIR="/var/lib/tuic"
 TUIC_CONF_DIR="/etc/tuic"
-TUIC_CONF_FILE="${TUIC_CONF_DIR}/config.json"
 
 TUIC_BIN="/usr/local/bin/tuic-server"
 TUIC_SERVICE_NAME="tuic-server"
@@ -106,7 +105,7 @@ Group=${TUIC_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${TUIC_STATE_DIR}
-ExecStart=${TUIC_BIN} -c ${TUIC_CONF_FILE}
+ExecStart=${TUIC_BIN} -d ${TUIC_CONF_DIR}
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
