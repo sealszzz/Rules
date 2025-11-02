@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic / xray / sing-box
+# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic / xray
 set -euo pipefail
 
 # ---------------- 工具函数 ----------------
@@ -184,22 +184,6 @@ uninstall_xray() {
   echo "[OK] Xray 卸载完成。"
 }
 
-uninstall_singbox() {
-  echo ">>> 卸载 sing-box ..."
-  stop_disable_service "sing-box"
-  remove_unit_artifacts "sing-box"
-  remove_paths \
-    /usr/local/bin/sing-box \
-    /etc/sing-box /var/lib/sing-box /var/log/sing-box \
-    /usr/share/sing-box /usr/local/share/sing-box \
-    /etc/logrotate.d/sing-box \
-    /usr/share/bash-completion/completions/sing-box \
-    /usr/share/zsh/site-functions/_sing-box \
-    /usr/share/fish/vendor_completions.d/sing-box.fish
-  remove_user_group "sing-box" || true
-  echo "[OK] sing-box 卸载完成。"
-}
-
 uninstall_all() {
   echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC / Xray / sing-box"
   uninstall_hysteria
@@ -209,7 +193,6 @@ uninstall_all() {
   uninstall_shoes
   uninstall_shadowquic
   uninstall_xray
-  uninstall_singbox
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -226,8 +209,7 @@ main_menu() {
 5) 卸载 Shoes
 6) 卸载 ShadowQUIC
 7) 卸载 Xray
-8) 卸载 sing-box
-9) 卸载以上所有
+8) 卸载以上所有
 0) 退出
 =========================================
 MENU
@@ -241,8 +223,7 @@ MENU
       5) uninstall_shoes;       pause ;;
       6) uninstall_shadowquic;  pause ;;
       7) uninstall_xray;        pause ;;
-      8) uninstall_singbox;     pause ;;
-      9) uninstall_all;         pause ;;
+      8) uninstall_all;         pause ;;
       0) echo "Bye."; exit 0 ;;
       *) echo "无效选择"; pause ;;
     esac
