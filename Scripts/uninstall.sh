@@ -33,9 +33,9 @@ stop_disable_service() {
   systemctl disable "${base}@.service" 2>/dev/null || true
 
   # 清理多种 target 下可能残留的 wants 链接（保险起见全局找）
-  find /etc/systemd/system -type l -maxdepth 2 -name "${svc}" -delete 2>/dev/null || true
-  find /etc/systemd/system -type l -maxdepth 2 -name "${base}@*.service" -delete 2>/dev/null || true
-
+  find /etc/systemd/system -maxdepth 2 -type l -name "${svc}" -delete 2>/dev/null || true
+  find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
+  
   systemctl reset-failed "$svc" 2>/dev/null || true
 }
 
@@ -62,9 +62,9 @@ remove_unit_artifacts() {
   done
 
   # 兜底再清理 /etc/systemd/system 下所有可能的 wants 残链
-  find /etc/systemd/system -type l -name "${base}.service" -delete 2>/dev/null || true
-  find /etc/systemd/system -type l -name "${base}@*.service" -delete 2>/dev/null || true
-
+  find /etc/systemd/system -maxdepth 2 -type l -name "${base}.service" -delete 2>/dev/null || true
+  find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
+  
   systemctl daemon-reload 2>/dev/null || true
   systemctl reset-failed 2>/dev/null || true
 }
@@ -152,7 +152,7 @@ uninstall_shoes() {
   stop_disable_service "shoes"
   remove_unit_artifacts "shoes"   # ★ 会删除 /etc/systemd/system/shoes.service.d/
   remove_paths \
-    /usr/local/bin/shoes /usr/local/bin/shoes-server /usr/local/bin/shoes.bak.* \
+    /usr/local/bin/shoes /usr/local/bin/shoes-server \
     /etc/shoes /var/lib/shoes /var/log/shoes \
     /etc/logrotate.d/shoes
   remove_user_group "shoes" || true
@@ -185,7 +185,7 @@ uninstall_xray() {
 }
 
 uninstall_all() {
-  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC / Xray / sing-box"
+  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC / Xray"
   uninstall_hysteria
   uninstall_snell
   uninstall_tuic
