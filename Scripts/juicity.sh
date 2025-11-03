@@ -87,7 +87,9 @@ if [ ! -f "$J_CONF" ]; then
   cat >"$J_CONF" <<EOF
 {
   "listen": "[::]:${J_PORT}",
-  "users": { "${J_UUID}": "${J_PASS}" },
+  "users": {
+    "${J_UUID}": "${J_PASS}"
+  },
   "certificate": "${CERT}",
   "private_key": "${KEY}",
   "congestion_control": "${J_CONG}",
