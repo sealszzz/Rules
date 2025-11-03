@@ -3,7 +3,7 @@
 set -euo pipefail
 
 # ---- 可调参数（可用环境变量覆盖）----
-: "${J_PORT:=8443}"
+: "${J_PORT:=443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 : "${J_CONG:=bbr}"            # bbr/cubic/new_reno
