@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic / xray
+# 覆盖：hysteria2 / snell / tuic / ss-rust / shoes / shadowquic / xray / juicity
 set -euo pipefail
 
 # ---------------- 工具函数 ----------------
@@ -35,7 +35,7 @@ stop_disable_service() {
   # 清理多种 target 下可能残留的 wants 链接（保险起见全局找）
   find /etc/systemd/system -maxdepth 2 -type l -name "${svc}" -delete 2>/dev/null || true
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
-  
+
   systemctl reset-failed "$svc" 2>/dev/null || true
 }
 
@@ -64,7 +64,7 @@ remove_unit_artifacts() {
   # 兜底再清理 /etc/systemd/system 下所有可能的 wants 残链
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}.service" -delete 2>/dev/null || true
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
-  
+
   systemctl daemon-reload 2>/dev/null || true
   systemctl reset-failed 2>/dev/null || true
 }
@@ -184,8 +184,24 @@ uninstall_xray() {
   echo "[OK] Xray 卸载完成。"
 }
 
+uninstall_juicity() {
+  echo ">>> 卸载 Juicity ..."
+  # 常见基名：juicity-server（你的安装脚本）、也顺带兜底 juicity
+  for base in "juicity-server" "juicity"; do
+    stop_disable_service "$base"
+    remove_unit_artifacts "$base"
+  done
+  # 二进制/配置/状态/日志/可能的 logrotate
+  remove_paths \
+    /usr/local/bin/juicity-server /usr/local/bin/juicity \
+    /etc/juicity /var/lib/juicity /var/log/juicity \
+    /etc/logrotate.d/juicity
+  remove_user_group "juicity" || true
+  echo "[OK] Juicity 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC / Xray"
+  echo ">>> 将卸载所有：Hysteria2 / Snell / TUIC / SSRust / Shoes / ShadowQUIC / Xray / Juicity"
   uninstall_hysteria
   uninstall_snell
   uninstall_tuic
@@ -193,6 +209,7 @@ uninstall_all() {
   uninstall_shoes
   uninstall_shadowquic
   uninstall_xray
+  uninstall_juicity
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -209,7 +226,8 @@ main_menu() {
 5) 卸载 Shoes
 6) 卸载 ShadowQUIC
 7) 卸载 Xray
-8) 卸载以上所有
+8) 卸载 Juicity
+9) 卸载以上所有
 0) 退出
 =========================================
 MENU
@@ -223,7 +241,8 @@ MENU
       5) uninstall_shoes;       pause ;;
       6) uninstall_shadowquic;  pause ;;
       7) uninstall_xray;        pause ;;
-      8) uninstall_all;         pause ;;
+      8) uninstall_juicity;     pause ;;
+      9) uninstall_all;         pause ;;
       0) echo "Bye."; exit 0 ;;
       *) echo "无效选择"; pause ;;
     esac
