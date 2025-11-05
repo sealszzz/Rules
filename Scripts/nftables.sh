@@ -27,8 +27,8 @@ flush ruleset
 
 table inet filter {
   # 黑名单（长封，7d；再次 add 会刷新超时）
-  set blacklist4 { type ipv4_addr; timeout 7d; size 65535; gc-interval 5m; }
-  set blacklist6 { type ipv6_addr; timeout 7d; size 65535; gc-interval 5m; }
+  set blacklist4 { type ipv4_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
+  set blacklist6 { type ipv6_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
 
   # 允许端口（按你的环境）
   set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }; }
