@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13 一把梭初始化（TZ/NTP/SSH/BBR/XanMod/nftables）
+# init-all.sh v1.0 — Debian 13 初始化（TZ/NTP/SSH/BBR/可选XanMod/nftables）
 # 环境变量：
 #   TIMEZONE=Etc/UTC     时区（默认 Etc/UTC）
 #   FORCE_NO_PASSWORD=1  未检测到公钥时也禁用口令登录（不推荐）
@@ -31,8 +31,9 @@ have_pubkey() {
 get_ssh_port() {
   if command -v sshd >/dev/null 2>&1; then
     local p
-    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -ge 1 ] && [ "$p" -le 65535 ] && { echo "$p"; return; }
+    if p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')"; then
+      [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -ge 1 ] && [ "$p" -le 65535 ] && { echo "$p"; return; }
+    fi
   fi
   local g
   g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
@@ -45,18 +46,23 @@ step_update_and_pkgs() {
   apt-get update -y
   apt-get -yq full-upgrade
   apt-get -yq install --no-install-recommends \
-    ca-certificates gnupg curl wget jq bc sed \
-    iproute2 iputils-ping dnsutils openssl \
-    git unzip zip \
-    vim nano htop tmux rsync lsof tar xz-utils bzip2 zstd \
-    build-essential usrmerge
-  apt-get -yq autoremove --purge
+    ca-certificates gnupg openssl \
+    curl wget git \
+    python3 python3-venv python3-pip \
+    build-essential \
+    iproute2 iputils-ping dnsutils \
+    tar xz-utils zstd unzip zip \
+    jq bc sed \
+    rsync lsof \
+    tmux htop \
+    vim nano
   apt-get -yq clean
 }
 
 step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
+  # 避免与其他 NTP 守护冲突
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
@@ -68,6 +74,7 @@ step_timezone_ntp() {
   systemctl enable --now systemd-timesyncd.service
   timedatectl set-ntp true
   timedatectl set-local-rtc 0
+  # 等待最多 30 秒显示已同步
   for _ in {1..30}; do
     [ "$(timedatectl show -p NTPSynchronized --value)" = "yes" ] && break
     sleep 1
@@ -86,10 +93,14 @@ KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 PermitRootLogin prohibit-password
 EOF
-    sshd -t && systemctl reload sshd
+    if command -v sshd >/dev/null 2>&1; then
+      sshd -t && systemctl reload sshd
+    else
+      echo "注意：未安装 OpenSSH server，已写入配置但未重载。"
+    fi
   else
     echo "!!! 未检测到任何 SSH 公钥，已跳过禁用口令登录（避免锁死）。"
-    echo "    如确认安全，可加 FORCE_NO_PASSWORD=1 再执行。"
+    echo "    确认安全后可加 FORCE_NO_PASSWORD=1 再执行。"
   fi
 }
 
@@ -120,7 +131,7 @@ step_xanmod() {
 }
 
 step_nftables() {
-  echo ">>> nftables（功能保持不变）"
+  echo ">>> nftables（规则逻辑保持不变）"
   local SSH_PORT; SSH_PORT="$(get_ssh_port)"
   apt-get install -y --no-install-recommends nftables
   cat >/etc/nftables.conf <<EOF
@@ -186,5 +197,4 @@ main() {
   step_nftables
   final_reboot
 }
-
 main "$@"
