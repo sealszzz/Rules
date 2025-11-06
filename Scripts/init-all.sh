@@ -31,7 +31,7 @@ have_pubkey() {
 get_ssh_port() {
   if command -v sshd >/dev/null 2>&1; then
     local p
-    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}') " || true
+    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
     [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -ge 1 ] && [ "$p" -le 65535 ] && { echo "$p"; return; }
   fi
   local g
@@ -46,7 +46,8 @@ step_update_and_pkgs() {
   apt-get -yq full-upgrade
   apt-get -yq install --no-install-recommends \
     ca-certificates gnupg curl wget jq bc sed \
-    iproute2 iputils-ping dnsutils net-tools openssl \
+    iproute2 iputils-ping dnsutils openssl \
+    git unzip zip \
     vim nano htop tmux rsync lsof tar xz-utils bzip2 zstd \
     build-essential usrmerge
   apt-get -yq autoremove --purge
@@ -56,7 +57,6 @@ step_update_and_pkgs() {
 step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
-
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
@@ -68,7 +68,6 @@ step_timezone_ntp() {
   systemctl enable --now systemd-timesyncd.service
   timedatectl set-ntp true
   timedatectl set-local-rtc 0
-
   for _ in {1..30}; do
     [ "$(timedatectl show -p NTPSynchronized --value)" = "yes" ] && break
     sleep 1
@@ -121,10 +120,9 @@ step_xanmod() {
 }
 
 step_nftables() {
-  echo ">>> nftables（保持你原有功能不变）"
+  echo ">>> nftables（功能保持不变）"
   local SSH_PORT; SSH_PORT="$(get_ssh_port)"
   apt-get install -y --no-install-recommends nftables
-
   cat >/etc/nftables.conf <<EOF
 flush ruleset
 
@@ -163,7 +161,6 @@ table inet filter {
   chain output  { type filter hook output  priority 0; policy accept; }
 }
 EOF
-
   nft -c -f /etc/nftables.conf
   nft -f /etc/nftables.conf
   systemctl enable --now nftables
