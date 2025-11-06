@@ -63,28 +63,44 @@ step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
 
-  # 避免冲突：若存在 chrony/ntp，先停用并禁用
+  # 1) 避免冲突：先停用 chrony/ntp
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
   done
 
-  # 安装并启用 systemd-timesyncd（先 update，避免索引过期导致安装失败）
+  # 2) 安装 timesyncd（先 update，避免索引过期）
   if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
     apt-get update -y
     apt-get install -y systemd-timesyncd
   fi
 
+  # 3) 解除 mask、启用服务（先别开 NTP，等网络）
   systemctl unmask systemd-timesyncd.service 2>/dev/null || true
   systemctl enable --now systemd-timesyncd.service || true
-
-  # 交给 timedatectl 管理 NTP，并将 RTC 设为 UTC
-  timedatectl set-ntp true || true
   timedatectl set-local-rtc 0 || true
+  timedatectl set-ntp false || true
 
-  # 等待 NTP 同步（最多 60 秒）
-  for _ in {1..60}; do
-    if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ]; then
+  # 4) 等待“网络就绪”（最多 30 秒；能 ping 通任意公网 IP 即算就绪）
+  echo ">>> 等待网络就绪（最多 30 秒）"
+  net_ok=no
+  for _ in {1..30}; do
+    if ping -c1 -W1 1.1.1.1 >/dev/null 2>&1 || ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; then
+      net_ok=yes; break
+    fi
+    sleep 1
+  done
+  [ "$net_ok" = yes ] || echo "!!! 网络连通性未确认，继续尝试 NTP（可能延迟更久）"
+
+  # 5) 交给 timedatectl 接管 NTP，并强制重启 timesyncd 触发建联
+  timedatectl set-ntp true || true
+  systemctl restart systemd-timesyncd || true
+
+  # 6) 等待 NTP 同步（最多 120 秒）
+  echo ">>> 等待 NTP 同步（最多 120 秒）"
+  for _ in {1..120}; do
+    state="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)"
+    if [ "$state" = "yes" ]; then
       break
     fi
     sleep 1
