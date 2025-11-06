@@ -62,21 +62,35 @@ step_update_and_pkgs() {
 step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
+
+  # 避免冲突：若存在 chrony/ntp，先停用并禁用
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
   done
+
+  # 安装并启用 systemd-timesyncd（先 update，避免索引过期导致安装失败）
   if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
+    apt-get update -y
     apt-get install -y systemd-timesyncd
   fi
+
   systemctl unmask systemd-timesyncd.service 2>/dev/null || true
-  systemctl enable --now systemd-timesyncd.service
-  timedatectl set-ntp true
-  timedatectl set-local-rtc 0
-  for _ in {1..30}; do
-    [ "$(timedatectl show -p NTPSynchronized --value)" = "yes" ] && break
+  systemctl enable --now systemd-timesyncd.service || true
+
+  # 交给 timedatectl 管理 NTP，并将 RTC 设为 UTC
+  timedatectl set-ntp true || true
+  timedatectl set-local-rtc 0 || true
+
+  # 等待 NTP 同步（最多 60 秒）
+  for _ in {1..60}; do
+    if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ]; then
+      break
+    fi
     sleep 1
   done
+
+  echo ">>> 当前时间状态："
   timedatectl
 }
 
