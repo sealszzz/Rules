@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# init-all.sh v1.1 — Debian 13 初始化（NTP 前置非阻塞 + 重启前最终验证）
+# init-all.sh — Debian 13 初始化（精简稳版）
+# 功能：TZ/NTP/SSH/BBR/可选XanMod/nftables
 # 环境变量：
 #   TIMEZONE=Etc/UTC
 #   FORCE_NO_PASSWORD=1
@@ -20,13 +21,13 @@ need_root() {
   fi
 }
 
-# === apt 锁等待（最多 180s）===
-apt_lock_wait() {
-  local tries=180
+# 简洁稳妥：apt/dpkg 锁等待（最多 120s）
+apt_wait() {
+  local t=120
   while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
      || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
      || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
-    ((tries--)) || { echo "!!! 超时：apt/dpkg 一直被占用"; exit 1; }
+    ((t--)) || { echo "apt/dpkg 被占用超时"; exit 1; }
     sleep 1
   done
 }
@@ -52,42 +53,11 @@ get_ssh_port() {
   echo 2222
 }
 
-# === 阶段 A：尽早准备 NTP（不长等）===
-step_timezone_ntp_prepare() {
-  echo ">>> [A] 时区与 NTP（前置准备，不阻塞）"
-  timedatectl set-timezone "${TIMEZONE}"
-
-  # 停用其他 NTP 守护，避免冲突
-  for svc in chrony ntp; do
-    systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
-    systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
-  done
-
-  # 安装并启用 systemd-timesyncd（带抢锁等待）
-  if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
-    apt_lock_wait; apt-get update -y
-    apt_lock_wait; apt-get install -y systemd-timesyncd
-  fi
-
-  systemctl unmask systemd-timesyncd.service 2>/dev/null || true
-  systemctl enable --now systemd-timesyncd.service || true
-
-  # 开启 NTP 管理，RTC 用 UTC
-  timedatectl set-ntp true || true
-  timedatectl set-local-rtc 0 || true
-
-  # 给 3 秒短等待让服务完成首次起跳，然后立即继续后续步骤
-  for _ in {1..3}; do sleep 1; done
-
-  echo ">>> [A] 当前时间状态（仅展示，不强制等待）："
-  timedatectl || true
-}
-
 step_update_and_pkgs() {
   echo ">>> 系统更新 & 基础包"
-  apt_lock_wait; apt-get update -y
-  apt_lock_wait; apt-get -yq full-upgrade
-  apt_lock_wait
+  apt_wait; apt-get update -y
+  apt_wait; apt-get -yq full-upgrade
+  apt_wait
   apt-get -yq install --no-install-recommends \
     ca-certificates gnupg openssl \
     curl wget git \
@@ -99,7 +69,46 @@ step_update_and_pkgs() {
     rsync lsof \
     tmux htop \
     vim nano
-  apt_lock_wait; apt-get -yq clean
+  apt_wait; apt-get -yq clean
+}
+
+step_timezone_ntp() {
+  echo ">>> 时区与 NTP"
+  timedatectl set-timezone "${TIMEZONE}"
+
+  # 停用可能冲突的 NTP 守护
+  for svc in chrony ntp; do
+    systemctl stop "$svc" 2>/dev/null || true
+    systemctl disable "$svc" 2>/dev/null || true
+  done
+
+  # 宿主是否允许实例管理 NTP（容器/托管环境可能禁止）
+  local can_ntp
+  can_ntp="$(timedatectl show -p CanNTP --value 2>/dev/null || echo no)"
+
+  if [ "$can_ntp" = "yes" ]; then
+    if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
+      apt_wait; apt-get update -y
+      apt_wait; apt-get install -y systemd-timesyncd
+    fi
+    systemctl unmask systemd-timesyncd.service 2>/dev/null || true
+    systemctl enable --now systemd-timesyncd.service || true
+    timedatectl set-ntp true || true
+    timedatectl set-local-rtc 0 || true
+    # 触发建联
+    systemctl restart systemd-timesyncd.service || true
+
+    # 最多 60s 等待同步（足够稳，不拖太久）
+    for _ in {1..60}; do
+      [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break
+      sleep 1
+    done
+  else
+    # 宿主统一授时：保持 RTC 为 UTC，跳过 set-ntp
+    timedatectl set-local-rtc 0 || true
+  fi
+
+  timedatectl
 }
 
 step_harden_ssh() {
@@ -145,15 +154,15 @@ step_xanmod() {
     echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' \
       >/etc/apt/sources.list.d/xanmod-release.list
   fi
-  apt_lock_wait; apt-get update -y
-  apt_lock_wait; apt-get -y install linux-xanmod-lts-x64v3
+  apt_wait; apt-get update -y
+  apt_wait; apt-get -y install linux-xanmod-lts-x64v3
   echo ">>> XanMod 安装完成（需重启生效）"
 }
 
 step_nftables() {
   echo ">>> nftables（规则逻辑保持不变）"
   local SSH_PORT; SSH_PORT="$(get_ssh_port)"
-  apt_lock_wait; apt-get install -y --no-install-recommends nftables
+  apt_wait; apt-get install -y --no-install-recommends nftables
   cat >/etc/nftables.conf <<EOF
 flush ruleset
 
@@ -197,21 +206,8 @@ EOF
   systemctl enable --now nftables
 }
 
-# === 阶段 B：重启前做最终 NTP 验证（才进行较长等待）===
-step_ntp_verify_before_reboot() {
-  echo ">>> [B] 重启前 NTP 最终验证（最多 120 秒）"
-  for _ in {1..120}; do
-    state="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)"
-    if [ "$state" = "yes" ]; then
-      break
-    fi
-    sleep 1
-  done
-  timedatectl || true
-}
-
 final_reboot() {
-  if [ "$REBOOT" = "1" ]; then
+  if [ "$REBOOT" = "1" ] && command -v systemctl >/dev/null 2>&1; then
     echo "[INFO] 5 秒后重启以启用新内核与配置..."
     sleep 5
     systemctl reboot || reboot
@@ -222,15 +218,12 @@ final_reboot() {
 
 main() {
   need_root
-  # 先准备 NTP（不阻塞），后面并行推进其它工作
-  step_timezone_ntp_prepare
   step_update_and_pkgs
+  step_timezone_ntp
   step_harden_ssh
   step_bbr
   step_xanmod
   step_nftables
-  # 重启前再做一次最终 NTP 验证（此处才可能等久一点）
-  step_ntp_verify_before_reboot
   final_reboot
 }
 main "$@"
