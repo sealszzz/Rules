@@ -99,6 +99,8 @@ rebuild_initramfs_and_grub() {
   apt-get autoremove -y --purge || true
 }
 
+# ---------------- GRUB 增强：保存默认、读取默认、精确匹配路径、设置默认 ----------------
+
 ensure_grub_saved_default() {
   command -v grub-set-default >/dev/null 2>&1 || { warn "grub-set-default not found."; return 1; }
   local cfg="/etc/default/grub"
@@ -109,28 +111,72 @@ ensure_grub_saved_default() {
   update-grub 2>/dev/null || true
 }
 
-# 在 /boot/grub/grub.cfg 中把默认项设为指定版本（非 recovery）
-grub_set_default_by_version() {
+grub_get_saved_default() {
+  command -v grub-editenv >/dev/null 2>&1 || { echo ""; return 0; }
+  local d; d="$(grub-editenv list 2>/dev/null | awk -F= '/^saved_entry=/{print $2; exit}')" || true
+  echo "${d:-}"
+}
+
+# 返回完整 menu path：若在子菜单中返回 "子菜单>条目"，否则返回 "条目"
+find_grub_entry_path_by_version() {
   local ver="$1" grubcfg="/boot/grub/grub.cfg"
   [[ -f "$grubcfg" ]] || { warn "Missing $grubcfg"; return 1; }
 
-  local submenu entry
-  submenu="$(awk -F\" '/^submenu /{print $2; exit}' "$grubcfg")"
-  if [[ -n "$submenu" ]]; then
-    entry="$(awk -v v="$ver" -F\" '
-      /^[[:space:]]*menuentry /{t=$2; if (t !~ /recovery/ && t ~ ("Linux " v)) {print t; exit}}
-    ' "$grubcfg")"
-    [[ -z "$entry" ]] && { warn "No menuentry with Linux $ver"; return 1; }
-    log "grub-set-default: ${submenu}>${entry}"
-    grub-set-default "${submenu}>${entry}"
-  else
-    entry="$(awk -v v="$ver" -F\" '/^menuentry /{t=$2; if (t !~ /recovery/ && t ~ ("Linux " v)) {print t; exit}}' "$grubcfg")"
-    [[ -z "$entry" ]] && { warn "No top-level menuentry with Linux $ver"; return 1; }
-    log "grub-set-default: ${entry}"
-    grub-set-default "${entry}"
+  local path
+  path="$(awk -v v="$ver" '
+    BEGIN{FS="\""; level=0; subname=""}
+    /^[[:space:]]*submenu[[:space:]]+/ { subname=$2; next }
+    /\{/ { level++ }
+    /\}/ { if(level>0) level--; if(level==0) subname="" }
+    /^[[:space:]]*menuentry[[:space:]]+/ {
+      title=$2
+      if (title !~ /recovery/ && title ~ ("Linux " v)) {
+        if (subname != "") { print subname ">" title; exit }
+        else { print title; exit }
+      }
+    }
+  ' "$grubcfg")"
+
+  if [[ -n "$path" ]]; then
+    echo "$path"; return 0
   fi
-  update-grub 2>/dev/null || true
+
+  # 兜底：顶层也可能直接有具体版本
+  path="$(awk -v v="$ver" -F\" '
+    /^[[:space:]]*menuentry[[:space:]]+/ {
+      t=$2; if (t !~ /recovery/ && t ~ ("Linux " v)) { print t; exit }
+  }' "$grubcfg")"
+
+  [[ -n "$path" ]] && { echo "$path"; return 0; }
+
+  return 1
 }
+
+# 设置 GRUB 默认为指定版本（若已是默认或正在运行同版本则跳过）
+grub_set_default_by_version() {
+  local ver="$1"
+  local running saved
+  running="$(uname -r)"
+  saved="$(grub_get_saved_default)"
+
+  if [[ "$running" == "$ver" && "$saved" == *"$ver"* ]]; then
+    log "GRUB default already points to $ver and it is the running kernel. Skip setting."
+    return 0
+  fi
+
+  local path
+  if ! path="$(find_grub_entry_path_by_version "$ver")"; then
+    warn "No GRUB menuentry found for Linux $ver"
+    return 1
+  fi
+
+  log "grub-set-default: ${path}"
+  grub-set-default "${path}" || { warn "grub-set-default failed for $ver"; return 1; }
+  update-grub 2>/dev/null || true
+  return 0
+}
+
+# ---------------- 执行：清理 + 切换 ----------------
 
 do_cleanup_and_switch() {
   local target_family="$1" target_pkg="" target_ver=""
@@ -155,9 +201,17 @@ do_cleanup_and_switch() {
     warn "No ${target_family^^} kernel installed; cannot switch default."
     return 1
   fi
+
   target_ver="${PKG_REL[$target_pkg]}"
+
   ensure_grub_saved_default || true
-  grub_set_default_by_version "$target_ver" || warn "Failed to set GRUB default to $target_ver"
+
+  # 若当前正在运行同版本，则无需修改 GRUB 默认项
+  if [[ "$(uname -r)" == "$target_ver" ]]; then
+    log "Running kernel is already $target_ver; skip changing GRUB default."
+  else
+    grub_set_default_by_version "$target_ver" || warn "Failed to set GRUB default to $target_ver"
+  fi
 
   log "Default boot set to ${target_family^^} ($target_ver). Rebooting ..."
   sleep 1
