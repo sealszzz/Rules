@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13 一把梭初始化（TZ/NTP/SSH/BBR/可选XanMod/nftables）
+# init-all.sh — Debian 13 一把梭初始化（TZ/NTP/SSH/BBR/XanMod/nftables）
 # 环境变量：
 #   TIMEZONE=Etc/UTC     时区（默认 Etc/UTC）
 #   FORCE_NO_PASSWORD=1  未检测到公钥时也禁用口令登录（不推荐）
