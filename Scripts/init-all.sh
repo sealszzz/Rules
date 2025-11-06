@@ -62,7 +62,6 @@ step_update_and_pkgs() {
 step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
-  # 避免与其他 NTP 守护冲突
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
@@ -74,7 +73,6 @@ step_timezone_ntp() {
   systemctl enable --now systemd-timesyncd.service
   timedatectl set-ntp true
   timedatectl set-local-rtc 0
-  # 等待最多 30 秒显示已同步
   for _ in {1..30}; do
     [ "$(timedatectl show -p NTPSynchronized --value)" = "yes" ] && break
     sleep 1
