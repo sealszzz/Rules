@@ -57,7 +57,6 @@ step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
 
-  # 统一使用 systemd-timesyncd，避免与 chrony/ntp 冲突
   for svc in chrony ntp; do
     systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
     systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
@@ -70,7 +69,6 @@ step_timezone_ntp() {
   timedatectl set-ntp true
   timedatectl set-local-rtc 0
 
-  # 最多等待 30 秒看是否已同步
   for _ in {1..30}; do
     [ "$(timedatectl show -p NTPSynchronized --value)" = "yes" ] && break
     sleep 1
@@ -150,21 +148,13 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    # 如确定不用 DHCP(6)，可解除注释：
-    # udp dport { 67, 68 } drop       # DHCPv4
-    # udp dport { 546, 547 } drop     # DHCPv6
-
-    # 未开放端口：TCP 初始 SYN 直接加黑后丢弃（IPv4/IPv6）
     tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
     tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
 
-    # UDP 未开放端口仅丢弃
     udp dport != @udp_allow ct state new counter drop
 
-    # 允许端口的新建必须是 SYN（仅作用 TCP；不影响 QUIC/UDP）
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
 
-    # 放行允许端口
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
