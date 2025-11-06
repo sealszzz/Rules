@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# init-all.sh v1.0 — Debian 13 初始化（TZ/NTP/SSH/BBR/可选XanMod/nftables）
+# init-all.sh v1.1 — Debian 13 初始化（NTP 前置非阻塞 + 重启前最终验证）
 # 环境变量：
-#   TIMEZONE=Etc/UTC     时区（默认 Etc/UTC）
-#   FORCE_NO_PASSWORD=1  未检测到公钥时也禁用口令登录（不推荐）
-#   SKIP_XANMOD=1        跳过 XanMod 安装
-#   REBOOT=0             执行完不自动重启
+#   TIMEZONE=Etc/UTC
+#   FORCE_NO_PASSWORD=1
+#   SKIP_XANMOD=1
+#   REBOOT=0
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
@@ -18,6 +18,17 @@ need_root() {
   if [ "${EUID:-$(id -u)}" -ne 0 ]; then
     echo "请用 root 运行：sudo $0" >&2; exit 1
   fi
+}
+
+# === apt 锁等待（最多 180s）===
+apt_lock_wait() {
+  local tries=180
+  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
+     || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
+     || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
+    ((tries--)) || { echo "!!! 超时：apt/dpkg 一直被占用"; exit 1; }
+    sleep 1
+  done
 }
 
 have_pubkey() {
@@ -41,10 +52,42 @@ get_ssh_port() {
   echo 2222
 }
 
+# === 阶段 A：尽早准备 NTP（不长等）===
+step_timezone_ntp_prepare() {
+  echo ">>> [A] 时区与 NTP（前置准备，不阻塞）"
+  timedatectl set-timezone "${TIMEZONE}"
+
+  # 停用其他 NTP 守护，避免冲突
+  for svc in chrony ntp; do
+    systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
+    systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
+  done
+
+  # 安装并启用 systemd-timesyncd（带抢锁等待）
+  if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
+    apt_lock_wait; apt-get update -y
+    apt_lock_wait; apt-get install -y systemd-timesyncd
+  fi
+
+  systemctl unmask systemd-timesyncd.service 2>/dev/null || true
+  systemctl enable --now systemd-timesyncd.service || true
+
+  # 开启 NTP 管理，RTC 用 UTC
+  timedatectl set-ntp true || true
+  timedatectl set-local-rtc 0 || true
+
+  # 给 3 秒短等待让服务完成首次起跳，然后立即继续后续步骤
+  for _ in {1..3}; do sleep 1; done
+
+  echo ">>> [A] 当前时间状态（仅展示，不强制等待）："
+  timedatectl || true
+}
+
 step_update_and_pkgs() {
   echo ">>> 系统更新 & 基础包"
-  apt-get update -y
-  apt-get -yq full-upgrade
+  apt_lock_wait; apt-get update -y
+  apt_lock_wait; apt-get -yq full-upgrade
+  apt_lock_wait
   apt-get -yq install --no-install-recommends \
     ca-certificates gnupg openssl \
     curl wget git \
@@ -56,58 +99,7 @@ step_update_and_pkgs() {
     rsync lsof \
     tmux htop \
     vim nano
-  apt-get -yq clean
-}
-
-step_timezone_ntp() {
-  echo ">>> 时区与 NTP"
-  timedatectl set-timezone "${TIMEZONE}"
-
-  # 1) 避免冲突：先停用 chrony/ntp
-  for svc in chrony ntp; do
-    systemctl is-active --quiet "$svc" && systemctl stop "$svc" || true
-    systemctl is-enabled --quiet "$svc" && systemctl disable "$svc" || true
-  done
-
-  # 2) 安装 timesyncd（先 update，避免索引过期）
-  if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
-    apt-get update -y
-    apt-get install -y systemd-timesyncd
-  fi
-
-  # 3) 解除 mask、启用服务（先别开 NTP，等网络）
-  systemctl unmask systemd-timesyncd.service 2>/dev/null || true
-  systemctl enable --now systemd-timesyncd.service || true
-  timedatectl set-local-rtc 0 || true
-  timedatectl set-ntp false || true
-
-  # 4) 等待“网络就绪”（最多 30 秒；能 ping 通任意公网 IP 即算就绪）
-  echo ">>> 等待网络就绪（最多 30 秒）"
-  net_ok=no
-  for _ in {1..30}; do
-    if ping -c1 -W1 1.1.1.1 >/dev/null 2>&1 || ping -c1 -W1 8.8.8.8 >/dev/null 2>&1; then
-      net_ok=yes; break
-    fi
-    sleep 1
-  done
-  [ "$net_ok" = yes ] || echo "!!! 网络连通性未确认，继续尝试 NTP（可能延迟更久）"
-
-  # 5) 交给 timedatectl 接管 NTP，并强制重启 timesyncd 触发建联
-  timedatectl set-ntp true || true
-  systemctl restart systemd-timesyncd || true
-
-  # 6) 等待 NTP 同步（最多 120 秒）
-  echo ">>> 等待 NTP 同步（最多 120 秒）"
-  for _ in {1..120}; do
-    state="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)"
-    if [ "$state" = "yes" ]; then
-      break
-    fi
-    sleep 1
-  done
-
-  echo ">>> 当前时间状态："
-  timedatectl
+  apt_lock_wait; apt-get -yq clean
 }
 
 step_harden_ssh() {
@@ -153,15 +145,15 @@ step_xanmod() {
     echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' \
       >/etc/apt/sources.list.d/xanmod-release.list
   fi
-  apt-get update -y
-  apt-get -y install linux-xanmod-lts-x64v3
+  apt_lock_wait; apt-get update -y
+  apt_lock_wait; apt-get -y install linux-xanmod-lts-x64v3
   echo ">>> XanMod 安装完成（需重启生效）"
 }
 
 step_nftables() {
   echo ">>> nftables（规则逻辑保持不变）"
   local SSH_PORT; SSH_PORT="$(get_ssh_port)"
-  apt-get install -y --no-install-recommends nftables
+  apt_lock_wait; apt-get install -y --no-install-recommends nftables
   cat >/etc/nftables.conf <<EOF
 flush ruleset
 
@@ -205,6 +197,19 @@ EOF
   systemctl enable --now nftables
 }
 
+# === 阶段 B：重启前做最终 NTP 验证（才进行较长等待）===
+step_ntp_verify_before_reboot() {
+  echo ">>> [B] 重启前 NTP 最终验证（最多 120 秒）"
+  for _ in {1..120}; do
+    state="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)"
+    if [ "$state" = "yes" ]; then
+      break
+    fi
+    sleep 1
+  done
+  timedatectl || true
+}
+
 final_reboot() {
   if [ "$REBOOT" = "1" ]; then
     echo "[INFO] 5 秒后重启以启用新内核与配置..."
@@ -217,12 +222,15 @@ final_reboot() {
 
 main() {
   need_root
+  # 先准备 NTP（不阻塞），后面并行推进其它工作
+  step_timezone_ntp_prepare
   step_update_and_pkgs
-  step_timezone_ntp
   step_harden_ssh
   step_bbr
   step_xanmod
   step_nftables
+  # 重启前再做一次最终 NTP 验证（此处才可能等久一点）
+  step_ntp_verify_before_reboot
   final_reboot
 }
 main "$@"
