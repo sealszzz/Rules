@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13 初始化（精简稳版）
-# 功能：TZ/NTP/SSH/BBR/可选XanMod/nftables
+# init-all.sh — Debian 13 初始化（含 apt 锁处理、TZ/NTP/SSH/BBR/可选XanMod/nftables）
 # 环境变量：
 #   TIMEZONE=Etc/UTC
 #   FORCE_NO_PASSWORD=1
@@ -21,13 +20,38 @@ need_root() {
   fi
 }
 
-# 简洁稳妥：apt/dpkg 锁等待（最多 120s）
+# --- 暂停 APT 定时任务，避免脚本期间被抢锁 ---
+apt_pause_timers() {
+  for u in apt-daily.timer apt-daily-upgrade.timer; do
+    systemctl stop "$u" 2>/dev/null || true
+  done
+  for u in apt-daily.service apt-daily-upgrade.service unattended-upgrades.service; do
+    systemctl stop "$u" 2>/dev/null || true
+  done
+}
+
+# --- 恢复 APT 定时任务（脚本结束或重启前） ---
+apt_resume_timers() {
+  for u in apt-daily.timer apt-daily-upgrade.timer; do
+    systemctl start "$u" 2>/dev/null || true
+  done
+}
+
+# --- 严格等待 APT/DPKG 锁（最长 15 分钟），同时检测占用者 ---
 apt_wait() {
-  local t=120
-  while fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 \
-     || fuser /var/lib/apt/lists/lock >/dev/null 2>&1 \
-     || fuser /var/cache/apt/archives/lock >/dev/null 2>&1; do
-    ((t--)) || { echo "apt/dpkg 被占用超时"; exit 1; }
+  local t=900
+  while \
+    lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+    lsof /var/lib/apt/lists/lock >/dev/null 2>&1 || \
+    lsof /var/cache/apt/archives/lock >/dev/null 2>&1 || \
+    pgrep -x dpkg >/dev/null || pgrep -x apt >/dev/null || pgrep -x apt-get >/dev/null || \
+    pgrep -x unattended-upgrade >/dev/null
+  do
+    ((t--)) || {
+      echo "!!! 等待 apt/dpkg 锁超时，当前相关进程："
+      ps -ef | egrep 'apt|dpkg|unattended' | grep -v grep || true
+      exit 1
+    }
     sleep 1
   done
 }
@@ -89,16 +113,15 @@ step_timezone_ntp() {
   if [ "$can_ntp" = "yes" ]; then
     if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
       apt_wait; apt-get update -y
-      apt_wait; apt-get install -y systemd-timesyncd
+      apt_wait; apt-get install -y systemd-timesyncd || { apt_wait; apt-get install -y systemd-timesyncd; }
     fi
     systemctl unmask systemd-timesyncd.service 2>/dev/null || true
     systemctl enable --now systemd-timesyncd.service || true
     timedatectl set-ntp true || true
     timedatectl set-local-rtc 0 || true
-    # 触发建联
     systemctl restart systemd-timesyncd.service || true
 
-    # 最多 60s 等待同步（足够稳，不拖太久）
+    # 最多 60s 等待同步
     for _ in {1..60}; do
       [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break
       sleep 1
@@ -218,12 +241,16 @@ final_reboot() {
 
 main() {
   need_root
+  apt_pause_timers
+
   step_update_and_pkgs
   step_timezone_ntp
   step_harden_ssh
   step_bbr
   step_xanmod
   step_nftables
+
+  apt_resume_timers
   final_reboot
 }
 main "$@"
