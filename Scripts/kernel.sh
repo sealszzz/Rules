@@ -12,15 +12,14 @@ set -euo pipefail
 log(){ printf '>>> %s\n' "$*"; }
 run(){ eval "$@"; }
 
-cur="$(uname -r)"                              # 例如：6.12.57-x64v3-xanmod1
-img_keep="";                                   # linux-image(-unsigned)-$cur
+cur="$(uname -r)"
+img_keep=""
 
 if dpkg -s "linux-image-${cur}" >/dev/null 2>&1; then
   img_keep="linux-image-${cur}"
 elif dpkg -s "linux-image-unsigned-${cur}" >/dev/null 2>&1; then
   img_keep="linux-image-unsigned-${cur}"
 else
-  # 兜底：按版本后缀精确匹配
   img_keep="$(dpkg -l 2>/dev/null | awk -v v="$cur" '/^ii/ && $2 ~ /^linux-image(-unsigned)?-/ {print $2}' | grep -F -- "-$cur" | head -n1 || true)"
 fi
 
@@ -37,6 +36,13 @@ else
 fi
 
 mapfile -t purge_pkgs < <( dpkg -l 2>/dev/null | awk "$awk_pat {print \$2}" | sort -u | grep -v -x -- "$img_keep" )
+
+# --- 仅当 PURGE_HEADERS=1 时，确保把“当前版本的 headers”也加入清单（若存在）---
+if [ "$PURGE_HEADERS" = "1" ] && dpkg -s "linux-headers-$cur" >/dev/null 2>&1; then
+  if ! printf '%s\n' "${purge_pkgs[@]}" 2>/dev/null | grep -qx "linux-headers-$cur"; then
+    purge_pkgs+=("linux-headers-$cur")
+  fi
+fi
 
 if ((${#purge_pkgs[@]})); then
   log "Packages to purge: ${purge_pkgs[*]}"
