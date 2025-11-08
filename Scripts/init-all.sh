@@ -100,37 +100,44 @@ step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
 
-  # 停用可能冲突的 NTP 守护
+  # 1) 关闭可能冲突的 NTP 守护
   for svc in chrony ntp; do
     systemctl stop "$svc" 2>/dev/null || true
     systemctl disable "$svc" 2>/dev/null || true
   done
 
-  # 宿主是否允许实例管理 NTP（容器/托管环境可能禁止）
-  local can_ntp
-  can_ntp="$(timedatectl show -p CanNTP --value 2>/dev/null || echo no)"
+  # 2) 优先安装并启动 systemd-timesyncd（忽略 CanNTP）
+  apt_wait; apt-get update -y || true
+  apt_wait; apt-get install -y systemd-timesyncd || true
 
-  if [ "$can_ntp" = "yes" ]; then
-    if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
-      apt_wait; apt-get update -y
-      apt_wait; apt-get install -y systemd-timesyncd || { apt_wait; apt-get install -y systemd-timesyncd; }
+  systemctl unmask systemd-timesyncd.service 2>/dev/null || true
+  systemctl enable --now systemd-timesyncd.service 2>/dev/null || true
+
+  timedatectl set-ntp true || true
+  timedatectl set-local-rtc 0 || true
+  systemctl restart systemd-timesyncd.service 2>/dev/null || true
+
+  # 3) 等待最多 60s，看是否已同步
+  synced=no
+  for _ in {1..60}; do
+    if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ]; then
+      synced=yes; break
     fi
-    systemctl unmask systemd-timesyncd.service 2>/dev/null || true
-    systemctl enable --now systemd-timesyncd.service || true
-    timedatectl set-ntp true || true
-    timedatectl set-local-rtc 0 || true
-    systemctl restart systemd-timesyncd.service || true
+    sleep 1
+  done
 
-    # 最多 60s 等待同步
-    for _ in {1..60}; do
-      [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break
-      sleep 1
-    done
-  else
-    # 宿主统一授时：保持 RTC 为 UTC，跳过 set-ntp
-    timedatectl set-local-rtc 0 || true
+  # 4) 若 timesyncd 不可用/仍未同步，则回退到 chrony
+  if ! systemctl is-active --quiet systemd-timesyncd.service || [ "$synced" = "no" ]; then
+    echo "[WARN] timesyncd 未就绪，回退到 chrony"
+    systemctl disable --now systemd-timesyncd.service 2>/dev/null || true
+    apt_wait; apt-get install -y chrony
+    systemctl enable --now chrony
+    # 立刻校时一次
+    chronyc -a makestep || true
   fi
 
+  # 5) 打印状态；如果你的防火墙严格，务必放行出站 UDP/123
+  echo "[INFO] 当前时间状态："
   timedatectl
 }
 
