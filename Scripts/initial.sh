@@ -1,37 +1,35 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13: TZ/NTP(wait) → nftables → SSH no-pass → BBR → XanMod (force), then reboot
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
-wait_for_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
+wait_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
-    local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && echo "$p" && return
+    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
+    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
   fi
-  local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
+  g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
+  [[ "$g" =~ ^[0-9]+$ ]] && { echo "$g"; return; }
+  echo 2222
 }
 
 need_root
 
-# 1) TZ/RTC/NTP + wait until synchronized (max ~180s)
+# 1) TZ / RTC / NTP （等待同步）
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
 timedatectl set-ntp true || true
-if ! systemctl list-unit-files | grep -q '^systemd-timesyncd.service'; then
-  wait_for_apt; apt-get update -y
-  wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
-fi
+wait_apt; apt-get update -y
+wait_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 systemctl enable --now systemd-timesyncd || true
 for _ in $(seq 1 90); do
   [ "$(timedatectl 2>/dev/null | awk -F': ' '/System clock synchronized/{print $2}')" = "yes" ] && break
   sleep 2
 done
 
-# 2) nftables (install → rules → enable)
-wait_for_apt; apt-get install -y --no-install-recommends nftables
+# 2) nftables（必须安装 + 应用规则）
+wait_apt; apt-get install -y --no-install-recommends nftables iproute2
 SSH_PORT="$(get_ssh_port)"
 cat >/etc/nftables.conf <<EOF
 flush ruleset
@@ -60,11 +58,25 @@ table inet filter {
   chain output  { type filter hook output  priority 0; policy accept; }
 }
 EOF
+
+# 内核模块（如可用则加载；持久化）
+install -d -m 0755 /etc/modules-load.d
+cat >/etc/modules-load.d/nftables.conf <<'EOF'
+nfnetlink
+nf_tables
+nf_conntrack
+nf_defrag_ipv4
+nf_defrag_ipv6
+EOF
+for m in nfnetlink nf_tables nf_conntrack nf_defrag_ipv4 nf_defrag_ipv6; do modprobe -q "$m" 2>/dev/null || true; done
+
+# 验证能力后应用
+nft list tables >/dev/null 2>&1 || { echo "nf_tables unsupported"; exit 1; }
 nft -c -f /etc/nftables.conf
 nft -f /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH harden (no password)
+# 3) SSH 禁止密码（仅公钥）
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
@@ -82,14 +94,13 @@ net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl --system >/dev/null
 
-# 5) XanMod LTS x64v3 (force install)
+# 5) XanMod LTS x64v3（必须安装）
 install -d -m 0755 /etc/apt/keyrings
-wait_for_apt; apt-get install -y --no-install-recommends wget gpg
+wait_apt; apt-get install -y --no-install-recommends wget gpg
 wget -qO - https://dl.xanmod.org/archive.key | gpg --dearmor -o /etc/apt/keyrings/xanmod-archive-keyring.gpg
 echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' >/etc/apt/sources.list.d/xanmod-release.list
-wait_for_apt; apt-get update -y
-wait_for_apt; apt-get install -y linux-xanmod-lts-x64v3
+wait_apt; apt-get update -y
+wait_apt; apt-get install -y linux-xanmod-lts-x64v3
 
-# Graceful reboot after 5s
 sleep 5
 reboot
