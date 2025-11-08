@@ -3,7 +3,8 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
-wait_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
+waitapt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
+
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
     p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
@@ -16,21 +17,29 @@ get_ssh_port(){
 
 need_root
 
-# 1) TZ / RTC / NTP （等待同步）
+# 1) TZ / RTC / NTP（等待同步）
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
 timedatectl set-ntp true || true
-wait_apt; apt-get update -y
-wait_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+waitapt; apt-get update -y
+waitapt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 systemctl enable --now systemd-timesyncd || true
+
 for _ in $(seq 1 90); do
   [ "$(timedatectl 2>/dev/null | awk -F': ' '/System clock synchronized/{print $2}')" = "yes" ] && break
   sleep 2
 done
 
-# 2) nftables（必须安装 + 应用规则）
-wait_apt; apt-get install -y --no-install-recommends nftables iproute2
+# 2) nftables（必须安装 + 必须加载模块）
+waitapt; apt-get install -y --no-install-recommends nftables iproute2
+
+# **这是昨天你系统能正常的关键：强制提前加载 nf_tables 模块**
+for m in nfnetlink nf_tables nf_conntrack nf_defrag_ipv4 nf_defrag_ipv6; do
+  modprobe -q "$m" 2>/dev/null || true
+done
+
 SSH_PORT="$(get_ssh_port)"
+
 cat >/etc/nftables.conf <<EOF
 flush ruleset
 table inet filter {
@@ -38,45 +47,37 @@ table inet filter {
   set blacklist6 { type ipv6_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
   set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }; }
   set udp_allow { type inet_service; elements = { 443, 4443, 8443, 8448 }; }
+
   chain input {
     type filter hook input priority 0; policy drop;
+
     ip  saddr @blacklist4 drop
     ip6 saddr @blacklist6 drop
+
     ct state invalid drop
     ct state established,related accept
     iif lo accept
+
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
-    udp dport != @udp_allow ct state new counter drop
-    tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
+
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip saddr add @blacklist4 { ip saddr } drop
+    udp dport != @udp_allow ct state new drop
+
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
+
   chain forward { type filter hook forward priority 0; policy drop; }
-  chain output  { type filter hook output  priority 0; policy accept; }
+  chain output  { type filter hook output priority 0; policy accept; }
 }
 EOF
 
-# 内核模块（如可用则加载；持久化）
-install -d -m 0755 /etc/modules-load.d
-cat >/etc/modules-load.d/nftables.conf <<'EOF'
-nfnetlink
-nf_tables
-nf_conntrack
-nf_defrag_ipv4
-nf_defrag_ipv6
-EOF
-for m in nfnetlink nf_tables nf_conntrack nf_defrag_ipv4 nf_defrag_ipv6; do modprobe -q "$m" 2>/dev/null || true; done
-
-# 验证能力后应用
-nft list tables >/dev/null 2>&1 || { echo "nf_tables unsupported"; exit 1; }
 nft -c -f /etc/nftables.conf
 nft -f /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH 禁止密码（仅公钥）
+# 3) SSH 禁密
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
@@ -94,13 +95,13 @@ net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl --system >/dev/null
 
-# 5) XanMod LTS x64v3（必须安装）
+# 5) XanMod 必装
 install -d -m 0755 /etc/apt/keyrings
-wait_apt; apt-get install -y --no-install-recommends wget gpg
+waitapt; apt-get install -y --no-install-recommends wget gpg
 wget -qO - https://dl.xanmod.org/archive.key | gpg --dearmor -o /etc/apt/keyrings/xanmod-archive-keyring.gpg
 echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' >/etc/apt/sources.list.d/xanmod-release.list
-wait_apt; apt-get update -y
-wait_apt; apt-get install -y linux-xanmod-lts-x64v3
+waitapt; apt-get update -y
+waitapt; apt-get install -y linux-xanmod-lts-x64v3
 
 sleep 5
 reboot
