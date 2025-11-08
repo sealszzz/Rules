@@ -168,7 +168,7 @@ EOF
 
 step_xanmod() {
   [ "$SKIP_XANMOD" = "1" ] && { echo ">>> 跳过 XanMod"; return; }
-  echo ">>> XanMod LTS x64v3（仅安装具体 image，避免 headers）"
+  echo ">>> XanMod LTS x64v3（仅安装 image，避免 headers）"
 
   install -d -m 0755 /etc/apt/keyrings
   if [ ! -f /etc/apt/keyrings/xanmod-archive-keyring.gpg ]; then
@@ -181,19 +181,25 @@ step_xanmod() {
 
   apt_wait; apt-get update -y
 
-  # 1) 列出仓库中可用的“具体 image 包”（x64v3 flavour），挑最新那个
-  #    例：linux-image-6.12.57-x64v3-xanmod1
+  # 1) 找到仓库里最新的“具体 image 包”（示例：linux-image-6.12.57-x64v3-xanmod1）
   img_pkg="$(apt-cache search '^linux-image-.*-x64v3-xanmod1$' | awk '{print $1}' | sort -V | tail -n1 || true)"
   if [ -z "$img_pkg" ]; then
-    echo "!!! 未找到可安装的 XanMod x64v3 image 包；请检查源/网络。"; exit 1
+    echo "!!! 未找到可安装的 XanMod x64v3 image 包，请检查源/网络"; exit 1
   fi
   echo ">>> 选择安装 image 包：$img_pkg"
 
-  # 2) 明确只装 image，不装元包；如系统里误装了元包/headers，则先清理
+  # 2) 先清理可能误装的元包/headers，避免它们把 headers 再拉回来
   apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
 
-  # 3) 安装 image 本体（无 headers）
+  # 3) 仅安装 image（--no-install-recommends 不影响 Depends，但这里本身就没有 headers 依赖）
   apt_wait; apt-get -y install --no-install-recommends "$img_pkg"
+
+  # 4) （可选强力保险）阻止将来把 xanmod headers 装回来：对 deb.xanmod.org 的 linux-headers-* 设负优先级
+  cat >/etc/apt/preferences.d/zzz-no-xanmod-headers.pref <<'PREF'
+Package: linux-headers-*
+Pin: origin "deb.xanmod.org"
+Pin-Priority: -1001
+PREF
 
   echo ">>> XanMod 安装完成（仅 image；无 headers）。需重启生效。"
 }
