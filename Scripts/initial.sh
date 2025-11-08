@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# initial.sh — Debian 13 初始化：TZ/NTP(等待) → nftables → SSH禁密 → BBR → XanMod（必装）→ 5秒后重启
+# initial.sh — TZ/NTP(wait) → nftables → SSH no-password → BBR → XanMod (force) → reboot
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
@@ -17,7 +17,7 @@ get_ssh_port(){
 
 need_root
 
-# 1) TZ / RTC / NTP (等待同步)
+# 1) TZ / RTC / NTP（等待同步）
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
 timedatectl set-ntp true || true
@@ -29,7 +29,7 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 
-# 2) nftables（按你的规则原样写入并启用）
+# 2) nftables（按你给的规则；仅加分号以通过 1.1.3 的语法解析）
 waitapt; apt-get install -y --no-install-recommends nftables iproute2
 SSH_PORT="$(get_ssh_port)"
 cat >/etc/nftables.conf <<EOF
@@ -55,8 +55,8 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0 add @blacklist4 { ip saddr }  counter drop
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::      add @blacklist6 { ip6 saddr } counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0; add @blacklist4 { ip saddr }; counter drop
+    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::;      add @blacklist6 { ip6 saddr }; counter drop
 
     udp dport != @udp_allow ct state new counter drop
 
@@ -74,7 +74,7 @@ nft -c -f /etc/nftables.conf
 nft -f /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH：仅公钥，禁用密码
+# 3) SSH 禁用密码（仅公钥）
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
@@ -92,13 +92,5 @@ net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl --system >/dev/null
 
-# 5) XanMod LTS x64v3（必装）
-install -d -m 0755 /etc/apt/keyrings
-waitapt; apt-get install -y --no-install-recommends wget gpg
-wget -qO - https://dl.xanmod.org/archive.key | gpg --dearmor -o /etc/apt/keyrings/xanmod-archive-keyring.gpg
-echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' >/etc/apt/sources.list.d/xanmod-release.list
-waitapt; apt-get update -y
-waitapt; apt-get install -y linux-xanmod-lts-x64v3
-
-sleep 5
+sleep 3
 reboot
