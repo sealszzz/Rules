@@ -192,14 +192,7 @@ step_xanmod() {
   apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
 
   # 3) 仅安装 image（--no-install-recommends 不影响 Depends，但这里本身就没有 headers 依赖）
-  apt_wait; apt-get -y install --no-install-recommends "$img_pkg"
-
-  # 4) （可选强力保险）阻止将来把 xanmod headers 装回来：对 deb.xanmod.org 的 linux-headers-* 设负优先级
-  cat >/etc/apt/preferences.d/zzz-no-xanmod-headers.pref <<'PREF'
-Package: linux-headers-*
-Pin: origin "deb.xanmod.org"
-Pin-Priority: -1001
-PREF
+  apt_wait; apt-get -y install --no-install-recommends "$
 
   echo ">>> XanMod 安装完成（仅 image；无 headers）。需重启生效。"
 }
