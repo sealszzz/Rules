@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13 初始化（APT 锁处理、TZ/NTP、SSH 加固、BBR、仅安装 XanMod image、nftables）
+# init-all.sh — Debian 13 初始化（APT 锁处理、TZ/NTP、SSH 加固、BBR、仅安装 XanMod LTS image、nftables）
 # 环境变量：
 #   TIMEZONE=Etc/UTC
 #   FORCE_NO_PASSWORD=1   # 没有公钥也强制禁用密码登录（谨慎）
 #   SKIP_XANMOD=1         # 跳过 XanMod 安装
-#   REBOOT=1              # 末尾自动重启
+#   REBOOT=1              # 末尾自动重启（默认 1）
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
@@ -20,38 +20,21 @@ need_root() {
   fi
 }
 
-# --- 暂停 APT 定时任务，避免脚本期间被抢锁 ---
 apt_pause_timers() {
-  for u in apt-daily.timer apt-daily-upgrade.timer; do
-    systemctl stop "$u" 2>/dev/null || true
-  done
-  for u in apt-daily.service apt-daily-upgrade.service unattended-upgrades.service; do
-    systemctl stop "$u" 2>/dev/null || true
-  done
+  for u in apt-daily.timer apt-daily-upgrade.timer; do systemctl stop "$u" 2>/dev/null || true; done
+  for u in apt-daily.service apt-daily-upgrade.service unattended-upgrades.service; do systemctl stop "$u" 2>/dev/null || true; done
 }
-
-# --- 恢复 APT 定时任务 ---
 apt_resume_timers() {
-  for u in apt-daily.timer apt-daily-upgrade.timer; do
-    systemctl start "$u" 2>/dev/null || true
-  done
+  for u in apt-daily.timer apt-daily-upgrade.timer; do systemctl start "$u" 2>/dev/null || true; done
 }
-
-# --- 严格等待 APT/DPKG 锁（最长 15 分钟） ---
 apt_wait() {
   local t=900
-  while \
-    lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
-    lsof /var/lib/apt/lists/lock >/dev/null 2>&1 || \
-    lsof /var/cache/apt/archives/lock >/dev/null 2>&1 || \
-    pgrep -x dpkg >/dev/null || pgrep -x apt >/dev/null || pgrep -x apt-get >/dev/null || \
-    pgrep -x unattended-upgrade >/dev/null
-  do
-    ((t--)) || {
-      echo "!!! 等待 apt/dpkg 锁超时，当前相关进程："
-      ps -ef | egrep 'apt|dpkg|unattended' | grep -v grep || true
-      exit 1
-    }
+  while lsof /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+        lsof /var/lib/apt/lists/lock >/dev/null 2>&1   || \
+        lsof /var/cache/apt/archives/lock >/dev/null 2>&1 || \
+        pgrep -x dpkg >/dev/null || pgrep -x apt >/dev/null || \
+        pgrep -x apt-get >/dev/null || pgrep -x unattended-upgrade >/dev/null; do
+    ((t--)) || { echo "!!! 等待 apt/dpkg 锁超时"; ps -ef | egrep 'apt|dpkg|unattended' | grep -v grep || true; exit 1; }
     sleep 1
   done
 }
@@ -66,27 +49,22 @@ have_pubkey() {
 
 get_ssh_port() {
   if command -v sshd >/dev/null 2>&1; then
-    local p
-    if p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')"; then
-      [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -ge 1 ] && [ "$p" -le 65535 ] && { echo "$p"; return; }
-    fi
+    local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
+    [[ "$p" =~ ^[0-9]+$ ]] && [ "$p" -ge 1 ] && [ "$p" -le 65535 ] && { echo "$p"; return; }
   fi
-  local g
-  g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
+  local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
   [[ "$g" =~ ^[0-9]+$ ]] && [ "$g" -ge 1 ] && [ "$g" -le 65535 ] && { echo "$g"; return; }
   echo 2222
 }
 
 step_update_and_pkgs() {
   echo ">>> 系统更新 & 基础包（预清理 headers/元包以防被拉回）"
-  # 先把可能存在的 meta / headers 清掉，避免 full-upgrade 顺便把 headers 装上
   apt_wait; apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
 
   apt_wait; apt-get update -y
   apt_wait; apt-get -yq full-upgrade
 
-  apt_wait
-  apt-get -yq install --no-install-recommends \
+  apt_wait; apt-get -yq install --no-install-recommends \
     ca-certificates gnupg openssl \
     curl wget git \
     python3 python3-venv python3-pip \
@@ -103,16 +81,9 @@ step_update_and_pkgs() {
 step_timezone_ntp() {
   echo ">>> 时区与 NTP"
   timedatectl set-timezone "${TIMEZONE}"
+  for svc in chrony ntp; do systemctl stop "$svc" 2>/dev/null || true; systemctl disable "$svc" 2>/dev/null || true; done
 
-  # 停用可能冲突的 NTP 守护
-  for svc in chrony ntp; do
-    systemctl stop "$svc" 2>/dev/null || true
-    systemctl disable "$svc" 2>/dev/null || true
-  done
-
-  local can_ntp
-  can_ntp="$(timedatectl show -p CanNTP --value 2>/dev/null || echo no)"
-
+  local can_ntp; can_ntp="$(timedatectl show -p CanNTP --value 2>/dev/null || echo no)"
   if [ "$can_ntp" = "yes" ]; then
     if ! dpkg -s systemd-timesyncd >/dev/null 2>&1; then
       apt_wait; apt-get update -y
@@ -123,15 +94,10 @@ step_timezone_ntp() {
     timedatectl set-ntp true || true
     timedatectl set-local-rtc 0 || true
     systemctl restart systemd-timesyncd.service || true
-
-    for _ in {1..60}; do
-      [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break
-      sleep 1
-    done
+    for _ in {1..60}; do [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break; sleep 1; done
   else
     timedatectl set-local-rtc 0 || true
   fi
-
   timedatectl
 }
 
@@ -146,14 +112,9 @@ KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 PermitRootLogin prohibit-password
 EOF
-    if command -v sshd >/dev/null 2>&1; then
-      sshd -t && systemctl reload sshd
-    else
-      echo "注意：未安装 OpenSSH server，已写入配置但未重载。"
-    fi
+    command -v sshd >/dev/null 2>&1 && sshd -t && systemctl reload sshd || echo "注意：未安装 OpenSSH server，已写入配置但未重载。"
   else
     echo "!!! 未检测到任何 SSH 公钥，已跳过禁用口令登录（避免锁死）。"
-    echo "    确认安全后可加 FORCE_NO_PASSWORD=1 再执行。"
   fi
 }
 
@@ -169,33 +130,40 @@ EOF
 
 step_xanmod() {
   [ "$SKIP_XANMOD" = "1" ] && { echo ">>> 跳过 XanMod"; return; }
-  echo ">>> XanMod LTS x64v3（仅安装具体 image，避免 headers）"
+  echo ">>> XanMod LTS x64v3（只装 LTS image，避免 headers 与主线）"
 
   install -d -m 0755 /etc/apt/keyrings
-  if [ ! -f /etc/apt/keyrings/xanmod-archive-keyring.gpg ]; then
+  [ -f /etc/apt/keyrings/xanmod-archive-keyring.gpg ] || \
     wget -qO- https://dl.xanmod.org/archive.key | gpg --dearmor -o /etc/apt/keyrings/xanmod-archive-keyring.gpg
-  fi
-  if [ ! -f /etc/apt/sources.list.d/xanmod-release.list ]; then
+  [ -f /etc/apt/sources.list.d/xanmod-release.list ] || \
     echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' \
-      >/etc/apt/sources.list.d/xanmod-release.list
-  fi
+      > /etc/apt/sources.list.d/xanmod-release.list
 
   apt_wait; apt-get update -y
 
-  # 1) 选出仓库中最新的“具体 image 包”（示例：linux-image-6.12.57-x64v3-xanmod1）
-  img_pkg="$(apt-cache --names-only search 'linux-image-.*-x64v3-xanmod1$' | awk '{print $1}' | sort -V | tail -n1 || true)"
+  # 从 LTS 元包解析出“确切的 LTS image 包名”，示例：linux-image-6.12.57-x64v3-xanmod1
+  img_pkg="$(
+    apt-cache depends -n linux-xanmod-lts-x64v3 2>/dev/null \
+      | awk '/^Depends:/ {print $2}' \
+      | grep -E '^linux-image(-unsigned)?-.*-x64v3-xanmod1$' \
+      | sort -V | tail -n1
+  )"
+
   if [ -z "$img_pkg" ]; then
-    echo "!!! 未找到可安装的 XanMod x64v3 image 包；请检查源/网络。"; exit 1
+    echo "!!! 未从 linux-xanmod-lts-x64v3 解析到 LTS image 包；请检查源/网络"; exit 1
   fi
-  echo ">>> 选择安装 image 包：$img_pkg"
 
-  # 2) 先清理可能存在的元包/headers，避免被依赖链再次带回
-  apt_wait; apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
+  echo ">>> 将安装 LTS image 包：${img_pkg}"
+  # 先把 headers / 元包清掉，避免把 headers 再拉回来
+  apt-get -y purge 'linux-headers-*' linux-xanmod linux-xanmod-x64v3 linux-xanmod-lts-x64v3 2>/dev/null || true
 
-  # 3) 明确仅安装 image 包
-  apt_wait; apt-get -y install --no-install-recommends "$img_pkg"
+  # 仅安装 image（不装 Recommends）
+  apt_wait; apt-get -y install --no-install-recommends "${img_pkg}"
 
-  echo ">>> XanMod 安装完成（仅 image；无 headers）。需重启生效。"
+  # 可选：给具体 image 打 hold，防止未来被换到主线
+  apt-mark hold "${img_pkg}" >/dev/null 2>&1 || true
+
+  echo ">>> XanMod LTS 安装完成（仅 image；无 headers）。需重启生效。"
 }
 
 step_nftables() {
