@@ -1,96 +1,112 @@
 #!/usr/bin/env bash
-# initial.sh — TZ/NTP(wait) → nftables → SSH no-password → BBR → reboot
+# initial.sh — Debian 13 初始化（TZ/NTP/nftables）
+# 环境变量可覆盖：
+#   TIMEZONE=Etc/UTC
+#   SKIP_NFTABLES=0
+#   REBOOT=0
+
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
-need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
-waitapt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
-get_ssh_port(){
-  if command -v sshd >/dev/null 2>&1; then
-    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
+: "${TIMEZONE:=Etc/UTC}"
+: "${SKIP_NFTABLES:=0}"
+: "${REBOOT:=0}"
+
+log(){ printf '\033[1;32m>>> %s\033[0m\n' "$*"; }
+warn(){ printf '\033[1;33m!!! %s\033[0m\n' "$*"; }
+err(){ printf '\033[1;31mxxx %s\033[0m\n' "$*"; }
+
+apt_wait_lock() {
+  # 等待 dpkg/apt 锁，防止并发
+  for i in {1..30}; do
+    if fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1 || \
+       fuser /var/lib/apt/lists/lock >/dev/null 2>&1; then
+      sleep 1
+    else
+      return 0
+    fi
+  done
+  return 1
+}
+
+apt_safe() {
+  apt_wait_lock || { err "apt/dpkg 锁长期被占用"; exit 1; }
+  apt-get -yq "$@"
+}
+
+is_systemd() { pidof systemd >/dev/null 2>&1; }
+virt_type() { systemd-detect-virt 2>/dev/null || echo "none"; }
+
+# 0) 基本信息
+log "Kernel: $(uname -r)"
+log "Virt  : $(virt_type)"
+
+# 1) APT 基础
+log "Refreshing apt and base packages..."
+apt_safe update
+apt_safe install ca-certificates apt-transport-https >/dev/null
+
+# 2) 设置时区（timedatectl 可用优先）
+log "Setting timezone -> ${TIMEZONE}"
+if command -v timedatectl >/dev/null 2>&1 && is_systemd; then
+  timedatectl set-timezone "${TIMEZONE}" || warn "timedatectl set-timezone 失败，改用软链"
+fi
+if [ ! -e /etc/localtime ] || ! readlink -f /etc/localtime | grep -q "/usr/share/zoneinfo/${TIMEZONE}$"; then
+  ln -sf "/usr/share/zoneinfo/${TIMEZONE}" /etc/localtime
+  echo "${TIMEZONE}" >/etc/timezone
+fi
+
+# 3) 安装并启用 NTP（先装 timesyncd，再 set-ntp）
+NTP_OK=0
+if is_systemd; then
+  if command -v timedatectl >/dev/null 2>&1; then
+    # 在容器/不支持修改宿主时间的环境跳过
+    case "$(virt_type)" in
+      lxc|openvz) warn "容器环境（$(virt_type)），跳过启用 NTP（宿主机控时）";;
+      *)
+        log "Installing systemd-timesyncd..."
+        apt_safe install systemd-timesyncd >/dev/null || true
+        systemctl enable systemd-timesyncd >/dev/null 2>&1 || true
+        systemctl restart systemd-timesyncd >/dev/null 2>&1 || true
+        # 只有在 timesyncd 就绪后再 set-ntp
+        if timedatectl set-ntp true 2>/dev/null; then
+          NTP_OK=1
+        else
+          warn "timedatectl set-ntp 未成功，稍后检查状态"
+        fi
+        ;;
+    esac
+  else
+    warn "timedatectl 不存在，跳过 NTP 开启"
   fi
-  g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$g" =~ ^[0-9]+$ ]] && { echo "$g"; return; }
-  echo 2222
-}
+else
+  warn "非 systemd 环境，跳过 NTP 开启"
+fi
 
-need_root
+# 可选：打印 NTP 状态（不使脚本失败）
+if command -v timedatectl >/dev/null 2>&1; then
+  timedatectl show -p NTPSynchronized -p NTP -p TimeUSec 2>/dev/null || true
+fi
 
-# 1) TZ / RTC / NTP（等待同步）
-timedatectl set-timezone Etc/UTC
-timedatectl set-local-rtc 0
-timedatectl set-ntp true || true
-waitapt; apt-get update -y
-waitapt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
-systemctl enable --now systemd-timesyncd || true
-for _ in $(seq 1 90); do
-  [ "$(timedatectl 2>/dev/null | awk -F': ' '/System clock synchronized/{print $2}')" = "yes" ] && break
-  sleep 2
-done
+# 4) 安装并启用 nftables
+if [ "${SKIP_NFTABLES}" != "1" ]; then
+  log "Installing & enabling nftables..."
+  apt_safe install -y nftables iproute2 >/dev/null || true
+  systemctl enable nftables >/dev/null 2>&1 || true
+  systemctl start nftables  >/dev/null 2>&1 || true
+fi
 
-# 2) nftables（仅在规则行加分号，其他不动）
-waitapt; apt-get install -y --no-install-recommends nftables iproute2
-SSH_PORT="$(get_ssh_port)"
-cat >/etc/nftables.conf <<EOF
-flush ruleset
+# 5) 总结
+log "Timezone set to: $(cat /etc/timezone 2>/dev/null || echo "${TIMEZONE}")"
+if [ $NTP_OK -eq 1 ]; then
+  log "NTP: enabled via systemd-timesyncd"
+else
+  warn "NTP: 未确认启用（容器/权限/网络可导致）。如果是 KVM/裸机应已正常工作。"
+fi
+systemctl is-enabled nftables >/dev/null 2>&1 && log "nftables: enabled" || warn "nftables: not enabled"
 
-table inet filter {
-  set blacklist4 { type ipv4_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
-  set blacklist6 { type ipv6_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
-
-  set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }; }
-  set udp_allow { type inet_service; elements = { 443, 4443, 8443, 8448 }; }
-
-  chain input {
-    type filter hook input priority 0; policy drop;
-
-    ip  saddr @blacklist4 drop
-    ip6 saddr @blacklist6 drop
-
-    ct state invalid drop
-    ct state established,related accept
-    iif lo accept
-
-    ip protocol icmp accept
-    ip6 nexthdr ipv6-icmp accept
-
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip  saddr != 0.0.0.0; add @blacklist4 { ip saddr }; counter drop
-    tcp flags & syn == syn tcp dport != @tcp_allow ct state new ip6 saddr != ::;      add @blacklist6 { ip6 saddr }; counter drop
-
-    udp dport != @udp_allow ct state new counter drop
-
-    tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
-
-    tcp dport @tcp_allow accept
-    udp dport @udp_allow accept
-  }
-
-  chain forward { type filter hook forward priority 0; policy drop; }
-  chain output  { type filter hook output  priority 0; policy accept; }
-}
-EOF
-nft -c -f /etc/nftables.conf
-nft -f /etc/nftables.conf
-systemctl enable --now nftables
-
-# 3) SSH 禁用密码（仅公钥）
-install -d -m 0755 /etc/ssh/sshd_config.d
-cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
-PubkeyAuthentication yes
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-ChallengeResponseAuthentication no
-PermitRootLogin prohibit-password
-EOF
-sshd -t && { systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true; } || rm -f /etc/ssh/sshd_config.d/99-no-password.conf
-
-# 4) BBR
-cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
-net.core.default_qdisc = fq
-net.ipv4.tcp_congestion_control = bbr
-EOF
-sysctl --system >/dev/null
-
-sleep 3
-reboot
+# 6) 可选重启
+if [ "${REBOOT}" = "1" ]; then
+  log "Rebooting..."
+  reboot
+fi
