@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13 初始化（含 apt 锁处理、TZ/NTP/SSH/BBR/可选XanMod/nftables）
+# init-all.sh — Debian 13 初始化（APT 锁处理、TZ/NTP、SSH 加固、BBR、仅安装 XanMod image、nftables）
 # 环境变量：
 #   TIMEZONE=Etc/UTC
-#   FORCE_NO_PASSWORD=1
-#   SKIP_XANMOD=1
-#   REBOOT=0
+#   FORCE_NO_PASSWORD=1   # 没有公钥也强制禁用密码登录（谨慎）
+#   SKIP_XANMOD=1         # 跳过 XanMod 安装
+#   REBOOT=1              # 末尾自动重启
 
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
@@ -30,14 +30,14 @@ apt_pause_timers() {
   done
 }
 
-# --- 恢复 APT 定时任务（脚本结束或重启前） ---
+# --- 恢复 APT 定时任务 ---
 apt_resume_timers() {
   for u in apt-daily.timer apt-daily-upgrade.timer; do
     systemctl start "$u" 2>/dev/null || true
   done
 }
 
-# --- 严格等待 APT/DPKG 锁（最长 15 分钟），同时检测占用者 ---
+# --- 严格等待 APT/DPKG 锁（最长 15 分钟） ---
 apt_wait() {
   local t=900
   while \
@@ -78,9 +78,13 @@ get_ssh_port() {
 }
 
 step_update_and_pkgs() {
-  echo ">>> 系统更新 & 基础包"
+  echo ">>> 系统更新 & 基础包（预清理 headers/元包以防被拉回）"
+  # 先把可能存在的 meta / headers 清掉，避免 full-upgrade 顺便把 headers 装上
+  apt_wait; apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
+
   apt_wait; apt-get update -y
   apt_wait; apt-get -yq full-upgrade
+
   apt_wait
   apt-get -yq install --no-install-recommends \
     ca-certificates gnupg openssl \
@@ -106,7 +110,6 @@ step_timezone_ntp() {
     systemctl disable "$svc" 2>/dev/null || true
   done
 
-  # 宿主是否允许实例管理 NTP（容器/托管环境可能禁止）
   local can_ntp
   can_ntp="$(timedatectl show -p CanNTP --value 2>/dev/null || echo no)"
 
@@ -121,13 +124,11 @@ step_timezone_ntp() {
     timedatectl set-local-rtc 0 || true
     systemctl restart systemd-timesyncd.service || true
 
-    # 最多 60s 等待同步
     for _ in {1..60}; do
       [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || echo no)" = "yes" ] && break
       sleep 1
     done
   else
-    # 宿主统一授时：保持 RTC 为 UTC，跳过 set-ntp
     timedatectl set-local-rtc 0 || true
   fi
 
@@ -168,7 +169,7 @@ EOF
 
 step_xanmod() {
   [ "$SKIP_XANMOD" = "1" ] && { echo ">>> 跳过 XanMod"; return; }
-  echo ">>> XanMod LTS x64v3（仅安装 image，避免 headers）"
+  echo ">>> XanMod LTS x64v3（仅安装具体 image，避免 headers）"
 
   install -d -m 0755 /etc/apt/keyrings
   if [ ! -f /etc/apt/keyrings/xanmod-archive-keyring.gpg ]; then
@@ -181,17 +182,17 @@ step_xanmod() {
 
   apt_wait; apt-get update -y
 
-  # 1) 找到仓库里最新的“具体 image 包”（示例：linux-image-6.12.57-x64v3-xanmod1）
-  img_pkg="$(apt-cache search '^linux-image-.*-x64v3-xanmod1$' | awk '{print $1}' | sort -V | tail -n1 || true)"
+  # 1) 选出仓库中最新的“具体 image 包”（示例：linux-image-6.12.57-x64v3-xanmod1）
+  img_pkg="$(apt-cache --names-only search 'linux-image-.*-x64v3-xanmod1$' | awk '{print $1}' | sort -V | tail -n1 || true)"
   if [ -z "$img_pkg" ]; then
-    echo "!!! 未找到可安装的 XanMod x64v3 image 包，请检查源/网络"; exit 1
+    echo "!!! 未找到可安装的 XanMod x64v3 image 包；请检查源/网络。"; exit 1
   fi
   echo ">>> 选择安装 image 包：$img_pkg"
 
-  # 2) 先清理可能误装的元包/headers，避免它们把 headers 再拉回来
-  apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
+  # 2) 先清理可能存在的元包/headers，避免被依赖链再次带回
+  apt_wait; apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
 
-  # 3) 仅安装 image（--no-install-recommends 不影响 Depends，但这里本身就没有 headers 依赖）
+  # 3) 明确仅安装 image 包
   apt_wait; apt-get -y install --no-install-recommends "$img_pkg"
 
   echo ">>> XanMod 安装完成（仅 image；无 headers）。需重启生效。"
