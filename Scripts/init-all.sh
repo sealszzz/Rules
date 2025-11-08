@@ -178,7 +178,7 @@ step_xanmod() {
       >/etc/apt/sources.list.d/xanmod-release.list
   fi
   apt_wait; apt-get update -y
-  apt_wait; apt-get -y install linux-xanmod-lts-x64v3
+  apt_wait; apt-get -y install --no-install-recommends linux-xanmod-lts-x64v3
   echo ">>> XanMod 安装完成（需重启生效）"
 }
 
