@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# initial.sh — TZ/NTP(wait) → nftables → SSH no-password → BBR → XanMod (force) → reboot
+# initial.sh — TZ/NTP(wait) → nftables → SSH no-password → BBR → reboot
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
@@ -29,7 +29,7 @@ for _ in $(seq 1 90); do
   sleep 2
 done
 
-# 2) nftables（按你给的规则；仅加分号以通过 1.1.3 的语法解析）
+# 2) nftables（仅在规则行加分号，其他不动）
 waitapt; apt-get install -y --no-install-recommends nftables iproute2
 SSH_PORT="$(get_ssh_port)"
 cat >/etc/nftables.conf <<EOF
