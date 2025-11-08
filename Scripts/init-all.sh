@@ -168,7 +168,8 @@ EOF
 
 step_xanmod() {
   [ "$SKIP_XANMOD" = "1" ] && { echo ">>> 跳过 XanMod"; return; }
-  echo ">>> XanMod LTS x64v3"
+  echo ">>> XanMod LTS x64v3（仅安装具体 image，避免 headers）"
+
   install -d -m 0755 /etc/apt/keyrings
   if [ ! -f /etc/apt/keyrings/xanmod-archive-keyring.gpg ]; then
     wget -qO- https://dl.xanmod.org/archive.key | gpg --dearmor -o /etc/apt/keyrings/xanmod-archive-keyring.gpg
@@ -177,9 +178,24 @@ step_xanmod() {
     echo 'deb [signed-by=/etc/apt/keyrings/xanmod-archive-keyring.gpg] http://deb.xanmod.org trixie main' \
       >/etc/apt/sources.list.d/xanmod-release.list
   fi
+
   apt_wait; apt-get update -y
-  apt_wait; apt-get -y install --no-install-recommends linux-xanmod-lts-x64v3
-  echo ">>> XanMod 安装完成（需重启生效）"
+
+  # 1) 列出仓库中可用的“具体 image 包”（x64v3 flavour），挑最新那个
+  #    例：linux-image-6.12.57-x64v3-xanmod1
+  img_pkg="$(apt-cache search '^linux-image-.*-x64v3-xanmod1$' | awk '{print $1}' | sort -V | tail -n1 || true)"
+  if [ -z "$img_pkg" ]; then
+    echo "!!! 未找到可安装的 XanMod x64v3 image 包；请检查源/网络。"; exit 1
+  fi
+  echo ">>> 选择安装 image 包：$img_pkg"
+
+  # 2) 明确只装 image，不装元包；如系统里误装了元包/headers，则先清理
+  apt-get -y purge linux-xanmod-lts-x64v3 'linux-headers-*' 2>/dev/null || true
+
+  # 3) 安装 image 本体（无 headers）
+  apt_wait; apt-get -y install --no-install-recommends "$img_pkg"
+
+  echo ">>> XanMod 安装完成（仅 image；无 headers）。需重启生效。"
 }
 
 step_nftables() {
