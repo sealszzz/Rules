@@ -48,7 +48,10 @@ table inet filter {
 
   chain input {
     type filter hook input priority 0; policy drop;
-
+    
+    ip  saddr @blacklist4 drop
+    ip6 saddr @blacklist6 drop
+    
     ct state invalid drop
     ct state established,related accept
     iif lo accept
