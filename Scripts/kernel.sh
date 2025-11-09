@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# kernel.sh — 仅保留“当前正在运行的内核”及其 headers（纯 APT 版）
+# kernel.sh — 纯 APT：仅保留“当前正在运行的内核”及其 headers（必重启）
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
@@ -33,13 +33,13 @@ main() {
     keep_headers="linux-headers-$cur"
   fi
 
-  # 候选：只抓“版本化”包，不碰元包
+  # 仅抓“版本化”包（不碰 meta 包）
   mapfile -t all_ver_pkgs < <(
     dpkg -l 2>/dev/null | awk '/^ii/{print $2}' | grep -E \
       '^(linux-image(-unsigned)?-[0-9]|linux-headers-[0-9]|linux-(kbuild|tools|source)-[0-9])'
   )
 
-  # 过滤：排除当前 image / headers
+  # 过滤掉当前 image / headers
   to_purge=()
   for p in "${all_ver_pkgs[@]}"; do
     [[ -n "$keep_image"   && "$p" == "$keep_image"   ]] && continue
@@ -57,11 +57,13 @@ main() {
   if ((${#to_purge[@]})); then
     apt-get -y purge "${to_purge[@]}" || true
   fi
-  update-initramfs -u -k "$cur" || true
-  update-grub || true
   apt-get -y autoremove --purge || true
   apt-get -y autoclean || true
   apt-get -y clean || true
+
+  # 重建当前 initramfs + 刷新 GRUB（非 GRUB 环境会静默跳过）
+  update-initramfs -u -k "$cur" || true
+  update-grub || true
 
   echo ">>> Done. Only current kernel kept: $cur"
 
