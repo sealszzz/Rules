@@ -39,6 +39,7 @@ wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
 cat >/etc/nftables.conf <<EOF
 flush ruleset
+
 table inet filter {
   set blacklist4 { type ipv4_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
   set blacklist6 { type ipv6_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
@@ -67,6 +68,7 @@ table inet filter {
     udp dport != @udp_allow ct state new counter drop
 
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
+    
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
