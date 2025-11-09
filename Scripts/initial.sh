@@ -5,7 +5,7 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
 wait_for_apt(){
-  # 等待后台 cloud-init/apt/dpkg 锁
+  # 等待 cloud-init/apt/dpkg 锁
   while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
     sleep 1
   done
@@ -20,10 +20,19 @@ get_ssh_port(){
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
 }
 
-# 更稳的 NTP 等待（最长 300s；只要 NTPSynchronized=yes 即通过）
+# NTP 软等待（最多 300s）
 wait_ntp_sync() {
   local timeout=300 elapsed=0
+  # 优先等待 systemd-time-wait-sync（若存在）
+  if systemctl list-unit-files | grep -q '^systemd-time-wait-sync\.service'; then
+    systemctl start systemd-time-wait-sync 2>/dev/null || true
+  fi
   while [ "$elapsed" -lt "$timeout" ]; do
+    # 先看 wait-sync 是否已激活（代表到点）
+    if systemctl is-active --quiet systemd-time-wait-sync 2>/dev/null; then
+      return 0
+    fi
+    # 退而求其次用 timedatectl 的标志
     if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)" = "yes" ]; then
       return 0
     fi
@@ -36,23 +45,22 @@ wait_ntp_sync() {
 
 need_root
 
-# 1) TZ/RTC/NTP + wait until synchronized (max ~300s)
+# 1) TZ/RTC/NTP（无 set-ntp；避免“not supported”）
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
 
-# —— 统一使用 systemd-timesyncd，避免与 chrony/ntp 并存 —— #
-# 若存在其它 NTP 实现，先停用以免 timedatectl 状态混乱
+# 统一使用 systemd-timesyncd（避免与 chrony/ntp 并存引起状态混乱）
 systemctl list-unit-files | grep -q '^chrony\.service' && { systemctl disable --now chrony || true; }
 systemctl list-unit-files | grep -q '^ntp\.service'    && { systemctl disable --now ntp    || true; }
 
-# 安装并启用 timesyncd（先 unmask 避免某些镜像默认屏蔽）
+# 安装 timesyncd
 systemctl unmask systemd-timesyncd.service 2>/dev/null || true
 if ! systemctl list-unit-files | grep -q '^systemd-timesyncd\.service'; then
   wait_for_apt; apt-get update
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 fi
 
-# 可选：写入可信时间源（留空则使用发行版默认）
+# 可选：指定时间源（不需要可删掉本块）
 install -d -m 0755 /etc/systemd
 cat >/etc/systemd/timesyncd.conf <<'EOF'
 [Time]
@@ -60,13 +68,12 @@ NTP=time.cloudflare.com time.google.com ntp.ubuntu.com
 FallbackNTP=pool.ntp.org
 EOF
 
+# 启用并启动 timesyncd；不再调用 `timedatectl set-ntp true`
 systemctl enable --now systemd-timesyncd || true
-# 只有当 timesyncd 存在时才设置 NTP=on（防止 "NTP not supported"）
-timedatectl set-ntp true || true
-# 配置变更后重启服务，触发尽快初次对时
 systemctl restart systemd-timesyncd || true
 
-# 等待首次同步（不强制失败）
+# 等待同步（软等待，不影响后续）
+systemctl enable --now systemd-time-wait-sync.service 2>/dev/null || true
 wait_ntp_sync || true
 
 # 2) nftables（安装→规则→开机自启）
@@ -97,7 +104,7 @@ table inet filter {
         add @blacklist6 { ip6 saddr } counter drop
 
     udp dport != @udp_allow ct state new counter drop
-
+    
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
