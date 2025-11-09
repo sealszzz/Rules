@@ -30,9 +30,9 @@ if ! systemctl list-unit-files | grep -q '^systemd-timesyncd.service'; then
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 fi
 systemctl enable --now systemd-timesyncd || true
-# 等待 NTP 同步标志
+# 等待 NTP 同步标志（最多 ~180s）
 for _ in $(seq 1 90); do
-  if [ "$(timedatectl 2>/dev/null | awk -F': ' '/System clock synchronized/{print $2}')" = "yes" ]; then
+  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
     break
   fi
   sleep 2
@@ -64,7 +64,7 @@ table inet filter {
         add @blacklist4 { ip saddr } counter drop
     meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist6 { ip6 saddr } counter drop
- 
+
     udp dport != @udp_allow ct state new counter drop
 
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
