@@ -11,7 +11,7 @@ waitapt; apt-get -yq full-upgrade
 waitapt; apt-get -yq install --no-install-recommends \
   ca-certificates gnupg openssl \
   curl wget git \
-  python3 python3-venv python3-pip \
+  python3 python3-venv \
   build-essential \
   iproute2 iputils-ping dnsutils \
   tar xz-utils zstd unzip zip \
