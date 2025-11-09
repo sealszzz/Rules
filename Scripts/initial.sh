@@ -10,6 +10,7 @@ wait_for_apt(){
     sleep 1
   done
 }
+
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
     local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
@@ -19,9 +20,26 @@ get_ssh_port(){
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
 }
 
+# 更稳的 NTP 等待（最长 300s；需 active 且 NTPSynchronized=yes）
+wait_ntp_sync() {
+  local timeout=300
+  local elapsed=0
+  while [ "$elapsed" -lt "$timeout" ]; do
+    if systemctl is-active --quiet systemd-timesyncd; then
+      if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
+        return 0
+      fi
+    fi
+    sleep 2
+    elapsed=$((elapsed+2))
+  done
+  echo "WARN: NTP not synchronized after ${timeout}s; continuing." >&2
+  return 1
+}
+
 need_root
 
-# 1) TZ/RTC/NTP + wait until synchronized (max ~180s)
+# 1) TZ/RTC/NTP + wait until synchronized (max ~300s)
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
 timedatectl set-ntp true || true
@@ -30,13 +48,8 @@ if ! systemctl list-unit-files | grep -q '^systemd-timesyncd.service'; then
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 fi
 systemctl enable --now systemd-timesyncd || true
-# 等待 NTP 同步标志（最多 ~180s）
-for _ in $(seq 1 90); do
-  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
-    break
-  fi
-  sleep 2
-done
+systemctl enable --now systemd-time-wait-sync.service 2>/dev/null || true
+wait_ntp_sync || true
 
 # 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
