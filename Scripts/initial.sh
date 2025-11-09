@@ -19,7 +19,6 @@ need_root
 # 1) TZ/RTC/NTP（不调用 set-ntp，避免 “NTP not supported”）
 timedatectl set-timezone Etc/UTC || true
 timedatectl set-local-rtc 0 || true
-# 安装并启用 timesyncd（若未安装）
 if ! systemctl list-unit-files | grep -q '^systemd-timesyncd\.service'; then
   wait_for_apt; apt-get update
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
@@ -27,7 +26,6 @@ fi
 systemctl unmask systemd-timesyncd.service 2>/dev/null || true
 systemctl enable --now systemd-timesyncd || true
 systemctl restart systemd-timesyncd || true
-# 软等待同步（最多 ~180s，不强制失败）
 for _ in $(seq 1 90); do
   v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
   [ "$v" = "yes" ] && break
@@ -37,7 +35,9 @@ done
 # 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
-cat >/etc/nftables.conf <<'EOF'
+
+# 注意：这里用无引号 heredoc，让 ${SSH_PORT} 正常展开
+cat >/etc/nftables.conf <<EOF
 flush ruleset
 
 table inet filter {
@@ -86,12 +86,11 @@ table inet filter {
 
     ip6 nexthdr ipv6-icmp icmpv6 type {
       nd-neighbor-solicit, nd-neighbor-advert,
-      router-solicitation, router-advertisement,
-      parameter-problem
+      nd-router-solicit, nd-router-advert
     } accept
 
     ip6 nexthdr ipv6-icmp icmpv6 type {
-      echo-request, destination-unreachable, time-exceeded, packet-too-big
+      echo-request, destination-unreachable, time-exceeded, packet-too-big, parameter-problem
     } limit rate 10/second accept
 
     meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
