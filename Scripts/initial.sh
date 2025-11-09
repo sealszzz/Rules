@@ -5,12 +5,10 @@ export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
 wait_for_apt(){
-  # 等待后台 cloud-init/apt/dpkg 锁
   while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
     sleep 1
   done
 }
-
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
     local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
@@ -20,36 +18,45 @@ get_ssh_port(){
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
 }
 
-# 更稳的 NTP 等待（最长 300s；需 active 且 NTPSynchronized=yes）
-wait_ntp_sync() {
-  local timeout=300
-  local elapsed=0
-  while [ "$elapsed" -lt "$timeout" ]; do
-    if systemctl is-active --quiet systemd-timesyncd; then
-      if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
-        return 0
-      fi
-    fi
-    sleep 2
-    elapsed=$((elapsed+2))
-  done
-  echo "WARN: NTP not synchronized after ${timeout}s; continuing." >&2
-  return 1
-}
-
 need_root
 
-# 1) TZ/RTC/NTP + wait until synchronized (max ~300s)
+# 1) TZ/RTC + 安装/启用 NTP 提供者，再等待同步（最多 ~180s）
 timedatectl set-timezone Etc/UTC
 timedatectl set-local-rtc 0
-timedatectl set-ntp true || true
-if ! systemctl list-unit-files | grep -q '^systemd-timesyncd.service'; then
+
+# 检测已有 NTP 提供者：优先沿用现有，缺失则安装 timesyncd
+has_chrony=false
+has_ntpd=false
+has_timesyncd=false
+
+systemctl list-unit-files | grep -q '^chrony\.service' && has_chrony=true
+systemctl list-unit-files | grep -q '^ntp\.service' && has_ntpd=true
+systemctl list-unit-files | grep -q '^systemd-timesyncd\.service' && has_timesyncd=true
+
+if ! $has_chrony && ! $has_ntpd && ! $has_timesyncd; then
   wait_for_apt; apt-get update
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+  has_timesyncd=true
 fi
-systemctl enable --now systemd-timesyncd || true
-systemctl enable --now systemd-time-wait-sync.service 2>/dev/null || true
-wait_ntp_sync || true
+
+# 启用并启动合适的 NTP 服务；仅当 timesyncd 存在时才使用 timedatectl set-ntp
+if $has_chrony; then
+  systemctl enable --now chrony || true
+elif $has_ntpd; then
+  systemctl enable --now ntp || true
+elif $has_timesyncd; then
+  systemctl enable --now systemd-timesyncd || true
+  timedatectl set-ntp true || true
+fi
+
+# 等待 NTP 同步：优先用 timedatectl 的机器可读标志；不可用就有限等待
+for _ in $(seq 1 90); do
+  val="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+  if [ "$val" = "yes" ]; then
+    break
+  fi
+  sleep 2
+done
 
 # 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
@@ -73,13 +80,16 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
+    # 端口扫描与黑名单：新建连接、SYN 到非白名单端口 → 动态拉黑并丢弃
     meta nfproto ipv4 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist4 { ip saddr } counter drop
     meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist6 { ip6 saddr } counter drop
 
+    # UDP 非允许端口直接丢弃
     udp dport != @udp_allow ct state new counter drop
 
+    # 允许列出的 TCP/UDP
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
