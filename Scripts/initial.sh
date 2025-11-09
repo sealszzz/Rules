@@ -1,19 +1,14 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13: TZ/NTP(wait) → nftables → SSH no-pass → BBR → reboot
+# init-all.sh — Debian 13：安装并配置 NTP（timesyncd）→ nftables → SSH 免密 → BBR → 重启
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
 need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
-wait_for_apt(){
-  # 等待后台 cloud-init/apt/dpkg 锁
-  while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
-    sleep 1
-  done
-}
+wait_for_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
     local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && echo "$p" && return
+    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
   fi
   local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
@@ -21,26 +16,27 @@ get_ssh_port(){
 
 need_root
 
-# 1) TZ/RTC/NTP + wait until synchronized (max ~180s)
-timedatectl set-timezone Etc/UTC
-timedatectl set-local-rtc 0
-timedatectl set-ntp true || true
-if ! systemctl list-unit-files | grep -q '^systemd-timesyncd.service'; then
-  wait_for_apt; apt-get update
-  wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
-fi
+# 1) 时区/RTC & NTP（先安装 timesyncd，再 set-ntp，避免 "NTP not supported"）
+timedatectl set-timezone Etc/UTC || true
+timedatectl set-local-rtc 0 || true
+
+wait_for_apt; apt-get update
+wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+
 systemctl enable --now systemd-timesyncd || true
-# 等待 NTP 同步标志（最多 ~180s）
+timedatectl set-ntp true || true
+
+# 软等待首次同步（最多 ~180s；不中断流程）
 for _ in $(seq 1 90); do
-  if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" = "yes" ]; then
-    break
-  fi
+  v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+  [ "$v" = "yes" ] && break
   sleep 2
 done
 
-# 2) nftables（安装→规则→开机自启）
+# 2) nftables（安装→写规则→加载→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
+
 cat >/etc/nftables.conf <<EOF
 flush ruleset
 table inet filter {
@@ -60,13 +56,16 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
+    # 非白名单端口的 TCP SYN 探测 → 动态拉黑并丢弃
     meta nfproto ipv4 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist4 { ip saddr } counter drop
     meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist6 { ip6 saddr } counter drop
 
+    # UDP 非允许端口直接丢弃
     udp dport != @udp_allow ct state new counter drop
 
+    # 允许列出的 TCP/UDP
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
@@ -76,11 +75,12 @@ table inet filter {
   chain output  { type filter hook output  priority 0; policy accept; }
 }
 EOF
+
 nft -c -f /etc/nftables.conf
-nft -f /etc/nftables.conf
+nft -f  /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH 加固：禁用口令/交互式，保留公钥；root 仅允许密钥
+# 3) SSH 加固（禁用口令/交互式，root 仅密钥）
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
@@ -89,18 +89,18 @@ KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 PermitRootLogin prohibit-password
 EOF
-if sshd -t; then
+if sshd -t 2>/dev/null; then
   systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
 else
   rm -f /etc/ssh/sshd_config.d/99-no-password.conf
 fi
 
-# 4) BBR（按你的偏好 fq+bbr）
+# 4) BBR（仅两项最小变更）
 cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
 EOF
-sysctl --system >/dev/null
+sysctl --system >/dev/null || true
 
 # 5) 温和重启
 sleep 5
