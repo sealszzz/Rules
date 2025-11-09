@@ -61,9 +61,9 @@ table inet filter {
     ip6 nexthdr ipv6-icmp accept
 
     meta nfproto ipv4 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
-        add @blacklist4 { ip saddr } counter drop
+      ip saddr != 0.0.0.0 add @blacklist4 { ip saddr } counter drop
     meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
-        add @blacklist6 { ip6 saddr } counter drop
+      ip6 saddr != :: add @blacklist6 { ip6 saddr } counter drop
 
     udp dport != @udp_allow ct state new counter drop
 
