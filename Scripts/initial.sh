@@ -37,46 +37,90 @@ done
 # 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
-cat >/etc/nftables.conf <<EOF
+cat >/etc/nftables.conf <<'EOF'
 flush ruleset
 
 table inet filter {
-  set blacklist4 { type ipv4_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
-  set blacklist6 { type ipv6_addr; flags dynamic; timeout 7d; size 65535; gc-interval 5m; }
+  set blacklist4 {
+    type ipv4_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
 
-  set tcp_allow { type inet_service; elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }; }
-  set udp_allow { type inet_service; elements = { 443, 4443, 8443, 8448 }; }
+  set blacklist6 {
+    type ipv6_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
+  
+  set tcp_allow {
+    type inet_service
+    flags interval
+    elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }
+  }
+
+  set udp_allow {
+    type inet_service
+    flags interval
+    elements = { 443, 4443, 8443, 8448 }
+  }
 
   chain input {
-    type filter hook input priority 0; policy drop;
-    
-    ip  saddr @blacklist4 drop
-    ip6 saddr @blacklist6 drop
-    
-    ct state invalid drop
-    ct state established,related accept
+    type filter hook input priority filter; policy drop;
+
+    ip  saddr @blacklist4 counter drop
+    ip6 saddr @blacklist6 counter drop
+
+    ct state invalid counter drop
+    ct state { established, related } accept
+
     iif lo accept
 
-    ip protocol icmp accept
-    ip6 nexthdr ipv6-icmp accept
+    ip protocol icmp icmp type {
+      echo-request, destination-unreachable, time-exceeded
+    } limit rate 10/second accept
 
-    meta nfproto ipv4 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
-      ip saddr != 0.0.0.0 add @blacklist4 { ip saddr } counter drop
-    meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
-      ip6 saddr != :: add @blacklist6 { ip6 saddr } counter drop
+    ip6 nexthdr ipv6-icmp icmpv6 type {
+      nd-neighbor-solicit, nd-neighbor-advert,
+      router-solicitation, router-advertisement,
+      parameter-problem
+    } accept
+
+    ip6 nexthdr ipv6-icmp icmpv6 type {
+      echo-request, destination-unreachable, time-exceeded, packet-too-big
+    } limit rate 10/second accept
+
+    meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
+    meta nfproto ipv6 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
 
     udp dport != @udp_allow ct state new counter drop
 
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
-    
+
+    tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn counter drop comment "FIN+SYN"
+    tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0   counter drop comment "NULL scan"
+    tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop comment "XMAS scan"
+
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
 
-  chain forward { type filter hook forward priority 0; policy drop; }
-  chain output  { type filter hook output  priority 0; policy accept; }
+  chain forward {
+    type filter hook forward priority filter; policy drop;
+  }
+
+  chain output {
+    type filter hook output priority filter; policy accept;
+  }
 }
 EOF
+
 nft -c -f /etc/nftables.conf
 nft -f  /etc/nftables.conf
 systemctl enable --now nftables
