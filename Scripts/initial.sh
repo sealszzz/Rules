@@ -80,16 +80,13 @@ table inet filter {
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    # 端口扫描与黑名单：新建连接、SYN 到非白名单端口 → 动态拉黑并丢弃
     meta nfproto ipv4 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist4 { ip saddr } counter drop
     meta nfproto ipv6 tcp flags & syn == syn tcp dport != @tcp_allow ct state new \
         add @blacklist6 { ip6 saddr } counter drop
 
-    # UDP 非允许端口直接丢弃
     udp dport != @udp_allow ct state new counter drop
 
-    # 允许列出的 TCP/UDP
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
