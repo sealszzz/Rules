@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# init-all.v3.1 — Debian 13: TZ/NTP(wait) → nftables → SSH no-pass → BBR → reboot
+# init-all.sh — Debian 13: TZ/NTP(wait,no set-ntp) → nftables → SSH no-pass → BBR → reboot
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
@@ -7,31 +7,34 @@ need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
 wait_for_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
 get_ssh_port(){
   if command -v sshd >/dev/null 2>&1; then
-    local p; p="$(sshd -T 2>/dev/null | awk "/^port /{print \$2; exit}")" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && echo "$p" && return
+    local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
+    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
   fi
-  local g; g="$(awk "/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print \$2; exit}" /etc/ssh/sshd_config 2>/dev/null)" || true
+  local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
 }
 
 need_root
 
-# 1) TZ/RTC/NTP（不再 set-ntp；若 timesyncd 缺失则安装，然后软等待）
+# 1) TZ/RTC/NTP（不调用 set-ntp，避免 “NTP not supported”）
 timedatectl set-timezone Etc/UTC || true
 timedatectl set-local-rtc 0 || true
+# 安装并启用 timesyncd（若未安装）
 if ! systemctl list-unit-files | grep -q '^systemd-timesyncd\.service'; then
   wait_for_apt; apt-get update
   wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
 fi
+systemctl unmask systemd-timesyncd.service 2>/dev/null || true
 systemctl enable --now systemd-timesyncd || true
-# 软等待同步（最多 ~180s；不强制失败）
+systemctl restart systemd-timesyncd || true
+# 软等待同步（最多 ~180s，不强制失败）
 for _ in $(seq 1 90); do
   v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
   [ "$v" = "yes" ] && break
   sleep 2
 done
 
-# 2) nftables（安装→规则→自启）
+# 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
 cat >/etc/nftables.conf <<EOF
@@ -45,9 +48,11 @@ table inet filter {
 
   chain input {
     type filter hook input priority 0; policy drop;
+
     ct state invalid drop
     ct state established,related accept
     iif lo accept
+
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
@@ -57,19 +62,21 @@ table inet filter {
         add @blacklist6 { ip6 saddr } counter drop
 
     udp dport != @udp_allow ct state new counter drop
+
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
+
   chain forward { type filter hook forward priority 0; policy drop; }
   chain output  { type filter hook output  priority 0; policy accept; }
 }
 EOF
 nft -c -f /etc/nftables.conf
-nft -f /etc/nftables.conf
+nft -f  /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH 免密加固（drop-in；校验失败自动回滚）
+# 3) SSH 免密（校验失败自动回滚）
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
@@ -78,19 +85,19 @@ KbdInteractiveAuthentication no
 ChallengeResponseAuthentication no
 PermitRootLogin prohibit-password
 EOF
-if sshd -t; then
+if sshd -t 2>/dev/null; then
   systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
 else
   rm -f /etc/ssh/sshd_config.d/99-no-password.conf
 fi
 
-# 4) BBR（fq + bbr）
+# 4) BBR
 cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl --system >/dev/null || true
 
-# 5) 温和重启
+# 5) 重启
 sleep 5
 reboot
