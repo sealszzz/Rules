@@ -60,7 +60,7 @@ table inet filter {
   set tcp_allow {
     type inet_service
     flags interval
-    elements = { ${SSH_PORT}, 80, 443, 4443, 8443, 8448 }
+    elements = { 80, 443, 4443, 8443, 8448, ${SSH_PORT} }
   }
 
   set udp_allow {
