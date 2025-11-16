@@ -11,7 +11,7 @@ get_ssh_port(){
     [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
   fi
   local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 2222
+  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 8888
 }
 
 need_root
