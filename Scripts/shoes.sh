@@ -170,7 +170,10 @@ ver="$(
 )"
 echo "shoes version: ${ver:-unknown}"
 echo
-echo "监听检查（端口 ${TUIC_PORT}）:"
-echo "监听检查（端口 ${VLESS_PORT}）:"
+
+echo "监听检查（TUIC / UDP 端口 ${TUIC_PORT}）："
 ss -Hnplu 2>/dev/null | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未发现 UDP ${TUIC_PORT}"
+
+echo
+echo "监听检查（VLESS / TCP 端口 ${VLESS_PORT}）："
 ss -Hnplt 2>/dev/null | grep -E ":${VLESS_PORT}([^0-9]|$)" || echo "未发现 TCP ${VLESS_PORT}"
