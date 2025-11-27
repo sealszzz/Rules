@@ -109,7 +109,6 @@ if [ ! -f /etc/shoes/config.yml ]; then
     password: "${T_PASS}"
 
 - address: "[::]:${VLESS_PORT}"
-  transport: tcp
   protocol:
     type: tls
     reality_targets:
