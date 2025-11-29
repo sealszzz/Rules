@@ -7,8 +7,7 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-: "${REALITY_SNI:=www.google.com}"
-: "${REALITY_DEST:=${REALITY_SNI}:443}"
+: "${VLESS_DOMAIN:=www.example.com}"
 
 : "${T_UUID:=$(uuidgen)}"
 : "${T_PASS:=$(openssl rand -hex 16 || echo '0123456789abcdef0123456789abcdef')}"
@@ -16,53 +15,12 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-gen_reality_keys() {
-  REALITY_SHORT_ID="${REALITY_SHORT_ID:-$(openssl rand -hex 8 2>/dev/null || echo '0123456789abcdef')}"
-
-  if [ -n "${REALITY_PRIVATE_KEY:-}" ] && [ -n "${REALITY_PUBLIC_KEY:-}" ]; then
-    return 0
-  fi
-
-  local out
-  out="$(python3 - <<'PY'
-from cryptography.hazmat.primitives.asymmetric import x25519
-from cryptography.hazmat.primitives import serialization
-import base64
-
-priv = x25519.X25519PrivateKey.generate()
-pub = priv.public_key()
-
-priv_raw = priv.private_bytes(
-    encoding=serialization.Encoding.Raw,
-    format=serialization.PrivateFormat.Raw,
-    encryption_algorithm=serialization.NoEncryption()
-)
-pub_raw = pub.public_bytes(
-    encoding=serialization.Encoding.Raw,
-    format=serialization.PublicFormat.Raw
-)
-
-def b64u(b: bytes) -> str:
-    return base64.urlsafe_b64encode(b).rstrip(b'=').decode()
-
-print("PRIVATE=" + b64u(priv_raw))
-print("PUBLIC=" + b64u(pub_raw))
-PY
-)" || { echo "生成 Reality 密钥对失败"; exit 1; }
-
-  REALITY_PRIVATE_KEY="${REALITY_PRIVATE_KEY:-$(printf '%s\n' "$out" | awk -F= '/^PRIVATE=/{print $2}')}"
-  REALITY_PUBLIC_KEY="${REALITY_PUBLIC_KEY:-$(printf '%s\n' "$out" | awk -F= '/^PUBLIC=/{print $2}')}"
-}
-
 apt update
 apt install -y --no-install-recommends \
-  curl jq ca-certificates tar unzip xz-utils uuid-runtime openssl iproute2 \
-  python3 python3-cryptography
+  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
-
-gen_reality_keys
 
 getent group shoes >/dev/null || groupadd --system shoes
 id -u shoes  >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
@@ -111,13 +69,12 @@ if [ ! -f /etc/shoes/config.yml ]; then
 - address: "[::]:${VLESS_PORT}"
   protocol:
     type: tls
-    reality_targets:
-      "${REALITY_SNI}":
-        private_key: "${REALITY_PRIVATE_KEY}"
-        public_key:  "${REALITY_PUBLIC_KEY}"
-        short_ids: ["${REALITY_SHORT_ID}"]
-        dest: "${REALITY_DEST}"
+    tls_targets:
+      "${VLESS_DOMAIN}":
+        cert: "${CERT}"
+        key:  "${KEY}"
         vision: true
+        alpn_protocols: ["h2"]
         protocol:
           type: vless
           user_id: "${V_UUID}"
@@ -127,7 +84,6 @@ if [ ! -f /etc/shoes/config.yml ]; then
 EOF
   chown root:shoes /etc/shoes/config.yml
   chmod 640      /etc/shoes/config.yml
-
 fi
 
 if [ ! -f /etc/systemd/system/shoes.service ]; then
