@@ -2,7 +2,7 @@
 # tuic-min: no-API latest tag, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-: "${TUIC_PORT:=443}"
+: "${TUIC_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
