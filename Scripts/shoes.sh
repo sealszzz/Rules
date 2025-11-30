@@ -74,7 +74,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
         cert: "${CERT}"
         key:  "${KEY}"
         vision: true
-        alpn_protocols: ["h2"]
+        alpn_protocols: ["http/1.1", "h2"]
         protocol:
           type: vless
           user_id: "${V_UUID}"
