@@ -99,8 +99,8 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
           "rejectUnknownSni": true,
           "minVersion": "1.2",
           "alpn": [
-            "http/1.1",
-            "h2"
+            "h2",
+            "http/1.1"
           ],
           "certificates": [
             {
