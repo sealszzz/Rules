@@ -65,6 +65,7 @@ if [ ! -f /etc/shoes/config.yml ]; then
     type: tuic
     uuid: "${T_UUID}"
     password: "${T_PASS}"
+    zero_rtt_handshake: true
 
 - address: "[::]:${VLESS_PORT}"
   protocol:
