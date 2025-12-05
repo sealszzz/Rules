@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# anytls-min: install anytls-server binary with systemd unit (x86_64/aarch64)
+# anytls-go minimal installer: install anytls-server + systemd (x86_64/aarch64)
 set -euo pipefail
 
 # ===== Tunables =====
@@ -7,19 +7,17 @@ set -euo pipefail
 : "${ANYTLS_LISTEN:=[::]}"
 : "${ANYTLS_USER:=anytls}"
 : "${ANYTLS_GROUP:=anytls}"
-: "${ANYTLS_REPO:=anytls/anytls-go}"         # GitHub repo
-: "${ANYTLS_TAG:=}"                          # override tag like v0.0.11 (empty = latest)
+: "${ANYTLS_REPO:=anytls/anytls-go}"     # GitHub repo
+: "${ANYTLS_TAG:=}"                      # override tag: v0.0.11 or 0.0.11, empty = latest
+: "${ANYTLS_PASSWORD:=}"                # empty -> auto-generate
 
 ANYTLS_STATE_DIR="/var/lib/anytls"
-ANYTLS_CONF_DIR="/etc/anytls"
-ANYTLS_ENV_FILE="${ANYTLS_CONF_DIR}/anytls.env"
-
 ANYTLS_BIN="/usr/local/bin/anytls-server"
 ANYTLS_SERVICE="/etc/systemd/system/anytls.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ===== Deps =====
+echo "[*] Install deps..."
 apt update
 apt install -y --no-install-recommends curl ca-certificates unzip openssl
 
@@ -28,8 +26,7 @@ getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
 id -u "$ANYTLS_USER" >/dev/null 2>&1 || \
   useradd --system -g "$ANYTLS_GROUP" -M -d "$ANYTLS_STATE_DIR" -s /usr/sbin/nologin "$ANYTLS_USER"
 
-install -d -o "$ANYTLS_USER"  -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_STATE_DIR"
-install -d -o root            -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_CONF_DIR"
+install -d -o "$ANYTLS_USER" -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_STATE_DIR"
 
 # ===== Resolve latest tag via redirect (no API / no jq) =====
 get_latest_tag() {
@@ -65,6 +62,7 @@ dl_url="https://github.com/${ANYTLS_REPO}/releases/download/${tag}/${asset_name}
 
 echo "[*] Install version: ${tag} (${version})"
 echo "[*] Asset:           ${asset_name}"
+echo "[*] URL:             ${dl_url}"
 
 tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
 dl_file="${tmpd}/${asset_name}"
@@ -74,32 +72,28 @@ curl -fL "$dl_url" -o "$dl_file"
 udir="${tmpd}/u"; mkdir -p "$udir"
 unzip -q "$dl_file" -d "$udir"
 
+# zip: readme.md / anytls-client / anytls-server，只装 server
 binpath="$(find "$udir" -maxdepth 1 -type f -name 'anytls-server' -perm -u+x | head -n1 || true)"
 [ -n "$binpath" ] || { echo "anytls-server binary not found in asset: $asset_name"; exit 1; }
 
+echo "[*] Installing binary to ${ANYTLS_BIN}"
 install -m 0755 "$binpath" "$ANYTLS_BIN"
 
-# ===== Env file (create-once, idempotent) =====
-if [ -f "$ANYTLS_ENV_FILE" ]; then
-  # reuse existing values
-  # shellcheck disable=SC1090
-  . "$ANYTLS_ENV_FILE"
+# ===== Password (generate once if empty and service not exists) =====
+if [ -z "${ANYTLS_PASSWORD}" ]; then
+  if [ -f "$ANYTLS_SERVICE" ]; then
+    echo "[*] Service already exists, keep existing password in unit."
+  else
+    ANYTLS_PASSWORD="$(openssl rand -hex 16 || echo '0123456789abcdef0123456789abcdef')"
+    echo "[*] Generated AnyTLS password: ${ANYTLS_PASSWORD}"
+  fi
 else
-  : "${ANYTLS_PASSWORD:=$(openssl rand -hex 16 || echo '0123456789abcdef0123456789abcdef')}"
-  cat >"$ANYTLS_ENV_FILE" <<EOF
-ANYTLS_LISTEN=${ANYTLS_LISTEN}
-ANYTLS_PORT=${ANYTLS_PORT}
-ANYTLS_PASSWORD=${ANYTLS_PASSWORD}
-EOF
-  chown root:"$ANYTLS_GROUP" "$ANYTLS_ENV_FILE"
-  chmod 640 "$ANYTLS_ENV_FILE"
-
-  echo "[*] AnyTLS password (also saved in ${ANYTLS_ENV_FILE}):"
-  echo "    ${ANYTLS_PASSWORD}"
+  echo "[*] Using provided ANYTLS_PASSWORD (env)."
 fi
 
 # ===== systemd unit (create-once) =====
 if [ ! -f "$ANYTLS_SERVICE" ]; then
+  echo "[*] Creating systemd unit: ${ANYTLS_SERVICE}"
   cat >"$ANYTLS_SERVICE" <<EOF
 [Unit]
 Description=AnyTLS Server
@@ -113,8 +107,7 @@ Group=${ANYTLS_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${ANYTLS_STATE_DIR}
-EnvironmentFile=${ANYTLS_ENV_FILE}
-ExecStart=${ANYTLS_BIN} -l \$ANYTLS_LISTEN:\$ANYTLS_PORT -p \$ANYTLS_PASSWORD
+ExecStart=${ANYTLS_BIN} -l ${ANYTLS_LISTEN}:${ANYTLS_PORT} -p ${ANYTLS_PASSWORD}
 Restart=on-failure
 RestartSec=3s
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
@@ -126,12 +119,18 @@ LimitNOFILE=262144
 WantedBy=multi-user.target
 EOF
   chmod 644 "$ANYTLS_SERVICE"
+else
+  echo "[*] systemd unit already exists, skip writing: ${ANYTLS_SERVICE}"
 fi
 
 # ===== Start / Reload =====
+echo "[*] Reload systemd & start service..."
 systemctl daemon-reload
-if systemctl is-enabled anytls >/dev/null 2>&1; then
-  systemctl try-reload-or-restart anytls || systemctl restart anytls
-else
-  systemctl enable --now anytls || true
-fi
+systemctl enable anytls
+systemctl restart anytls
+
+echo "[*] Done."
+echo "    Port:     ${ANYTLS_PORT}"
+echo "    Listen:   ${ANYTLS_LISTEN}"
+[ -n "${ANYTLS_PASSWORD}" ] && echo "    Password: ${ANYTLS_PASSWORD}"
+echo "Check status: systemctl status anytls --no-pager -l"
