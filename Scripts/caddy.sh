@@ -140,7 +140,7 @@ After=network.target
 [Service]
 User=${CADDY_USER}
 Group=${CADDY_GROUP}
-ExecStart=${CADDY_BIN} run --config ${CADDY_CONF} --adapter json
+ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
 Restart=on-failure
 RestartSec=5s
 
