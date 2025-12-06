@@ -117,6 +117,18 @@ cat > "${CADDY_CONF}" <<EOF
                   ]
                 }
               ]
+            },
+            {
+              "match": [
+                {
+                  "quic": {}
+                }
+              ],
+              "handle": [
+                {
+                  "handler": "echo"
+                }
+              ]
             }
           ]
         }
