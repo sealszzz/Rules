@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# caddy-l4 UDP 443 SNI 分流到 TUIC + Juicity（使用你上传的二进制）
+# caddy-l4 UDP 443 SNI 分流到 TUIC + Juicity
 set -euo pipefail
 
 # ===== 可调参数 =====
@@ -22,7 +22,7 @@ apt install -y --no-install-recommends \
   debian-keyring debian-archive-keyring apt-transport-https \
   curl ca-certificates gpg
 
-# ===== 不再编译！只检查上传的二进制是否存在，然后赋权 =====
+# ===== 检查二进制文件是否存在，然后赋权 =====
 if [ ! -f "${CADDY_BIN}" ]; then
   echo "FATAL: ${CADDY_BIN} 不存在！"
   echo "请先把 caddy-l4 上传到 ${CADDY_BIN}"
