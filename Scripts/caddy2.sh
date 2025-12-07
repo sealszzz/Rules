@@ -22,14 +22,15 @@ apt install -y --no-install-recommends \
   debian-keyring debian-archive-keyring apt-transport-https \
   curl ca-certificates gpg
 
-# ===== 不再编译！只检查上传的二进制是否存在 =====
-if [ ! -x "${CADDY_BIN}" ]; then
-  echo "FATAL: ${CADDY_BIN} 不存在或不可执行！"
+# ===== 不再编译！只检查上传的二进制是否存在，然后赋权 =====
+if [ ! -f "${CADDY_BIN}" ]; then
+  echo "FATAL: ${CADDY_BIN} 不存在！"
   echo "请先把 caddy-l4 上传到 ${CADDY_BIN}"
   exit 1
 fi
 
-echo "[*] 检测到已上传的 Caddy：${CADDY_BIN}"
+chmod +x "${CADDY_BIN}"
+echo "[*] 检测到已上传的 Caddy，并已赋予可执行权限：${CADDY_BIN}"
 
 # ===== 创建用户和目录 =====
 echo "[*] 创建 caddy 用户/组与配置目录..."
