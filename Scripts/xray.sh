@@ -4,11 +4,12 @@ set -euo pipefail
 # ===== Tunables =====
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
-: "${XRAY_SNI:=www.cloudflare.com}"   # must exist in dest's cert
+: "${XRAY_SNI:=www.cloudflare.com}"      # must exist in dest's cert
 : "${XRAY_TARGET:=127.0.0.1:9999}"      # upstream TLS endpoint
 : "${XRAY_DEST:=127.0.0.1:9999}"
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
+: "${XRAY_TAG:=}"                       # 可选：手动指定 tag，如 v25.12.2，空=自动取最新(含 pre-release)
 
 XRAY_STATE_DIR="/var/lib/xray"
 XRAY_CONF_DIR="/etc/xray"
@@ -30,16 +31,39 @@ id -u "$XRAY_USER" >/dev/null 2>&1 || \
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
 
-# ===== Resolve latest tag via redirect (no API / no jq) =====
+# ===== Resolve (pre)release tag via /releases HTML (no API / no jq) =====
 get_latest_tag() {
+  if [ -n "${XRAY_TAG:-}" ]; then
+    printf '%s\n' "$XRAY_TAG"
+    return 0
+  fi
+
+  local url="https://github.com/XTLS/Xray-core/releases?per_page=1"
+  local html tag
+
+  if html="$(curl -fsSL "$url")"; then
+    tag="$(
+      printf '%s\n' "$html" \
+      | grep -oE '/XTLS/Xray-core/releases/tag/[v0-9][^"]*' \
+      | head -n1 \
+      | sed 's#.*/tag/##'
+    )"
+
+    if [ -n "$tag" ]; then
+      printf '%s\n' "$tag"
+      return 0
+    fi
+  fi
+  
   local final
   final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
            https://github.com/XTLS/Xray-core/releases/latest)" || return 1
   printf '%s\n' "${final##*/}"
 }
 
-echo "[*] Query latest Xray release (no-API)..."
+echo "[*] Query latest Xray release (including pre-release, no-API)..."
 tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
+
 case "$(uname -m)" in
   x86_64|amd64)  MACHINE="64" ;;
   aarch64|arm64) MACHINE="arm64-v8a" ;;
