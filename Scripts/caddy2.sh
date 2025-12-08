@@ -43,6 +43,11 @@ if ! id -u "${CADDY_USER}" >/dev/null 2>&1; then
     "${CADDY_USER}"
 fi
 
+# 为 caddy 创建 home 和 autosave 目录（修复 /home/caddy 权限报错）
+HOME_DIR="/home/${CADDY_USER}"
+mkdir -p "${HOME_DIR}/.config/caddy"
+chown -R "${CADDY_USER}:${CADDY_GROUP}" "${HOME_DIR}"
+
 mkdir -p /etc/caddy
 chown -R "${CADDY_USER}:${CADDY_GROUP}" /etc/caddy
 
