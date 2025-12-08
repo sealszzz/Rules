@@ -52,9 +52,7 @@ xcaddy build \
   --output "${CADDY_BIN}"
 
 chmod +x "${CADDY_BIN}"
-
-# 可选：清理一下构建缓存（你也可以保留，加速以后升级）
-# rm -rf "$BUILD_TMP_ROOT" "$BUILD_CACHE_ROOT"
+echo "[*] 已更新二进制: ${CADDY_BIN}"
 
 # ===== 创建用户和目录 =====
 echo "[*] 创建 caddy 用户/组与配置目录..."
@@ -69,10 +67,13 @@ fi
 mkdir -p /etc/caddy
 chown -R "${CADDY_USER}:${CADDY_GROUP}" /etc/caddy
 
-# ===== 写入 caddy.json（UDP 443 SNI → TUIC / Juicity） =====
-echo "[*] 写入 ${CADDY_CONF}..."
+# ===== 写入 caddy.json（仅在不存在时创建） =====
+if [ -e "${CADDY_CONF}" ]; then
+  echo "[*] 检测到已有配置 ${CADDY_CONF}，跳过覆盖（保留你现有的配置）。"
+else
+  echo "[*] 写入默认配置到 ${CADDY_CONF}..."
 
-cat > "${CADDY_CONF}" <<EOF
+  cat > "${CADDY_CONF}" <<EOF
 {
   "apps": {
     "layer4": {
@@ -138,13 +139,17 @@ cat > "${CADDY_CONF}" <<EOF
 }
 EOF
 
-chown "${CADDY_USER}:${CADDY_GROUP}" "${CADDY_CONF}"
-chmod 640 "${CADDY_CONF}"
+  chown "${CADDY_USER}:${CADDY_GROUP}" "${CADDY_CONF}"
+  chmod 640 "${CADDY_CONF}"
+fi
 
-# ===== systemd 服务 =====
-echo "[*] 写入 ${CADDY_SERVICE}..."
+# ===== systemd 服务（仅在不存在时创建） =====
+if [ -e "${CADDY_SERVICE}" ]; then
+  echo "[*] 检测到已有 systemd 服务 ${CADDY_SERVICE}，跳过覆盖。"
+else
+  echo "[*] 写入 ${CADDY_SERVICE}..."
 
-cat > "${CADDY_SERVICE}" <<EOF
+  cat > "${CADDY_SERVICE}" <<EOF
 [Unit]
 Description=Caddy layer4 UDP 443 SNI proxy (TUIC + Juicity)
 After=network.target
@@ -165,15 +170,19 @@ LimitNOFILE=1048576
 [Install]
 WantedBy=multi-user.target
 EOF
+fi
 
-# ===== 启动服务 =====
-echo "[*] 重新加载 systemd & 启动 caddy-l4..."
+# ===== 启动 / 重启服务 =====
+echo "[*] 重新加载 systemd & 启动/重启 caddy-l4..."
 systemctl daemon-reload
 systemctl enable --now caddy-l4
+systemctl restart caddy-l4 || true
 
 echo
 echo "[+] 完成！现在 UDP/443 由 Caddy 接管，并按 SNI 分流："
 echo "    ${TUIC_SNI}     →  udp/127.0.0.1:${TUIC_PORT} (TUIC)"
 echo "    ${JUICITY_SNI}  →  udp/127.0.0.1:${JUICITY_PORT} (Juicity)"
 echo
-echo "注意：请确保 tuic / juicity 监听的都是上面的本地端口，不再直接占用 UDP 443。"
+echo "注意："
+echo "  - 首次运行会生成默认配置和服务文件；"
+echo "  - 以后再次运行只会更新 ${CADDY_BIN}，不会覆盖你已经手改过的配置和 unit。"
