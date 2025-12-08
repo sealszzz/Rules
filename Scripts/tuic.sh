@@ -11,7 +11,7 @@ TUIC_GROUP="tuic"
 
 TUIC_STATE_DIR="/var/lib/tuic"
 TUIC_CONF_DIR="/etc/tuic"
-TUIC_CONF_FILE="${TUIC_CONF_DIR}/config.json"
+TUIC_CONF_FILE="${TUIC_CONF_DIR}/config.toml"
 
 TUIC_BIN="/usr/local/bin/tuic-server"
 TUIC_SERVICE_NAME="tuic-server"
@@ -66,26 +66,46 @@ if [ ! -f "$TUIC_CONF_FILE" ]; then
   TUIC_PASS="${TUIC_PASS:-$(openssl rand -hex 16)}"
 
   cat >"$TUIC_CONF_FILE" <<EOF
-{
-  "server": "[::]:${TUIC_PORT}",
-  "users": {
-    "${TUIC_UUID}":
-    "${TUIC_PASS}"
-  },
-  "certificate": "${CERT}",
-  "private_key": "${KEY}",
-  "congestion_control": "bbr",
-  "alpn": ["h3"],
-  "udp_relay_ipv6": true,
-  "dual_stack": true,
-  "zero_rtt_handshake": false,
-  "auth_timeout": "3s",
-  "task_negotiation_timeout": "3s",
-  "max_external_packet_size": 1500,
-  "stream_timeout": "60s",
-  "log_level": "warn"
-}
+log_level = "warn"
+server = "[::]:${TUIC_PORT}"
+data_dir = ""
+udp_relay_ipv6 = false
+zero_rtt_handshake = false
+dual_stack = false
+auth_timeout = "3s"
+task_negotiation_timeout = "3s"
+gc_interval = "10s"
+gc_lifetime = "30s"
+max_external_packet_size = 1500
+stream_timeout = "60s"
+
+[users]
+"${TUIC_UUID}" = "${TUIC_PASS}"
+
+[tls]
+self_sign = false
+certificate = "${CERT}"
+private_key = "${KEY}"
+alpn = ["h3"]
+
+[quic]
+initial_mtu = 1400
+min_mtu = 1300
+gso = true
+pmtu = true
+send_window = 16777216
+receive_window = 8388608
+max_idle_time = "30s"
+
+[quic.congestion_control]
+controller = "bbr"
+initial_window = 1048576
+
+[experimental]
+drop_loopback = true
+drop_private = true
 EOF
+
   chown root:"$TUIC_GROUP" "$TUIC_CONF_FILE"
   chmod 640 "$TUIC_CONF_FILE"
   echo "TUIC UUID: ${TUIC_UUID}"
