@@ -68,16 +68,9 @@ if [ ! -f "$TUIC_CONF_FILE" ]; then
   cat >"$TUIC_CONF_FILE" <<EOF
 log_level = "warn"
 server = "[::]:${TUIC_PORT}"
-data_dir = ""
-udp_relay_ipv6 = false
+udp_relay_ipv6 = true
 zero_rtt_handshake = false
 dual_stack = false
-auth_timeout = "3s"
-task_negotiation_timeout = "3s"
-gc_interval = "10s"
-gc_lifetime = "30s"
-max_external_packet_size = 1500
-stream_timeout = "60s"
 
 [users]
 "${TUIC_UUID}" = "${TUIC_PASS}"
@@ -89,21 +82,15 @@ private_key = "${KEY}"
 alpn = ["h3"]
 
 [quic]
-initial_mtu = 1400
-min_mtu = 1300
-gso = true
-pmtu = true
-send_window = 16777216
-receive_window = 8388608
-max_idle_time = "30s"
-
-[quic.congestion_control]
 controller = "bbr"
-initial_window = 1048576
 
 [experimental]
 drop_loopback = true
 drop_private = true
+
+[outbound]
+type = "direct"
+ip_mode = "v4first"
 EOF
 
   chown root:"$TUIC_GROUP" "$TUIC_CONF_FILE"
