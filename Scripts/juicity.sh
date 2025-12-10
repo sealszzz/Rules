@@ -7,7 +7,7 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 : "${J_CONG:=bbr}"            # bbr/cubic/new_reno
-: "${J_LOG:=info}"            # trace/debug/info/warn/error
+: "${J_LOG:=warn}"            # trace/debug/info/warn/error
 : "${J_DISABLE_UDP443:=true}" # true/false
 
 J_USER="juicity"
