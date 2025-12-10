@@ -81,7 +81,7 @@ certificate = "${CERT}"
 private_key = "${KEY}"
 alpn = ["h3"]
 
-[quic]
+[quic.congestion_control]
 controller = "bbr"
 
 [experimental]
