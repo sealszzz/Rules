@@ -27,14 +27,24 @@ NEED_BUILD=0
 NEED_RESTART=0
 
 # ===== 交互：要不要重新编译 bin？ =====
-if [ -x "${CADDY_BIN}" ]; then
-  echo "[*] 检测到已存在的二进制: ${CADDY_BIN}"
-  read -rp "是否重新编译 caddy-l4？ [y/N]: " ANSWER
-  ANSWER=${ANSWER:-N}
-  if [[ "${ANSWER}" =~ ^[Yy]$ ]]; then
-    NEED_BUILD=1
+if [ -f "${CADDY_BIN}" ]; then
+  echo "[*] 检测到已有文件: ${CADDY_BIN}"
+  # 自动尝试赋予执行权限
+  chmod +x "${CADDY_BIN}" 2>/dev/null || true
+
+  if [ -x "${CADDY_BIN}" ]; then
+    echo "[*] 已确认 ${CADDY_BIN} 可执行。"
+    read -rp "是否重新编译 caddy-l4？ [y/N]: " ANSWER
+    ANSWER=${ANSWER:-N}
+    if [[ "${ANSWER}" =~ ^[Yy]$ ]]; then
+      NEED_BUILD=1
+    else
+      echo "[*] 选择不重新编译，使用现有二进制。"
+    fi
   else
-    echo "[*] 选择不重新编译，使用现有二进制。"
+    echo "FATAL: ${CADDY_BIN} 存在但不可执行，且无法自动赋权。"
+    echo "       请手动执行: chmod +x ${CADDY_BIN}"
+    exit 1
   fi
 else
   echo "[!] 未找到 ${CADDY_BIN}，如果不编译，就必须先手动上传该文件。"
@@ -87,7 +97,7 @@ else
     echo "FATAL: 期望使用已有 ${CADDY_BIN}，但文件不存在。"
     exit 1
   fi
-  chmod +x "${CADDY_BIN}"
+  chmod +x "${CADDY_BIN}" 2>/dev/null || true
   echo "[*] 使用已有二进制: ${CADDY_BIN}"
 fi
 
@@ -194,7 +204,6 @@ if [ "${NEED_RESTART}" -eq 1 ]; then
   echo "[*] 本次编译了新二进制 → 重启 caddy-l4..."
   systemctl restart caddy-l4
 else
-  # 没编译新 bin：仅在未运行时启动
   if systemctl is-active --quiet caddy-l4; then
     echo "[*] caddy-l4 已在运行，保持现状，不做重启。"
   else
