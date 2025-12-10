@@ -88,7 +88,7 @@ controller = "bbr"
 drop_loopback = true
 drop_private = true
 
-[outbound]
+[outbound.default]
 type = "direct"
 ip_mode = "v4first"
 EOF
