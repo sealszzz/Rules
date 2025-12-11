@@ -1,11 +1,16 @@
 #!/usr/bin/env bash
-# caddy-l4 UDP 443 SNI → TUIC / Juicity
+# caddy-l4 TCP+UDP 443 SNI STREAM:
+
 set -euo pipefail
 
-: "${TUIC_PORT:=4443}"
-: "${JUICITY_PORT:=5443}"
+: "${ANYTLS_PORT:=8001}"
+: "${VLESS_PORT:=8002}"
+: "${ANYTLS_SNI:=anytls.example.com}"
+
+: "${TUIC_PORT:=9001}"
+: "${JUICITY_PORT:=9002}"
 : "${TUIC_SNI:=tuic.example.com}"
-: "${JUICITY_SNI:=jc.example.com}"
+: "${JUICITY_SNI:=juicity.example.com}"
 
 : "${CADDY_USER:=caddy}"
 : "${CADDY_GROUP:=caddy}"
@@ -77,7 +82,7 @@ if ! id -u "${CADDY_USER}" >/dev/null 2>&1; then
 fi
 
 HOME_DIR="/home/${CADDY_USER}"
-mkdir -p "${HOME_DIR}/.config/caddy}"
+mkdir -p "${HOME_DIR}/.config/caddy"
 chown -R "${CADDY_USER}:${CADDY_GROUP}" "${HOME_DIR}"
 
 mkdir -p /etc/caddy
@@ -89,11 +94,44 @@ if [ ! -e "${CADDY_CONF}" ]; then
   "apps": {
     "layer4": {
       "servers": {
-        "udpsni": {
+        "tcp443": {
+          "listen": [":443"],
+          "routes": [
+            {
+              "match": [
+                { "tls": { "sni": ["${ANYTLS_SNI}"] } }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["127.0.0.1:${ANYTLS_PORT}"] }
+                  ]
+                }
+              ]
+            },
+            {
+              "match": [
+                { "tls": {} }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["127.0.0.1:${VLESS_PORT}"] }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        "udp443": {
           "listen": ["udp/:443"],
           "routes": [
             {
-              "match": [{ "quic": { "sni": ["${TUIC_SNI}"] }}],
+              "match": [
+                { "quic": { "sni": ["${TUIC_SNI}"] } }
+              ],
               "handle": [
                 {
                   "handler": "proxy",
@@ -104,7 +142,9 @@ if [ ! -e "${CADDY_CONF}" ]; then
               ]
             },
             {
-              "match": [{ "quic": { "sni": ["${JUICITY_SNI}"] }}],
+              "match": [
+                { "quic": { "sni": ["${JUICITY_SNI}"] } }
+              ],
               "handle": [
                 {
                   "handler": "proxy",
@@ -115,8 +155,12 @@ if [ ! -e "${CADDY_CONF}" ]; then
               ]
             },
             {
-              "match": [{ "quic": {} }],
-              "handle": [{ "handler": "echo" }]
+              "match": [
+                { "quic": {} }
+              ],
+              "handle": [
+                { "handler": "echo" }
+              ]
             }
           ]
         }
@@ -132,7 +176,7 @@ fi
 if [ ! -e "${CADDY_SERVICE}" ]; then
   cat > "${CADDY_SERVICE}" <<EOF
 [Unit]
-Description=Caddy layer4 UDP 443 SNI proxy (TUIC + Juicity)
+Description=Caddy layer4 TCP+UDP 443 SNI proxy (AnyTLS + VLESS + TUIC + Juicity)
 After=network.target
 
 [Service]
@@ -161,3 +205,12 @@ else
 fi
 
 echo "caddy-l4 updated to version: ${TAG}"
+echo
+echo "TCP 443 SNI 分流:"
+echo "  ${ANYTLS_SNI}      → 127.0.0.1:${ANYTLS_PORT}   (AnyTLS via sing-box)"
+echo "  其他所有 TLS SNI   → 127.0.0.1:${VLESS_PORT}    (Xray VLESS+REALITY)"
+echo
+echo "UDP 443 QUIC SNI 分流:"
+echo "  ${TUIC_SNI}        → udp/127.0.0.1:${TUIC_PORT} (TUIC)"
+echo "  ${JUICITY_SNI}     → udp/127.0.0.1:${JUICITY_PORT} (Juicity)"
+echo "  其他 QUIC          → echo (如需转发到 udp/127.0.0.1:9999 可手动改配置)"
