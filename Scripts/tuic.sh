@@ -122,7 +122,6 @@ NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=on-failure
 RestartSec=3s
-Environment=RUST_LOG=warn
 
 [Install]
 WantedBy=multi-user.target
