@@ -59,9 +59,8 @@ if [ ! -f /etc/shoes/config.yaml ]; then
     uuid: "${T_UUID}"
     password: "${T_PASS}"
     zero_rtt_handshake: false
-
-rules:
-  - allow-all-direct
+  rules:
+    - allow-all-direct
 EOF
 
   chown root:shoes /etc/shoes/config.yaml
