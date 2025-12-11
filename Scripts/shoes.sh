@@ -54,6 +54,8 @@ if [ ! -f /etc/shoes/config.yaml ]; then
   quic_settings:
     cert: "${CERT}"
     key:  "${KEY}"
+    alpn_protocols: ["h3"]
+    congestion_control: bbr
   protocol:
     type: tuic
     uuid: "${T_UUID}"
