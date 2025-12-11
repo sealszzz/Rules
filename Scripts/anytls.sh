@@ -28,19 +28,18 @@ id -u "$ANYTLS_USER" >/dev/null 2>&1 || \
 
 install -d -o "$ANYTLS_USER" -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_STATE_DIR"
 
-# ===== Resolve latest tag via redirect (no API / no jq) =====
-get_latest_tag() {
-  local final
-  final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-           "https://github.com/${ANYTLS_REPO}/releases/latest")" || return 1
-  printf '%s\n' "${final##*/}"
-}
-
+# ===== Resolve tag via /releases/latest 302 (no API) =====
 if [ -n "${ANYTLS_TAG}" ]; then
-  tag="$ANYTLS_TAG"
+  tag="${ANYTLS_TAG}"
+  echo "[*] Use explicit tag: ${tag}"
 else
-  echo "[*] Query latest AnyTLS release (no-API)..."
-  tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
+  echo "[*] Query latest AnyTLS release via redirect (no API)..."
+  final_url="$(
+    curl -fsSIL -o /dev/null -w '%{url_effective}' \
+      "https://github.com/${ANYTLS_REPO}/releases/latest"
+  )" || { echo "Failed to resolve latest tag via redirect"; exit 1; }
+  tag="${final_url##*/}"
+  echo "[*] Resolved latest tag: ${tag}"
 fi
 
 case "$tag" in
