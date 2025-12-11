@@ -71,6 +71,8 @@ server = "[::]:${TUIC_PORT}"
 udp_relay_ipv6 = true
 zero_rtt_handshake = false
 dual_stack = false
+auth_timeout = "8s"
+max_idle_time = "8s"
 
 [users]
 "${TUIC_UUID}" = "${TUIC_PASS}"
@@ -118,8 +120,8 @@ CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
-Restart=always
-RestartSec=2
+Restart=on-failure
+RestartSec=3s
 Environment=RUST_LOG=warn
 
 [Install]
