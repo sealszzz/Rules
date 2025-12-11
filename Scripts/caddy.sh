@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# caddy-l4 UDP 443 SNI → TUIC / Juicity 分流
+# caddy-l4 UDP 443 SNI → TUIC / Juicity 分流（从 GitHub Releases 下载二进制）
 set -euo pipefail
 
 # ===== 可调参数 =====
@@ -14,94 +14,75 @@ set -euo pipefail
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
 : "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
 
+# 你的 GitHub 仓库（可以改成别的）
+: "${CADDY_REPO:=sealszzz/Caddy}"
+
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[*] 安装基础依赖（非编译环境也安全）..."
+echo "[*] 安装基础依赖..."
 apt update
 apt install -y --no-install-recommends \
-  debian-keyring debian-archive-keyring apt-transport-https \
-  curl ca-certificates gpg
+  curl ca-certificates tar
 
-# 标记：本次是否编译了新 bin
-NEED_BUILD=0
-NEED_RESTART=0
+# ===== 检测架构，映射到 amd64 / arm64 =====
+detect_arch() {
+  local a
+  a=$(dpkg --print-architecture 2>/dev/null || echo "")
+  case "$a" in
+    amd64) echo "amd64" ;;
+    arm64|aarch64) echo "arm64" ;;
+    *)
+      # 兜底用 uname
+      a=$(uname -m)
+      case "$a" in
+        x86_64) echo "amd64" ;;
+        aarch64|arm64) echo "arm64" ;;
+        *)
+          echo "FATAL: 不支持的架构: $a" >&2
+          exit 1
+          ;;
+      esac
+      ;;
+  esac
+}
 
-# ===== 交互：要不要重新编译 bin？ =====
-if [ -f "${CADDY_BIN}" ]; then
-  echo "[*] 检测到已有文件: ${CADDY_BIN}"
-  # 自动尝试赋予执行权限
-  chmod +x "${CADDY_BIN}" 2>/dev/null || true
+ARCH="$(detect_arch)"
+echo "[*] 检测到架构: ${ARCH}"
 
-  if [ -x "${CADDY_BIN}" ]; then
-    echo "[*] 已确认 ${CADDY_BIN} 可执行。"
-    read -rp "是否重新编译 caddy-l4？ [y/N]: " ANSWER
-    ANSWER=${ANSWER:-N}
-    if [[ "${ANSWER}" =~ ^[Yy]$ ]]; then
-      NEED_BUILD=1
-    else
-      echo "[*] 选择不重新编译，使用现有二进制。"
-    fi
-  else
-    echo "FATAL: ${CADDY_BIN} 存在但不可执行，且无法自动赋权。"
-    echo "       请手动执行: chmod +x ${CADDY_BIN}"
-    exit 1
-  fi
-else
-  echo "[!] 未找到 ${CADDY_BIN}，如果不编译，就必须先手动上传该文件。"
-  read -rp "是否现在编译 caddy-l4？ [y/N]: " ANSWER
-  ANSWER=${ANSWER:-N}
-  if [[ "${ANSWER}" =~ ^[Yy]$ ]]; then
-    NEED_BUILD=1
-  else
-    echo "FATAL: 没有 ${CADDY_BIN}，且你选择不编译，本机目前没有可用的 caddy-l4。"
-    exit 1
-  fi
+# ===== 解析你仓库的最新 tag =====
+echo "[*] 获取 ${CADDY_REPO} 最新 Release tag..."
+LATEST_URL=$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+  "https://github.com/${CADDY_REPO}/releases/latest")
+TAG="${LATEST_URL##*/}"   # 例如 v2.9.1
+echo "[*] 最新 tag: ${TAG}"
+
+ASSET_NAME="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
+ASSET_URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET_NAME}"
+
+TMP_DIR=$(mktemp -d /tmp/caddy-l4.XXXXXX)
+trap 'rm -rf "${TMP_DIR}"' EXIT
+
+echo "[*] 下载二进制压缩包: ${ASSET_URL}"
+if ! curl -fL -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"; then
+  echo "FATAL: 下载失败: ${ASSET_URL}"
+  exit 1
 fi
 
-# ===== 如果需要编译，走一遍 xcaddy build 流程 =====
-if [ "${NEED_BUILD}" -eq 1 ]; then
-  echo "[*] 安装编译环境 golang-go..."
-  apt install -y --no-install-recommends golang-go
+echo "[*] 解压..."
+tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
 
-  if ! command -v xcaddy >/dev/null 2>&1; then
-    echo "[*] 安装 xcaddy..."
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/xcaddy/gpg.key' \
-      | gpg --dearmor >/usr/share/keyrings/caddy-xcaddy-archive-keyring.gpg
-
-    curl -1sLf 'https://dl.cloudsmith.io/public/caddy/xcaddy/debian.deb.txt' \
-      > /etc/apt/sources.list.d/caddy-xcaddy.list
-
-    apt update
-    apt install -y xcaddy
-  fi
-
-  BUILD_TMP_ROOT="/var/tmp/go-build"
-  BUILD_CACHE_ROOT="/var/tmp/go-cache"
-  mkdir -p "$BUILD_TMP_ROOT" "$BUILD_CACHE_ROOT"
-  chmod 700 "$BUILD_TMP_ROOT" "$BUILD_CACHE_ROOT"
-  export TMPDIR="$BUILD_TMP_ROOT"
-  export GOCACHE="$BUILD_CACHE_ROOT"
-
-  echo "[*] 使用 xcaddy 编译带 layer4 的 Caddy..."
-  xcaddy build \
-    --with github.com/mholt/caddy-l4 \
-    --output "${CADDY_BIN}"
-
-  chmod +x "${CADDY_BIN}"
-  echo "[+] 编译完成: ${CADDY_BIN}"
-
-  NEED_RESTART=1
-else
-  # 不编译，但要求 bin 必须存在
-  if [ ! -f "${CADDY_BIN}" ]; then
-    echo "FATAL: 期望使用已有 ${CADDY_BIN}，但文件不存在。"
-    exit 1
-  fi
-  chmod +x "${CADDY_BIN}" 2>/dev/null || true
-  echo "[*] 使用已有二进制: ${CADDY_BIN}"
+BIN_SRC="${TMP_DIR}/caddy-l4-linux-${ARCH}"
+if [ ! -f "${BIN_SRC}" ]; then
+  echo "FATAL: 压缩包内未找到二进制: ${BIN_SRC}"
+  exit 1
 fi
 
-# ===== 创建用户和目录 =====
+echo "[*] 安装二进制到 ${CADDY_BIN}..."
+install -m 0755 "${BIN_SRC}" "${CADDY_BIN}"
+
+NEED_RESTART=1
+
+# ===== 创建用户和目录（只做一次） =====
 echo "[*] 创建 caddy 用户/组与配置目录..."
 getent group "${CADDY_GROUP}" >/dev/null || groupadd --system "${CADDY_GROUP}"
 
@@ -200,23 +181,20 @@ echo "[*] 重新加载 systemd..."
 systemctl daemon-reload
 systemctl enable caddy-l4 >/dev/null 2>&1 || true
 
-if [ "${NEED_RESTART}" -eq 1 ]; then
-  echo "[*] 本次编译了新二进制 → 重启 caddy-l4..."
+if systemctl is-active --quiet caddy-l4; then
+  echo "[*] caddy-l4 已在运行，重启以加载新二进制..."
   systemctl restart caddy-l4
 else
-  if systemctl is-active --quiet caddy-l4; then
-    echo "[*] caddy-l4 已在运行，保持现状，不做重启。"
-  else
-    echo "[*] caddy-l4 未运行，尝试启动..."
-    systemctl start caddy-l4
-  fi
+  echo "[*] caddy-l4 未运行，尝试启动..."
+  systemctl start caddy-l4
 fi
 
 echo
-echo "[+] 完成！UDP/443 已由 Caddy 接管，并按 SNI 分流："
+echo "[+] 完成！"
+echo "    - 使用的仓库: ${CADDY_REPO}"
+echo "    - 使用的版本: ${TAG}"
+echo "    - 二进制:      ${CADDY_BIN}"
+echo
+echo "UDP/443 分流："
 echo "    ${TUIC_SNI}    → udp/127.0.0.1:${TUIC_PORT} (TUIC)"
 echo "    ${JUICITY_SNI} → udp/127.0.0.1:${JUICITY_PORT} (Juicity)"
-echo
-echo "使用提示："
-echo "  - 首次用“编译机”跑时，可以直接选 Y，让它编译出 ${CADDY_BIN}"
-echo "  - 在其他 VPS 上，只要先上传同名 bin，运行脚本时选 N 即可完成部署"
