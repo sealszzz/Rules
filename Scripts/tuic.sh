@@ -118,8 +118,8 @@ CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
-Restart=on-failure
-RestartSec=3s
+Restart=always
+RestartSec=2
 Environment=RUST_LOG=warn
 
 [Install]
