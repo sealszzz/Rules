@@ -29,7 +29,21 @@ install_shoes_release() {
     *) echo "unsupported arch: $(uname -m)"; exit 1 ;;
   esac
 
-  local BASE="https://github.com/cfal/shoes/releases/latest/download"
+  local REL_PAGE="https://github.com/cfal/shoes/releases"
+  local latest_tag
+  latest_tag="$(
+    curl -fsSL "$REL_PAGE" \
+      | grep -Eo '/cfal/shoes/releases/tag/[^"]+' \
+      | head -n1 \
+      | sed 's#.*/tag/##'
+  )" || true
+
+  if [ -z "$latest_tag" ]; then
+    echo "无法从 ${REL_PAGE} 解析最新 tag"
+    exit 1
+  fi
+
+  local BASE="https://github.com/cfal/shoes/releases/download/${latest_tag}"
   local tmpd; tmpd="$(mktemp -d)"
   trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
 
