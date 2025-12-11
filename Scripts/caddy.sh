@@ -1,8 +1,7 @@
 #!/usr/bin/env bash
-# caddy-l4 UDP 443 SNI → TUIC / Juicity 分流（从 GitHub Releases 下载二进制）
+# caddy-l4 UDP 443 SNI → TUIC / Juicity 分流（从 GitHub Releases 安静安装/更新）
 set -euo pipefail
 
-# ===== 可调参数 =====
 : "${TUIC_PORT:=4443}"
 : "${JUICITY_PORT:=5443}"
 : "${TUIC_SNI:=tuic.example.com}"
@@ -14,17 +13,13 @@ set -euo pipefail
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
 : "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
 
-# 你的 GitHub 仓库（可以改成别的）
 : "${CADDY_REPO:=sealszzz/Caddy}"
 
 export DEBIAN_FRONTEND=noninteractive
 
-echo "[*] 安装基础依赖..."
-apt update
-apt install -y --no-install-recommends \
-  curl ca-certificates tar
+apt update -y >/dev/null
+apt install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
-# ===== 检测架构，映射到 amd64 / arm64 =====
 detect_arch() {
   local a
   a=$(dpkg --print-architecture 2>/dev/null || echo "")
@@ -32,13 +27,12 @@ detect_arch() {
     amd64) echo "amd64" ;;
     arm64|aarch64) echo "arm64" ;;
     *)
-      # 兜底用 uname
       a=$(uname -m)
       case "$a" in
         x86_64) echo "amd64" ;;
         aarch64|arm64) echo "arm64" ;;
         *)
-          echo "FATAL: 不支持的架构: $a" >&2
+          echo "FATAL: unsupported arch: $a" >&2
           exit 1
           ;;
       esac
@@ -47,14 +41,10 @@ detect_arch() {
 }
 
 ARCH="$(detect_arch)"
-echo "[*] 检测到架构: ${ARCH}"
 
-# ===== 解析你仓库的最新 tag =====
-echo "[*] 获取 ${CADDY_REPO} 最新 Release tag..."
 LATEST_URL=$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
   "https://github.com/${CADDY_REPO}/releases/latest")
-TAG="${LATEST_URL##*/}"   # 例如 v2.9.1
-echo "[*] 最新 tag: ${TAG}"
+TAG="${LATEST_URL##*/}"
 
 ASSET_NAME="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
 ASSET_URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET_NAME}"
@@ -62,28 +52,21 @@ ASSET_URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET_NAM
 TMP_DIR=$(mktemp -d /tmp/caddy-l4.XXXXXX)
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
-echo "[*] 下载二进制压缩包: ${ASSET_URL}"
 if ! curl -fL -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"; then
-  echo "FATAL: 下载失败: ${ASSET_URL}"
+  echo "FATAL: download failed: ${ASSET_URL}" >&2
   exit 1
 fi
 
-echo "[*] 解压..."
 tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
 
 BIN_SRC="${TMP_DIR}/caddy-l4-linux-${ARCH}"
 if [ ! -f "${BIN_SRC}" ]; then
-  echo "FATAL: 压缩包内未找到二进制: ${BIN_SRC}"
+  echo "FATAL: binary not found in tar: ${BIN_SRC}" >&2
   exit 1
 fi
 
-echo "[*] 安装二进制到 ${CADDY_BIN}..."
 install -m 0755 "${BIN_SRC}" "${CADDY_BIN}"
 
-NEED_RESTART=1
-
-# ===== 创建用户和目录（只做一次） =====
-echo "[*] 创建 caddy 用户/组与配置目录..."
 getent group "${CADDY_GROUP}" >/dev/null || groupadd --system "${CADDY_GROUP}"
 
 if ! id -u "${CADDY_USER}" >/dev/null 2>&1; then
@@ -100,11 +83,7 @@ chown -R "${CADDY_USER}:${CADDY_GROUP}" "${HOME_DIR}"
 mkdir -p /etc/caddy
 chown -R "${CADDY_USER}:${CADDY_GROUP}" /etc/caddy
 
-# ===== 写配置（仅第一次创建） =====
-if [ -e "${CADDY_CONF}" ]; then
-  echo "[*] 检测到已有配置 ${CADDY_CONF}，跳过覆盖。"
-else
-  echo "[*] 写入默认配置到 ${CADDY_CONF}..."
+if [ ! -e "${CADDY_CONF}" ]; then
   cat > "${CADDY_CONF}" <<EOF
 {
   "apps": {
@@ -150,11 +129,7 @@ EOF
   chmod 640 "${CADDY_CONF}"
 fi
 
-# ===== 写 systemd 单元（仅第一次创建） =====
-if [ -e "${CADDY_SERVICE}" ]; then
-  echo "[*] 检测到已有 systemd 单元 ${CADDY_SERVICE}，跳过覆盖。"
-else
-  echo "[*] 写入 ${CADDY_SERVICE}..."
+if [ ! -e "${CADDY_SERVICE}" ]; then
   cat > "${CADDY_SERVICE}" <<EOF
 [Unit]
 Description=Caddy layer4 UDP 443 SNI proxy (TUIC + Juicity)
@@ -176,25 +151,13 @@ WantedBy=multi-user.target
 EOF
 fi
 
-# ===== 启动 / 重启逻辑 =====
-echo "[*] 重新加载 systemd..."
 systemctl daemon-reload
 systemctl enable caddy-l4 >/dev/null 2>&1 || true
 
 if systemctl is-active --quiet caddy-l4; then
-  echo "[*] caddy-l4 已在运行，重启以加载新二进制..."
   systemctl restart caddy-l4
 else
-  echo "[*] caddy-l4 未运行，尝试启动..."
   systemctl start caddy-l4
 fi
 
-echo
-echo "[+] 完成！"
-echo "    - 使用的仓库: ${CADDY_REPO}"
-echo "    - 使用的版本: ${TAG}"
-echo "    - 二进制:      ${CADDY_BIN}"
-echo
-echo "UDP/443 分流："
-echo "    ${TUIC_SNI}    → udp/127.0.0.1:${TUIC_PORT} (TUIC)"
-echo "    ${JUICITY_SNI} → udp/127.0.0.1:${JUICITY_PORT} (Juicity)"
+echo "caddy-l4 updated to version: ${TAG}"
