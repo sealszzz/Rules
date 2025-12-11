@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# caddy-l4 UDP 443 SNI → TUIC / Juicity 分流（从 GitHub Releases 安静安装/更新）
+# caddy-l4 UDP 443 SNI → TUIC / Juicity
 set -euo pipefail
 
 : "${TUIC_PORT:=4443}"
@@ -17,8 +17,8 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt update -y >/dev/null
-apt install -y --no-install-recommends curl ca-certificates tar >/dev/null
+apt-get update -y >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
 detect_arch() {
   local a
@@ -77,7 +77,7 @@ if ! id -u "${CADDY_USER}" >/dev/null 2>&1; then
 fi
 
 HOME_DIR="/home/${CADDY_USER}"
-mkdir -p "${HOME_DIR}/.config/caddy"
+mkdir -p "${HOME_DIR}/.config/caddy}"
 chown -R "${CADDY_USER}:${CADDY_GROUP}" "${HOME_DIR}"
 
 mkdir -p /etc/caddy
