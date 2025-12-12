@@ -198,12 +198,12 @@ Type=simple
 UMask=0077
 WorkingDirectory=${XRAY_STATE_DIR}
 ExecStart=${XRAY_BIN} run -c ${XRAY_CONF_FILE}
-Restart=on-failure
-RestartSec=3s
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
+Restart=on-failure
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
