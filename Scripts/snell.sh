@@ -2,7 +2,7 @@
 # snell-min: latest snell-server, first-run config, later runs only update binary
 set -euo pipefail
 
-: "${SN_PORT:=8448}"
+: "${SN_PORT:=8443}"
 : "${SN_PSK:=}"
 : "${SN_USER:=snell}"
 : "${SN_GROUP:=${SN_USER}}"
