@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # caddy-l4 TCP+UDP 443 SNI STREAM:
-
 set -euo pipefail
 
 : "${ANYTLS_PORT:=8001}"
@@ -105,7 +104,7 @@ if [ ! -e "${CADDY_CONF}" ]; then
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["127.0.0.1:${ANYTLS_PORT}"] }
+                    { "dial": ["tcp/127.0.0.1:${ANYTLS_PORT}"] }
                   ]
                 }
               ]
@@ -118,7 +117,7 @@ if [ ! -e "${CADDY_CONF}" ]; then
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["127.0.0.1:${VLESS_PORT}"] }
+                    { "dial": ["tcp/127.0.0.1:${VLESS_PORT}"] }
                   ]
                 }
               ]
@@ -183,12 +182,12 @@ After=network.target
 User=${CADDY_USER}
 Group=${CADDY_GROUP}
 ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
-Restart=on-failure
-RestartSec=3s
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-LimitNOFILE=1048576
+LimitNOFILE=262144
+Restart=on-failure
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
@@ -207,8 +206,8 @@ fi
 echo "caddy-l4 updated to version: ${TAG}"
 echo
 echo "TCP 443 SNI 分流:"
-echo "  ${ANYTLS_SNI}      → 127.0.0.1:${ANYTLS_PORT}   (AnyTLS via sing-box)"
-echo "  其他所有 TLS SNI   → 127.0.0.1:${VLESS_PORT}    (Xray VLESS+REALITY)"
+echo "  ${ANYTLS_SNI}      → tcp/127.0.0.1:${ANYTLS_PORT}   (AnyTLS via sing-box)"
+echo "  其他所有 TLS SNI   → tcp/127.0.0.1:${VLESS_PORT}    (Xray VLESS+REALITY)"
 echo
 echo "UDP 443 QUIC SNI 分流:"
 echo "  ${TUIC_SNI}        → udp/127.0.0.1:${TUIC_PORT} (TUIC)"
