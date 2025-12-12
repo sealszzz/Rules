@@ -17,7 +17,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update -y >/dev/null
-apt-get install -y --no-install-recommends curl ca-certificates tar openssl >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar openssl coreutils >/dev/null
 
 detect_arch() {
   local a
@@ -54,8 +54,7 @@ TAG="v${VERSION}"
 ASSET_NAME="sing-box-${VERSION}-linux-${ARCH}.tar.gz"
 ASSET_URL="https://github.com/${SINGBOX_REPO}/releases/download/${TAG}/${ASSET_NAME}"
 
-TMP_DIR
-TMP_DIR=$(mktemp -d /tmp/sing-box.XXXXXX)
+TMP_DIR="$(mktemp -d /tmp/sing-box.XXXXXX)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
 echo "[*] downloading ${ASSET_URL}"
@@ -87,8 +86,7 @@ if ! id -u "${SINGBOX_USER}" >/dev/null 2>&1; then
     "${SINGBOX_USER}"
 fi
 
-mkdir -p /etc/sing-box
-mkdir -p /var/lib/sing-box
+mkdir -p /etc/sing-box /var/lib/sing-box
 chown -R "${SINGBOX_USER}:${SINGBOX_GROUP}" /etc/sing-box /var/lib/sing-box
 
 if [ -z "${ANYTLS_PASSWORD}" ]; then
@@ -107,9 +105,7 @@ if [ ! -e "${SINGBOX_CONF}" ]; then
       "listen": "::",
       "listen_port": ${ANYTLS_PORT},
       "users": [
-        {
-          "password": "${ANYTLS_PASSWORD}"
-        }
+        { "password": "${ANYTLS_PASSWORD}" }
       ],
       "tls": {
         "enabled": true,
@@ -119,9 +115,7 @@ if [ ! -e "${SINGBOX_CONF}" ]; then
     }
   ],
   "outbounds": [
-    {
-      "type": "direct"
-    }
+    { "type": "direct" }
   ]
 }
 EOF
@@ -144,16 +138,19 @@ User=${SINGBOX_USER}
 Group=${SINGBOX_GROUP}
 ExecStart=${SINGBOX_BIN} run -c ${SINGBOX_CONF}
 WorkingDirectory=/var/lib/sing-box
-Restart=on-failure
-RestartSec=3s
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-LimitNOFILE=1048576
+LimitNOFILE=262144
+Restart=on-failure
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
 EOF
+  echo "[*] created new service: ${SINGBOX_SERVICE}"
+else
+  echo "[*] existing service detected at ${SINGBOX_SERVICE}, not touching it."
 fi
 
 systemctl daemon-reload
@@ -167,7 +164,4 @@ fi
 
 echo
 echo "sing-box updated to version: ${TAG}"
-if "${SINGBOX_BIN}" version >/dev/null 2>&1; then
-  echo
-  "${SINGBOX_BIN}" version || true
-fi
+"${SINGBOX_BIN}" version || true
