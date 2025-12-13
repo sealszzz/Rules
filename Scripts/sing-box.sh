@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# sing-box anytls minimal installer: install/upgrade from GitHub Releases
+# sing-box anytls minimal installer: stable only (302 latest tag -> build asset name)
 set -euo pipefail
 
 : "${SINGBOX_USER:=sing-box}"
@@ -12,93 +12,85 @@ set -euo pipefail
 : "${ANYTLS_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${ANYTLS_PASSWORD:=}"
+: "${ANYTLS_PASSWORD:=}"     # empty -> generate only when creating config
+: "${SINGBOX_TAG:=}"         # optional override, like v1.12.0
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update -y >/dev/null
-apt-get install -y --no-install-recommends curl ca-certificates tar openssl coreutils >/dev/null
+apt-get update >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar openssl >/dev/null
 
 detect_arch() {
-  local a
-  a=$(dpkg --print-architecture 2>/dev/null || echo "")
-  case "$a" in
-    amd64) echo "amd64" ;;
+  case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
+    amd64|x86_64) echo "amd64" ;;
     arm64|aarch64) echo "arm64" ;;
     *)
-      a=$(uname -m)
-      case "$a" in
-        x86_64) echo "amd64" ;;
-        aarch64|arm64) echo "arm64" ;;
-        *)
-          echo "FATAL: unsupported arch: $a" >&2
-          exit 1
-          ;;
-      esac
+      echo "FATAL: unsupported arch: $(uname -m)" >&2
+      exit 1
       ;;
   esac
 }
 
+get_latest_tag_302() {
+  if [ -n "${SINGBOX_TAG}" ]; then
+    printf '%s\n' "${SINGBOX_TAG}"
+    return 0
+  fi
+  local final
+  final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+    "https://github.com/${SINGBOX_REPO}/releases/latest")" || return 1
+  printf '%s\n' "${final##*/}"
+}
+
 ARCH="$(detect_arch)"
+TAG="$(get_latest_tag_302)" || { echo "FATAL: cannot resolve latest stable tag via 302"; exit 1; }
 
-LATEST_URL=$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-  "https://github.com/${SINGBOX_REPO}/releases/latest")
-VERSION="$(echo "${LATEST_URL}" | grep -oE '/v[0-9][0-9.]*$' | sed 's#/v##')"
+case "$TAG" in
+  v*) VERSION="${TAG#v}" ;;
+  *)  VERSION="$TAG"; TAG="v$TAG" ;;
+esac
 
-if [ -z "${VERSION}" ]; then
-  echo "FATAL: cannot parse latest version from ${LATEST_URL}" >&2
-  exit 1
-fi
-
-TAG="v${VERSION}"
 ASSET_NAME="sing-box-${VERSION}-linux-${ARCH}.tar.gz"
 ASSET_URL="https://github.com/${SINGBOX_REPO}/releases/download/${TAG}/${ASSET_NAME}"
 
 TMP_DIR="$(mktemp -d /tmp/sing-box.XXXXXX)"
 trap 'rm -rf "${TMP_DIR}"' EXIT
 
-echo "[*] downloading ${ASSET_URL}"
-if ! curl -fL -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"; then
-  echo "FATAL: download failed: ${ASSET_URL}" >&2
-  exit 1
-fi
+echo "[*] Download: ${ASSET_URL}"
+curl -fL --retry 3 --retry-delay 1 -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"
 
-echo "[*] extracting..."
+echo "[*] Extract..."
 tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
 
 BIN_DIR="${TMP_DIR}/sing-box-${VERSION}-linux-${ARCH}"
 BIN_SRC="${BIN_DIR}/sing-box"
+[ -f "${BIN_SRC}" ] || { echo "FATAL: binary not found: ${BIN_SRC}"; exit 1; }
 
-if [ ! -f "${BIN_SRC}" ]; then
-  echo "FATAL: binary not found in tar: ${BIN_SRC}" >&2
-  exit 1
-fi
-
-echo "[*] installing binary to ${SINGBOX_BIN}"
+echo "[*] Install binary -> ${SINGBOX_BIN}"
 install -m 0755 "${BIN_SRC}" "${SINGBOX_BIN}"
 
+# user/group
 getent group "${SINGBOX_GROUP}" >/dev/null || groupadd --system "${SINGBOX_GROUP}"
-
 if ! id -u "${SINGBOX_USER}" >/dev/null 2>&1; then
-  useradd --system --no-create-home \
-    --gid "${SINGBOX_GROUP}" \
-    --shell /usr/sbin/nologin \
-    "${SINGBOX_USER}"
+  useradd --system --no-create-home --gid "${SINGBOX_GROUP}" --shell /usr/sbin/nologin "${SINGBOX_USER}"
 fi
 
-mkdir -p /etc/sing-box /var/lib/sing-box
-chown -R "${SINGBOX_USER}:${SINGBOX_GROUP}" /etc/sing-box /var/lib/sing-box
+# dirs (no home)
+install -d -o root -g "${SINGBOX_GROUP}" -m 750 /etc/sing-box
+install -d -o "${SINGBOX_USER}" -g "${SINGBOX_GROUP}" -m 750 /var/lib/sing-box
 
-if [ -z "${ANYTLS_PASSWORD}" ]; then
-  ANYTLS_PASSWORD="$(openssl rand -hex 16 || echo '0123456789abcdef0123456789abcdef')"
-fi
+# config create-if-missing
+if [ ! -f "${SINGBOX_CONF}" ]; then
+  [ -r "${CERT}" ] || { echo "FATAL: missing ${CERT}"; exit 1; }
+  [ -r "${KEY}"  ] || { echo "FATAL: missing ${KEY}";  exit 1; }
 
-if [ ! -e "${SINGBOX_CONF}" ]; then
+  if [ -z "${ANYTLS_PASSWORD}" ]; then
+    ANYTLS_PASSWORD="$(openssl rand -hex 16)"
+  fi
+
   cat > "${SINGBOX_CONF}" <<EOF
 {
-  "log": {
-    "level": "warn"
-  },
+  "log": { "level": "warn" },
   "inbounds": [
     {
       "type": "anytls",
@@ -119,25 +111,30 @@ if [ ! -e "${SINGBOX_CONF}" ]; then
   ]
 }
 EOF
-  chown "${SINGBOX_USER}:${SINGBOX_GROUP}" "${SINGBOX_CONF}"
+  chown root:"${SINGBOX_GROUP}" "${SINGBOX_CONF}"
   chmod 640 "${SINGBOX_CONF}"
-  echo "[*] created new config: ${SINGBOX_CONF}"
-  echo "[*] anytls password: ${ANYTLS_PASSWORD}"
+  echo "[*] Created config: ${SINGBOX_CONF}"
+  echo "[*] AnyTLS password: ${ANYTLS_PASSWORD}"
 else
-  echo "[*] existing config detected at ${SINGBOX_CONF}, not touching it."
+  echo "[*] Config exists, keep unchanged: ${SINGBOX_CONF}"
 fi
 
-if [ ! -e "${SINGBOX_SERVICE}" ]; then
+# systemd create-if-missing
+if [ ! -f "${SINGBOX_SERVICE}" ]; then
   cat > "${SINGBOX_SERVICE}" <<EOF
 [Unit]
-Description=sing-box service (anytls)
-After=network.target
+Description=sing-box service
+Documentation=https://sing-box.sagernet.org/
+After=network-online.target nss-lookup.target
+Wants=network-online.target
 
 [Service]
 User=${SINGBOX_USER}
 Group=${SINGBOX_GROUP}
-ExecStart=${SINGBOX_BIN} run -c ${SINGBOX_CONF}
+Type=simple
+UMask=0077
 WorkingDirectory=/var/lib/sing-box
+ExecStart=${SINGBOX_BIN} run -c ${SINGBOX_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -148,20 +145,16 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  echo "[*] created new service: ${SINGBOX_SERVICE}"
+  chmod 644 "${SINGBOX_SERVICE}"
+  echo "[*] Created service: ${SINGBOX_SERVICE}"
 else
-  echo "[*] existing service detected at ${SINGBOX_SERVICE}, not touching it."
+  echo "[*] Service exists, keep unchanged: ${SINGBOX_SERVICE}"
 fi
 
 systemctl daemon-reload
 systemctl enable sing-box >/dev/null 2>&1 || true
-
-if systemctl is-active --quiet sing-box; then
-  systemctl restart sing-box
-else
-  systemctl start sing-box
-fi
+systemctl restart sing-box
 
 echo
-echo "sing-box updated to version: ${TAG}"
-"${SINGBOX_BIN}" version || true
+echo "sing-box installed tag: ${TAG} (stable via /releases/latest 302)"
+"${SINGBOX_BIN}" version 2>/dev/null || true
