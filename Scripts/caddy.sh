@@ -20,21 +20,11 @@ set -euo pipefail
 
 : "${CADDY_REPO:=sealszzz/Caddy}"
 
-CADDY_SERVICE_NAME="caddy-l4"
-
 export DEBIAN_FRONTEND=noninteractive
-
-need_root() { [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }; }
-need_root
 
 # ===== Deps (runtime only) =====
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
-
-# ensure 'install' exists (some minimal images may lack it)
-if ! command -v install >/dev/null 2>&1; then
-  apt-get install -y --no-install-recommends coreutils >/dev/null
-fi
 
 # ===== Arch =====
 detect_arch() {
@@ -161,13 +151,6 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-# validate config before (re)starting (official CLI command)
-if ! "$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null 2>&1; then
-  echo "FATAL: caddy config validation failed: $CADDY_CONF" >&2
-  "$CADDY_BIN" validate --config "$CADDY_CONF" || true
-  exit 1
-fi
-
 # ===== systemd (create-once) =====
 if [ ! -f "$CADDY_SERVICE" ]; then
   cat >"$CADDY_SERVICE" <<EOF
@@ -194,12 +177,12 @@ fi
 
 # ===== Start / restart =====
 systemctl daemon-reload
-systemctl enable "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || true
+systemctl enable caddy-l4 >/dev/null 2>&1 || true
 
-if systemctl is-active --quiet "$CADDY_SERVICE_NAME"; then
-  systemctl restart "$CADDY_SERVICE_NAME"
+if systemctl is-active --quiet caddy-l4; then
+  systemctl restart caddy-l4
 else
-  systemctl start "$CADDY_SERVICE_NAME"
+  systemctl start caddy-l4
 fi
 
 echo "caddy-l4 updated to version: ${TAG}"
