@@ -23,7 +23,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 # ===== Deps (runtime only) =====
-apt-get update -y >/dev/null
+apt-get update >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
 # ===== Arch =====
@@ -32,7 +32,7 @@ detect_arch() {
     amd64|x86_64) echo "amd64" ;;
     arm64|aarch64) echo "arm64" ;;
     *)
-      echo "FATAL: unsupported arch" >&2
+      echo "FATAL: unsupported arch: $(uname -m)" >&2
       exit 1
       ;;
   esac
@@ -40,9 +40,9 @@ detect_arch() {
 ARCH="$(detect_arch)"
 
 # ===== Resolve latest release via 302 =====
-LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-  "https://github.com/${CADDY_REPO}/releases/latest")"
+LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${CADDY_REPO}/releases/latest")"
 TAG="${LATEST_URL##*/}"
+[ -n "$TAG" ] || { echo "FATAL: failed to resolve latest tag"; exit 1; }
 
 ASSET="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
 URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET}"
@@ -50,11 +50,11 @@ URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET}"
 TMP_DIR="$(mktemp -d)"
 trap 'rm -rf "$TMP_DIR"' EXIT
 
-curl -fL -o "$TMP_DIR/$ASSET" "$URL"
+curl -fL --retry 3 --retry-delay 1 -o "$TMP_DIR/$ASSET" "$URL"
 tar -xzf "$TMP_DIR/$ASSET" -C "$TMP_DIR"
 
 BIN_SRC="$TMP_DIR/caddy-l4-linux-${ARCH}"
-[ -f "$BIN_SRC" ] || { echo "FATAL: binary missing"; exit 1; }
+[ -f "$BIN_SRC" ] || { echo "FATAL: binary missing: $BIN_SRC"; exit 1; }
 
 install -m 0755 "$BIN_SRC" "$CADDY_BIN"
 
@@ -194,3 +194,5 @@ else
 fi
 
 echo "caddy-l4 updated to version: ${TAG}"
+echo "[*] caddy-l4 binary version:"
+"$CADDY_BIN" version 2>/dev/null || "$CADDY_BIN" -version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || true
