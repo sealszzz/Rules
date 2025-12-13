@@ -140,5 +140,3 @@ fi
 
 echo
 "$TUIC_BIN" -V 2>/dev/null || "$TUIC_BIN" --version 2>/dev/null || true
-echo "UDP/${TUIC_PORT} 监听检查："
-ss -Hnplu | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未见 UDP/${TUIC_PORT} 占用"
