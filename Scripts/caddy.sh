@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
-# caddy-l4 TCP+UDP 443 SNI STREAM:
+# caddy-l4 TCP+UDP 443 SNI STREAM (admin disabled, no home dir)
 set -euo pipefail
 
+# ===== Tunables =====
 : "${ANYTLS_PORT:=8001}"
 : "${VLESS_PORT:=8002}"
 : "${ANYTLS_SNI:=anytls.example.com}"
@@ -21,75 +22,61 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
+# ===== Deps (runtime only) =====
 apt-get update -y >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
+# ===== Arch =====
 detect_arch() {
-  local a
-  a=$(dpkg --print-architecture 2>/dev/null || echo "")
-  case "$a" in
-    amd64) echo "amd64" ;;
+  case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
+    amd64|x86_64) echo "amd64" ;;
     arm64|aarch64) echo "arm64" ;;
     *)
-      a=$(uname -m)
-      case "$a" in
-        x86_64) echo "amd64" ;;
-        aarch64|arm64) echo "arm64" ;;
-        *)
-          echo "FATAL: unsupported arch: $a" >&2
-          exit 1
-          ;;
-      esac
+      echo "FATAL: unsupported arch" >&2
+      exit 1
       ;;
   esac
 }
-
 ARCH="$(detect_arch)"
 
-LATEST_URL=$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-  "https://github.com/${CADDY_REPO}/releases/latest")
+# ===== Resolve latest release via 302 =====
+LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+  "https://github.com/${CADDY_REPO}/releases/latest")"
 TAG="${LATEST_URL##*/}"
 
-ASSET_NAME="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
-ASSET_URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET_NAME}"
+ASSET="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
+URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET}"
 
-TMP_DIR=$(mktemp -d /tmp/caddy-l4.XXXXXX)
-trap 'rm -rf "${TMP_DIR}"' EXIT
+TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
 
-if ! curl -fL -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"; then
-  echo "FATAL: download failed: ${ASSET_URL}" >&2
-  exit 1
-fi
+curl -fL -o "$TMP_DIR/$ASSET" "$URL"
+tar -xzf "$TMP_DIR/$ASSET" -C "$TMP_DIR"
 
-tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
+BIN_SRC="$TMP_DIR/caddy-l4-linux-${ARCH}"
+[ -f "$BIN_SRC" ] || { echo "FATAL: binary missing"; exit 1; }
 
-BIN_SRC="${TMP_DIR}/caddy-l4-linux-${ARCH}"
-if [ ! -f "${BIN_SRC}" ]; then
-  echo "FATAL: binary not found in tar: ${BIN_SRC}" >&2
-  exit 1
-fi
+install -m 0755 "$BIN_SRC" "$CADDY_BIN"
 
-install -m 0755 "${BIN_SRC}" "${CADDY_BIN}"
+# ===== User / dirs (NO HOME) =====
+getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
 
-getent group "${CADDY_GROUP}" >/dev/null || groupadd --system "${CADDY_GROUP}"
-
-if ! id -u "${CADDY_USER}" >/dev/null 2>&1; then
+if ! id -u "$CADDY_USER" >/dev/null 2>&1; then
   useradd --system --no-create-home \
-    --gid "${CADDY_GROUP}" \
+    --gid "$CADDY_GROUP" \
     --shell /usr/sbin/nologin \
-    "${CADDY_USER}"
+    "$CADDY_USER"
 fi
-
-HOME_DIR="/home/${CADDY_USER}"
-mkdir -p "${HOME_DIR}/.config/caddy"
-chown -R "${CADDY_USER}:${CADDY_GROUP}" "${HOME_DIR}"
 
 mkdir -p /etc/caddy
-chown -R "${CADDY_USER}:${CADDY_GROUP}" /etc/caddy
+chown root:"$CADDY_GROUP" /etc/caddy
+chmod 750 /etc/caddy
 
-if [ ! -e "${CADDY_CONF}" ]; then
-  cat > "${CADDY_CONF}" <<EOF
+# ===== Config (create-once) =====
+if [ ! -f "$CADDY_CONF" ]; then
+  cat >"$CADDY_CONF" <<EOF
 {
+  "admin": { "disabled": true },
   "apps": {
     "layer4": {
       "servers": {
@@ -168,14 +155,15 @@ if [ ! -e "${CADDY_CONF}" ]; then
   }
 }
 EOF
-  chown "${CADDY_USER}:${CADDY_GROUP}" "${CADDY_CONF}"
-  chmod 640 "${CADDY_CONF}"
+  chown root:"$CADDY_GROUP" "$CADDY_CONF"
+  chmod 640 "$CADDY_CONF"
 fi
 
-if [ ! -e "${CADDY_SERVICE}" ]; then
-  cat > "${CADDY_SERVICE}" <<EOF
+# ===== systemd (create-once) =====
+if [ ! -f "$CADDY_SERVICE" ]; then
+  cat >"$CADDY_SERVICE" <<EOF
 [Unit]
-Description=Caddy layer4 TCP+UDP 443 SNI proxy (AnyTLS + VLESS + TUIC + Juicity)
+Description=Caddy layer4 TCP+UDP 443 SNI proxy
 After=network.target
 
 [Service]
@@ -192,8 +180,10 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
+  chmod 644 "$CADDY_SERVICE"
 fi
 
+# ===== Start / restart =====
 systemctl daemon-reload
 systemctl enable caddy-l4 >/dev/null 2>&1 || true
 
@@ -204,12 +194,3 @@ else
 fi
 
 echo "caddy-l4 updated to version: ${TAG}"
-echo
-echo "TCP 443 SNI 分流:"
-echo "  ${ANYTLS_SNI}      → tcp/127.0.0.1:${ANYTLS_PORT}   (AnyTLS via sing-box)"
-echo "  其他所有 TLS SNI   → tcp/127.0.0.1:${VLESS_PORT}    (Xray VLESS+REALITY)"
-echo
-echo "UDP 443 QUIC SNI 分流:"
-echo "  ${TUIC_SNI}        → udp/127.0.0.1:${TUIC_PORT} (TUIC)"
-echo "  ${JUICITY_SNI}     → udp/127.0.0.1:${JUICITY_PORT} (Juicity)"
-echo "  其他 QUIC          → echo (如需转发到 udp/127.0.0.1:9999 可手动改配置)"
