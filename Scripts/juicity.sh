@@ -5,9 +5,9 @@ set -euo pipefail
 : "${J_PORT:=443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${J_CONG:=bbr}"            # bbr/cubic/new_reno
-: "${J_LOG:=warn}"            # trace/debug/info/warn/error
-: "${J_DISABLE_UDP443:=true}" # true/false
+: "${J_CONG:=bbr}"
+: "${J_LOG:=warn}"
+: "${J_DISABLE_UDP443:=true}"
 
 J_USER="juicity"
 J_GROUP="juicity"
@@ -22,12 +22,15 @@ J_SVC="/etc/systemd/system/${J_SVC_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt-get update -y
-apt-get install -y --no-install-recommends curl ca-certificates unzip openssl uuid-runtime iproute2
+# ---- deps (一次性，允许重复但不破坏幂等) ----
+apt-get update >/dev/null
+apt-get install -y --no-install-recommends \
+  curl ca-certificates unzip openssl uuid-runtime iproute2 >/dev/null
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
+# ---- user / dir ----
 getent group "$J_GROUP" >/dev/null || groupadd --system "$J_GROUP"
 id -u "$J_USER" >/dev/null 2>&1 || \
   useradd --system -g "$J_GROUP" -M -d "$J_STATE_DIR" -s /usr/sbin/nologin "$J_USER"
@@ -35,46 +38,39 @@ id -u "$J_USER" >/dev/null 2>&1 || \
 install -d -o "$J_USER" -g "$J_GROUP" -m 750 "$J_STATE_DIR"
 install -d -o root      -g "$J_GROUP" -m 750 "$J_ETC_DIR"
 
+# ---- latest tag via 302 ----
 get_latest_tag() {
   local u
   u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-      https://github.com/juicity/juicity/releases/latest)" || return 1
+    https://github.com/juicity/juicity/releases/latest)" || return 1
   printf '%s\n' "${u##*/}"
 }
-echo "[*] Query latest Juicity release (no-API)…"
-TAG="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
-echo "[*] Latest tag: $TAG"
 
-# ---- 3) 选择并下载资产：juicity-linux-{x86_64|arm64}.zip ----
+TAG="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
+
 case "$(uname -m)" in
   x86_64|amd64)  ARCH="x86_64" ;;
   aarch64|arm64) ARCH="arm64"  ;;
-  *) echo "Unsupported arch: $(uname -m) (x86_64/arm64 only)">&2; exit 1 ;;
+  *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
 esac
 
 ASSET="juicity-linux-${ARCH}.zip"
-BASE="https://github.com/juicity/juicity/releases/download/${TAG}/${ASSET}"
+URL="https://github.com/juicity/juicity/releases/download/${TAG}/${ASSET}"
 
+# ---- download & install bin (always) ----
 tmpd="$(mktemp -d)"
-cleanup(){ rm -rf "$tmpd"; }
-trap cleanup EXIT
+trap 'rm -rf "$tmpd"' EXIT
 
-zipfile="${tmpd}/${ASSET}"
-echo "[*] Download: ${ASSET}"
-curl -fL --retry 3 --retry-delay 1 -o "$zipfile" "$BASE"
+curl -fL --retry 3 --retry-delay 1 -o "${tmpd}/${ASSET}" "$URL"
+unzip -q "${tmpd}/${ASSET}" -d "$tmpd"
 
-work="${tmpd}/unz"
-mkdir -p "$work"
-unzip -q "$zipfile" -d "$work"
+[ -f "${tmpd}/juicity-server" ] || { echo "FATAL: juicity-server not found"; exit 1; }
+install -m 0755 "${tmpd}/juicity-server" "$J_BIN"
 
-[ -f "${work}/juicity-server" ] || { echo "FATAL: juicity-server not found in zip"; exit 1; }
-install -m 0755 "${work}/juicity-server" "$J_BIN"
-rm -f "$zipfile"
-rm -rf "$work"
-
+# ---- first-time config only ----
 if [ ! -f "$J_CONF" ]; then
-  J_UUID="${J_UUID:-$(uuidgen)}"
-  J_PASS="${J_PASS:-$(openssl rand -hex 16)}"
+  J_UUID="$(uuidgen)"
+  J_PASS="$(openssl rand -hex 16)"
 
   cat >"$J_CONF" <<EOF
 {
@@ -89,13 +85,15 @@ if [ ! -f "$J_CONF" ]; then
   "log_level": "${J_LOG}"
 }
 EOF
+
   chown root:"$J_GROUP" "$J_CONF"
-  chmod 0640 "$J_CONF"
+  chmod 640 "$J_CONF"
 
   echo "JUICITY UUID: ${J_UUID}"
   echo "JUICITY PASS: ${J_PASS}"
 fi
 
+# ---- systemd unit (create once) ----
 if [ ! -f "$J_SVC" ]; then
   cat >"$J_SVC" <<EOF
 [Unit]
@@ -121,9 +119,10 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 0644 "$J_SVC"
+  chmod 644 "$J_SVC"
 fi
 
+# ---- start / reload ----
 systemctl daemon-reload
 if systemctl is-enabled "$J_SVC_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$J_SVC_NAME" || systemctl restart "$J_SVC_NAME"
@@ -131,8 +130,4 @@ else
   systemctl enable --now "$J_SVC_NAME" || true
 fi
 
-echo
 "$J_BIN" --version 2>/dev/null || true
-echo "UDP/TCP ${J_PORT} 监听："
-ss -Hnplu | grep -E ":${J_PORT}([^0-9]|$)" || echo "未见 UDP/${J_PORT} 占用（Juicity 走 QUIC/UDP）"
-ss -Hnplt | grep -E ":${J_PORT}([^0-9]|$)" || true
