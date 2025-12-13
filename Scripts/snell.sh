@@ -62,7 +62,7 @@ SN_SRC="$(find "$tmpd" -maxdepth 2 -type f -name 'snell-server' -perm -u+x 2>/de
 install -m 0755 "$SN_SRC" "$SN_BIN"
 
 if [ ! -f "$SN_CONFIG" ]; then
-  PSK="$(openssl rand -hex 32)"
+  PSK="$(openssl rand -hex 16)"
   cat >"$SN_CONFIG" <<EOF
 [snell-server]
 listen = ::0:${SN_PORT}
@@ -108,7 +108,7 @@ systemctl daemon-reload
 if systemctl is-enabled "$SERVICE_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$SERVICE_NAME" || systemctl restart "$SERVICE_NAME"
 else
-  systemctl enable --now "$SERVICE_NAME" || true
+  systemctl enable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
 fi
 
 "$SN_BIN" -v 2>/dev/null || true
