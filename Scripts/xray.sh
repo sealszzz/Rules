@@ -20,8 +20,8 @@ XRAY_SERVICE="/etc/systemd/system/xray.service"
 export DEBIAN_FRONTEND=noninteractive
 
 # ===== Deps =====
-apt update
-apt install -y --no-install-recommends curl ca-certificates uuid-runtime unzip openssl iproute2
+apt-get update -y >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates uuid-runtime unzip openssl iproute2 >/dev/null
 
 # ===== User & Dirs =====
 getent group "$XRAY_GROUP" >/dev/null || groupadd --system "$XRAY_GROUP"
@@ -95,11 +95,6 @@ parse_reality_keys() {
   pub="$(
     printf '%s\n' "$out" \
       | awk -F': *' 'tolower($1) ~ /^ *public ?key *$/  {gsub(/^ +| +$/,"",$2); print $2; exit}'
-  )"
-
-  [ -z "$pub" ] && pub="$(
-    printf '%s\n' "$out" \
-      | awk -F': *' 'tolower($1) ~ /^ *password *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
   )"
 
   case "$priv" in ""|*[!A-Za-z0-9_-]*) priv="";; *) [ ${#priv} -lt 40 ] && priv="";; esac
@@ -213,7 +208,7 @@ fi
 
 # ===== Start / Reload =====
 systemctl daemon-reload
-if systemctl is-enabled xray >/devnull 2>&1; then
+if systemctl is-enabled xray >/dev/null 2>&1; then
   systemctl try-reload-or-restart xray || systemctl restart xray
 else
   systemctl enable --now xray || true
