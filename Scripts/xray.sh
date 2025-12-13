@@ -1,12 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+export DEBIAN_FRONTEND=noninteractive
+
 # ===== Tunables =====
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
-: "${XRAY_SNI:=www.cloudflare.com}"     # must exist in dest's cert
-: "${XRAY_TARGET:=127.0.0.1:9999}"      # upstream TLS endpoint (Reality target)
-: "${XRAY_DEST:=127.0.0.1:9999}"        # fallback dest
+: "${XRAY_SNI:=www.cloudflare.com}"
+: "${XRAY_TARGET:=127.0.0.1:9999}"
+: "${XRAY_DEST:=127.0.0.1:9999}"
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
 : "${XRAY_TAG:=}"
@@ -16,12 +18,12 @@ XRAY_CONF_DIR="/etc/xray"
 XRAY_CONF_FILE="${XRAY_CONF_DIR}/config.json"
 XRAY_BIN="/usr/local/bin/xray"
 XRAY_SERVICE="/etc/systemd/system/xray.service"
-
-export DEBIAN_FRONTEND=noninteractive
+XRAY_SERVICE_NAME="xray"
 
 # ===== Deps =====
-apt-get update -y >/dev/null
-apt-get install -y --no-install-recommends curl ca-certificates uuid-runtime unzip openssl iproute2 >/dev/null
+apt update
+apt install -y --no-install-recommends \
+  curl ca-certificates uuid-runtime unzip openssl iproute2
 
 # ===== User & Dirs =====
 getent group "$XRAY_GROUP" >/dev/null || groupadd --system "$XRAY_GROUP"
@@ -31,7 +33,7 @@ id -u "$XRAY_USER" >/dev/null 2>&1 || \
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
 
-# ===== Resolve release tag via /releases/latest 302 (no API / no HTML) =====
+# ===== Resolve release tag via /releases/latest 302 =====
 get_latest_tag() {
   if [ -n "${XRAY_TAG:-}" ]; then
     printf '%s\n' "$XRAY_TAG"
@@ -54,7 +56,7 @@ case "$(uname -m)" in
   x86_64|amd64)  MACHINE="64"        ;;
   aarch64|arm64) MACHINE="arm64-v8a" ;;
   *)
-    echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)" >&2
+    echo "Unsupported arch: $(uname -m)" >&2
     exit 1
     ;;
 esac
@@ -65,12 +67,15 @@ dl_url="https://github.com/XTLS/Xray-core/releases/download/${tag}/${asset_name}
 echo "[*] Install version: ${tag}"
 echo "[*] Asset:          ${asset_name}"
 
-tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
+tmpd="$(mktemp -d)"
+trap 'rm -rf "$tmpd"' EXIT
+
 dl_file="${tmpd}/${asset_name}"
 curl -fL --retry 3 --retry-delay 1 -o "$dl_file" "$dl_url"
 
 # ===== Extract & install =====
-udir="${tmpd}/u"; mkdir -p "$udir"
+udir="${tmpd}/u"
+mkdir -p "$udir"
 unzip -q "$dl_file" -d "$udir"
 
 binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 || true)"
@@ -78,68 +83,37 @@ binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 |
 
 install -m 0755 "$binpath" "$XRAY_BIN"
 
-# ===== Reality keypair (robust across new x25519 output format) =====
-strip_ansi() { sed 's/\x1B\[[0-9;]*[A-Za-z]//g'; }
-
+# ===== Reality keypair (Password ONLY) =====
 parse_reality_keys() {
-  if [ -n "${XRAY_PRIV:-}" ] && [ -n "${XRAY_PUB:-}" ]; then
-    return 0
-  fi
+  local out priv pub
+  out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r' | sed 's/\x1B\[[0-9;]*[A-Za-z]//g')" || out=""
 
-  local out priv pub out2
-
-  # Step 1: generate a new private key (newer Xray prints PrivateKey/Password/Hash32)
-  out="$("$XRAY_BIN" x25519 2>&1 | tr -d '\r' | strip_ansi)" || out=""
   priv="$(
     printf '%s\n' "$out" \
       | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
   )"
 
-  # Validate private key basic shape (base64url-ish, long enough)
-  case "$priv" in
-    ""|*[!A-Za-z0-9_-]*) priv="";;
-    *) [ ${#priv} -lt 40 ] && priv="";;
-  esac
+  pub="$(
+    printf '%s\n' "$out" \
+      | awk -F': *' 'tolower($1) ~ /^ *password *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
+  )"
 
-  if [ -z "$priv" ]; then
-    echo "[FATAL] cannot parse 'xray x25519' private key; abort." >&2
+  if [ -z "$priv" ] || [ -z "$pub" ]; then
+    echo "[FATAL] cannot parse xray x25519 output (need PrivateKey + Password)" >&2
     echo "-------- raw begin --------" >&2
     printf '%s\n' "$out" >&2
     echo "--------- raw end ---------" >&2
-    return 1
-  fi
-
-  # Step 2: derive public key from private key (officially supported: xray x25519 -i "privateKey")
-  out2="$("$XRAY_BIN" x25519 -i "$priv" 2>&1 | tr -d '\r' | strip_ansi)" || out2=""
-  pub="$(
-    printf '%s\n' "$out2" \
-      | awk -F': *' 'tolower($1) ~ /^ *public ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
-  )"
-
-  case "$pub" in
-    ""|*[!A-Za-z0-9_-]*) pub="";;
-    *) [ ${#pub} -lt 40 ] && pub="";;
-  esac
-
-  if [ -z "$pub" ]; then
-    echo "[FATAL] cannot derive public key via 'xray x25519 -i'; abort." >&2
-    echo "-------- private key --------" >&2
-    printf '%s\n' "$priv" >&2
-    echo "-------- raw begin --------" >&2
-    printf '%s\n' "$out2" >&2
-    echo "--------- raw end ---------" >&2
-    return 1
+    exit 1
   fi
 
   XRAY_PRIV="$priv"
   XRAY_PUB="$pub"
-  return 0
 }
 
-# ===== First-time config (idempotent) =====
+# ===== First-time config =====
 if [ ! -f "$XRAY_CONF_FILE" ]; then
-  XRAY_UUID="${XRAY_UUID:-$(uuidgen)}"
-  XRAY_SHORTID="${XRAY_SHORTID:-$(openssl rand -hex 8)}"
+  XRAY_UUID="$(uuidgen)"
+  XRAY_SHORTID="$(openssl rand -hex 8)"
   parse_reality_keys
 
   cat >"$XRAY_CONF_FILE" <<EOF
@@ -184,8 +158,9 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
     }
   ],
   "outbounds": [
-    { "protocol": "freedom",   "tag": "direct"  },
-    { "protocol": "blackhole", "tag": "blocked" }
+    {
+      "protocol": "freedom"
+    }
   ]
 }
 EOF
@@ -194,7 +169,7 @@ EOF
   chmod 640 "$XRAY_CONF_FILE"
 fi
 
-# ===== systemd unit (create-once) =====
+# ===== systemd unit =====
 if [ ! -f "$XRAY_SERVICE" ]; then
   cat >"$XRAY_SERVICE" <<EOF
 [Unit]
@@ -225,8 +200,8 @@ fi
 
 # ===== Start / Reload =====
 systemctl daemon-reload
-if systemctl is-enabled xray >/dev/null 2>&1; then
-  systemctl try-reload-or-restart xray || systemctl restart xray
+if systemctl is-enabled "$XRAY_SERVICE_NAME" >/dev/null 2>&1; then
+  systemctl try-reload-or-restart "$XRAY_SERVICE_NAME" || systemctl restart "$XRAY_SERVICE_NAME"
 else
-  systemctl enable --now xray
+  systemctl enable --now "$XRAY_SERVICE_NAME"
 fi
