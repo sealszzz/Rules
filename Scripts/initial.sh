@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# init-all.sh — Debian 13: TZ/NTP(wait,no set-ntp) → nftables → SSH no-pass → BBR → reboot
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
@@ -16,27 +15,32 @@ get_ssh_port(){
 
 need_root
 
-# 1) TZ/RTC/NTP（不调用 set-ntp，避免 “NTP not supported”）
 timedatectl set-timezone Etc/UTC || true
-timedatectl set-local-rtc 0 || true
-if ! systemctl list-unit-files | grep -q '^systemd-timesyncd\.service'; then
-  wait_for_apt; apt-get update
-  wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+
+if [ "$(timedatectl show -p LocalRTC --value 2>/dev/null || echo no)" = "yes" ]; then
+  timedatectl set-local-rtc 0 || true
 fi
+
+if ! systemctl status systemd-timesyncd.service >/dev/null 2>&1; then
+  if ! systemctl cat systemd-timesyncd.service >/dev/null 2>&1; then
+    wait_for_apt; apt-get update
+    wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+  fi
+fi
+
 systemctl unmask systemd-timesyncd.service 2>/dev/null || true
 systemctl enable --now systemd-timesyncd || true
 systemctl restart systemd-timesyncd || true
+
 for _ in $(seq 1 90); do
   v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
   [ "$v" = "yes" ] && break
   sleep 2
 done
 
-# 2) nftables（安装→规则→开机自启）
 wait_for_apt; apt-get install -y --no-install-recommends nftables
 SSH_PORT="$(get_ssh_port)"
 
-# 注意：这里用无引号 heredoc，让 ${SSH_PORT} 正常展开
 cat >/etc/nftables.conf <<EOF
 flush ruleset
 
@@ -102,9 +106,9 @@ table inet filter {
 
     tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
 
-    tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn counter drop comment "FIN+SYN"
-    tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0   counter drop comment "NULL scan"
-    tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop comment "XMAS scan"
+    tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn counter drop
+    tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0   counter drop
+    tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop
 
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
@@ -124,28 +128,25 @@ nft -c -f /etc/nftables.conf
 nft -f  /etc/nftables.conf
 systemctl enable --now nftables
 
-# 3) SSH 免密（校验失败自动回滚）
 install -d -m 0755 /etc/ssh/sshd_config.d
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
 PasswordAuthentication no
 KbdInteractiveAuthentication no
-ChallengeResponseAuthentication no
 PermitRootLogin prohibit-password
 EOF
+
 if sshd -t 2>/dev/null; then
   systemctl reload ssh 2>/dev/null || systemctl reload sshd 2>/dev/null || true
 else
   rm -f /etc/ssh/sshd_config.d/99-no-password.conf
 fi
 
-# 4) BBR
 cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
 EOF
 sysctl --system >/dev/null || true
 
-# 5) 重启
 sleep 5
 reboot
