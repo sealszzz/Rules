@@ -139,14 +139,6 @@ if [ ! -f "$CADDY_CONF" ]; then
                   ]
                 }
               ]
-            },
-            {
-              "match": [
-                { "quic": {} }
-              ],
-              "handle": [
-                { "handler": "echo" }
-              ]
             }
           ]
         }
