@@ -21,8 +21,8 @@ XRAY_SERVICE="/etc/systemd/system/xray.service"
 XRAY_SERVICE_NAME="xray"
 
 # ===== Deps =====
-apt update
-apt install -y --no-install-recommends \
+apt-get update
+apt-get install -y --no-install-recommends \
   curl ca-certificates uuid-runtime unzip openssl iproute2
 
 # ===== User & Dirs =====
@@ -86,23 +86,14 @@ install -m 0755 "$binpath" "$XRAY_BIN"
 # ===== Reality keypair (Password ONLY) =====
 parse_reality_keys() {
   local out priv pub
-  out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r' | sed 's/\x1B\[[0-9;]*[A-Za-z]//g')" || out=""
+  out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r')" || out=""
 
-  priv="$(
-    printf '%s\n' "$out" \
-      | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
-  )"
-
-  pub="$(
-    printf '%s\n' "$out" \
-      | awk -F': *' 'tolower($1) ~ /^ *password *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
-  )"
+  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {print $2; exit}')"
+  pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *password *$/    {print $2; exit}')"
 
   if [ -z "$priv" ] || [ -z "$pub" ]; then
-    echo "[FATAL] cannot parse xray x25519 output (need PrivateKey + Password)" >&2
-    echo "-------- raw begin --------" >&2
+    echo "[FATAL] cannot parse xray x25519 output" >&2
     printf '%s\n' "$out" >&2
-    echo "--------- raw end ---------" >&2
     exit 1
   fi
 
