@@ -78,39 +78,62 @@ binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 |
 
 install -m 0755 "$binpath" "$XRAY_BIN"
 
-# ===== Reality keypair (single-shot parse; fail fast) =====
+# ===== Reality keypair (robust across new x25519 output format) =====
+strip_ansi() { sed 's/\x1B\[[0-9;]*[A-Za-z]//g'; }
+
 parse_reality_keys() {
   if [ -n "${XRAY_PRIV:-}" ] && [ -n "${XRAY_PUB:-}" ]; then
     return 0
   fi
 
-  local out
-  out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r' | sed 's/\x1B\[[0-9;]*[A-Za-z]//g')" || out=""
+  local out priv pub out2
 
-  local priv pub
+  # Step 1: generate a new private key (newer Xray prints PrivateKey/Password/Hash32)
+  out="$("$XRAY_BIN" x25519 2>&1 | tr -d '\r' | strip_ansi)" || out=""
   priv="$(
     printf '%s\n' "$out" \
       | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
   )"
-  pub="$(
-    printf '%s\n' "$out" \
-      | awk -F': *' 'tolower($1) ~ /^ *public ?key *$/  {gsub(/^ +| +$/,"",$2); print $2; exit}'
-  )"
 
-  case "$priv" in ""|*[!A-Za-z0-9_-]*) priv="";; *) [ ${#priv} -lt 40 ] && priv="";; esac
-  case "$pub"  in ""|*[!A-Za-z0-9_-]*)  pub="";;  *) [ ${#pub}  -lt 40 ] &&  pub="";; esac
+  # Validate private key basic shape (base64url-ish, long enough)
+  case "$priv" in
+    ""|*[!A-Za-z0-9_-]*) priv="";;
+    *) [ ${#priv} -lt 40 ] && priv="";;
+  esac
 
-  if [ -n "$priv" ] && [ -n "$pub" ]; then
-    XRAY_PRIV="$priv"
-    XRAY_PUB="$pub"
-    return 0
+  if [ -z "$priv" ]; then
+    echo "[FATAL] cannot parse 'xray x25519' private key; abort." >&2
+    echo "-------- raw begin --------" >&2
+    printf '%s\n' "$out" >&2
+    echo "--------- raw end ---------" >&2
+    return 1
   fi
 
-  echo "[FATAL] cannot parse 'xray x25519' output; abort." >&2
-  echo "-------- raw begin --------" >&2
-  printf '%s\n' "$out" >&2
-  echo "--------- raw end ---------" >&2
-  return 1
+  # Step 2: derive public key from private key (officially supported: xray x25519 -i "privateKey")
+  out2="$("$XRAY_BIN" x25519 -i "$priv" 2>&1 | tr -d '\r' | strip_ansi)" || out2=""
+  pub="$(
+    printf '%s\n' "$out2" \
+      | awk -F': *' 'tolower($1) ~ /^ *public ?key *$/ {gsub(/^ +| +$/,"",$2); print $2; exit}'
+  )"
+
+  case "$pub" in
+    ""|*[!A-Za-z0-9_-]*) pub="";;
+    *) [ ${#pub} -lt 40 ] && pub="";;
+  esac
+
+  if [ -z "$pub" ]; then
+    echo "[FATAL] cannot derive public key via 'xray x25519 -i'; abort." >&2
+    echo "-------- private key --------" >&2
+    printf '%s\n' "$priv" >&2
+    echo "-------- raw begin --------" >&2
+    printf '%s\n' "$out2" >&2
+    echo "--------- raw end ---------" >&2
+    return 1
+  fi
+
+  XRAY_PRIV="$priv"
+  XRAY_PUB="$pub"
+  return 0
 }
 
 # ===== First-time config (idempotent) =====
@@ -161,14 +184,8 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
     }
   ],
   "outbounds": [
-    {
-      "protocol": "freedom",
-      "tag": "direct"
-    },
-    {
-      "protocol": "blackhole",
-      "tag": "blocked"
-    }
+    { "protocol": "freedom",   "tag": "direct"  },
+    { "protocol": "blackhole", "tag": "blocked" }
   ]
 }
 EOF
@@ -211,5 +228,5 @@ systemctl daemon-reload
 if systemctl is-enabled xray >/dev/null 2>&1; then
   systemctl try-reload-or-restart xray || systemctl restart xray
 else
-  systemctl enable --now xray || true
+  systemctl enable --now xray
 fi
