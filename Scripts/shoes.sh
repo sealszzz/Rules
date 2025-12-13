@@ -5,8 +5,8 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-: "${T_UUID:=$(uuidgen)}"
-: "${T_PASS:=$(openssl rand -hex 16 || echo '0123456789abcdef0123456789abcdef')}"
+: "${T_UUID:=}"   # optional override; empty -> generate on first config
+: "${T_PASS:=}"   # optional override; empty -> generate on first config
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -31,7 +31,7 @@ install_shoes_release() {
 
   local BASE="https://github.com/cfal/shoes/releases/latest/download"
   local tmpd; tmpd="$(mktemp -d)"
-  trap 't="${tmpd-}"; [ -n "$t" ] && rm -rf -- "$t"' RETURN
+  trap 'rm -rf -- "${tmpd}"' RETURN
 
   curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
   mkdir -p "$tmpd/unpack"
@@ -47,7 +47,15 @@ install_shoes_release() {
 
 install_shoes_release
 
+# ===== config: create only if missing =====
 if [ ! -f /etc/shoes/config.yaml ]; then
+  if [ -z "${T_UUID}" ]; then
+    T_UUID="$(uuidgen)"
+  fi
+  if [ -z "${T_PASS}" ]; then
+    T_PASS="$(openssl rand -hex 16)"
+  fi
+
   cat >/etc/shoes/config.yaml <<EOF
 - address: "[::]:${TUIC_PORT}"
   transport: quic
@@ -67,8 +75,12 @@ EOF
 
   chown root:shoes /etc/shoes/config.yaml
   chmod 640      /etc/shoes/config.yaml
+
+  echo "TUIC UUID: ${T_UUID}"
+  echo "TUIC PASS: ${T_PASS}"
 fi
 
+# ===== systemd unit: create only if missing =====
 if [ ! -f /etc/systemd/system/shoes.service ]; then
   cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
@@ -93,11 +105,15 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
+  chmod 644 /etc/systemd/system/shoes.service
 fi
 
 systemctl daemon-reload
-systemctl enable --now shoes || true
-systemctl try-reload-or-restart shoes || systemctl restart shoes
+if systemctl is-enabled shoes >/dev/null 2>&1; then
+  systemctl restart shoes
+else
+  systemctl enable --now shoes || true
+fi
 
 echo
 ver="$(
