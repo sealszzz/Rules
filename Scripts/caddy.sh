@@ -42,7 +42,8 @@ detect_arch() {
 ARCH="$(detect_arch)"
 
 # ===== Resolve latest release via 302 =====
-LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${CADDY_REPO}/releases/latest")"
+LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+  "https://github.com/${CADDY_REPO}/releases/latest")"
 TAG="${LATEST_URL##*/}"
 [ -n "$TAG" ] || { echo "FATAL: failed to resolve latest tag"; exit 1; }
 
@@ -153,7 +154,12 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null 2>&1
+# ===== Validate config (silent on success, loud on failure) =====
+if ! _validate_out="$("$CADDY_BIN" validate --config "$CADDY_CONF" 2>&1)"; then
+  echo "FATAL: caddy config validation failed: $CADDY_CONF" >&2
+  printf '%s\n' "$_validate_out" >&2
+  exit 1
+fi
 
 # ===== systemd (create-once) =====
 if [ ! -f "$CADDY_SERVICE" ]; then
@@ -191,5 +197,4 @@ fi
 
 echo "caddy-l4 updated to version: ${TAG}"
 echo "[*] caddy-l4 binary version:"
-
-"$CADDY_BIN" version | head -n
+"$CADDY_BIN" version | head -n1
