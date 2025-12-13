@@ -19,8 +19,8 @@ TUIC_SERVICE="/etc/systemd/system/${TUIC_SERVICE_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt update
-apt install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates uuid-runtime openssl iproute2
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
@@ -45,7 +45,7 @@ tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
 case "$(uname -m)" in
   x86_64|amd64)  ARK="x86_64"  ;;
   aarch64|arm64) ARK="aarch64" ;;
-  *) echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)">&2; exit 1 ;;
+  *) echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)" >&2; exit 1 ;;
 esac
 
 asset_name="tuic-server-${ARK}-linux"
