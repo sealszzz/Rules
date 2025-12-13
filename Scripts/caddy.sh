@@ -153,7 +153,7 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null
+"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null 2>&1
 
 # ===== systemd (create-once) =====
 if [ ! -f "$CADDY_SERVICE" ]; then
@@ -191,4 +191,5 @@ fi
 
 echo "caddy-l4 updated to version: ${TAG}"
 echo "[*] caddy-l4 binary version:"
-"$CADDY_BIN" version 2>/dev/null || "$CADDY_BIN" -version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || true
+
+"$CADDY_BIN" version | head -n
