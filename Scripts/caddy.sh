@@ -20,6 +20,8 @@ set -euo pipefail
 
 : "${CADDY_REPO:=sealszzz/Caddy}"
 
+CADDY_SERVICE_NAME="caddy-l4"
+
 export DEBIAN_FRONTEND=noninteractive
 
 # ===== Deps (runtime only) =====
@@ -151,6 +153,8 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
+"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null
+
 # ===== systemd (create-once) =====
 if [ ! -f "$CADDY_SERVICE" ]; then
   cat >"$CADDY_SERVICE" <<EOF
@@ -177,14 +181,14 @@ fi
 
 # ===== Start / restart =====
 systemctl daemon-reload
-systemctl enable caddy-l4 >/dev/null 2>&1 || true
+systemctl enable "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || true
 
-if systemctl is-active --quiet caddy-l4; then
-  systemctl restart caddy-l4
+if systemctl is-active --quiet "$CADDY_SERVICE_NAME"; then
+  systemctl restart "$CADDY_SERVICE_NAME"
 else
-  systemctl start caddy-l4
+  systemctl start "$CADDY_SERVICE_NAME"
 fi
 
 echo "caddy-l4 updated to version: ${TAG}"
 echo "[*] caddy-l4 binary version:"
-"$CADDY_BIN" version 2>/dev/null || "$CADDY_BIN" -version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || true
+"$CADDY_BIN" version 2>/dev/null || "$CADDY_BIN" -version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || "$CADDY_BIN" --version 2>/dev/null || true
