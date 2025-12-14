@@ -18,16 +18,21 @@ apt install -y --no-install-recommends \
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
 getent group shoes >/dev/null || groupadd --system shoes
-id -u shoes >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
+id -u shoes >/dev/null 2>&1 || \
+  useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
+
 install -d -o shoes -g shoes -m 750 /var/lib/shoes
 install -d -o root  -g shoes -m 750 /etc/shoes
 
+# ===== resolve latest tag via 302 =====
 get_shoes_tag() {
   local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/cfal/shoes/releases/latest")" || return 1
+  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
+      https://github.com/cfal/shoes/releases/latest)" || return 1
   printf '%s\n' "${u##*/}"
 }
 
+# ===== install shoes =====
 install_shoes_release() {
   case "$(uname -m)" in
     x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
@@ -36,8 +41,9 @@ install_shoes_release() {
   esac
 
   local BASE="https://github.com/cfal/shoes/releases/latest/download"
-  local tmpd; tmpd="$(mktemp -d)"
-  trap 'rm -rf -- "${tmpd}"' RETURN
+  local tmpd
+  tmpd="$(mktemp -d)"
+  trap 'rm -rf "$tmpd"' RETURN
 
   curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
   mkdir -p "$tmpd/unpack"
@@ -45,7 +51,7 @@ install_shoes_release() {
 
   local bin
   bin="$(find "$tmpd/unpack" -type f -name shoes -perm -u+x | head -n1 || true)"
-  [ -n "$bin" ] || { echo "未在资产中找到 shoes 可执行文件"; exit 1; }
+  [ -n "$bin" ] || { echo "FATAL: shoes binary not found"; exit 1; }
 
   install -m 0755 "$bin" /usr/local/bin/shoes
   trap - RETURN
@@ -56,12 +62,8 @@ install_shoes_release
 
 # ===== config: create only if missing =====
 if [ ! -f /etc/shoes/config.yaml ]; then
-  if [ -z "${T_UUID}" ]; then
-    T_UUID="$(uuidgen)"
-  fi
-  if [ -z "${T_PASS}" ]; then
-    T_PASS="$(openssl rand -hex 16)"
-  fi
+  [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
+  [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
 
   cat >/etc/shoes/config.yaml <<EOF
 - address: "[::]:${TUIC_PORT}"
@@ -81,13 +83,10 @@ if [ ! -f /etc/shoes/config.yaml ]; then
 EOF
 
   chown root:shoes /etc/shoes/config.yaml
-  chmod 640      /etc/shoes/config.yaml
-
-  echo "TUIC UUID: ${T_UUID}"
-  echo "TUIC PASS: ${T_PASS}"
+  chmod 640 /etc/shoes/config.yaml
 fi
 
-# ===== systemd unit: create only if missing =====
+# ===== systemd unit =====
 if [ ! -f /etc/systemd/system/shoes.service ]; then
   cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
@@ -122,6 +121,7 @@ else
   systemctl enable --now shoes >/dev/null 2>&1 || true
 fi
 
+# ===== final output (ONLY tag + bin) =====
 BIN_VER="$(/usr/local/bin/shoes -V 2>/dev/null || /usr/local/bin/shoes --version 2>/dev/null || true)"
 echo "shoes tag: ${SHOES_TAG:-unknown}"
 echo "shoes bin: ${BIN_VER:-unknown}"
