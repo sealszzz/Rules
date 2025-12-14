@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TUIC_PORT:=8443}"
+: "${TUIC_PORT:=4443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
@@ -21,6 +21,12 @@ getent group shoes >/dev/null || groupadd --system shoes
 id -u shoes >/dev/null 2>&1 || useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
 install -d -o shoes -g shoes -m 750 /var/lib/shoes
 install -d -o root  -g shoes -m 750 /etc/shoes
+
+get_shoes_tag() {
+  local u
+  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/cfal/shoes/releases/latest")" || return 1
+  printf '%s\n' "${u##*/}"
+}
 
 install_shoes_release() {
   case "$(uname -m)" in
@@ -45,6 +51,7 @@ install_shoes_release() {
   trap - RETURN
 }
 
+SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
 install_shoes_release
 
 # ===== config: create only if missing =====
@@ -112,18 +119,9 @@ systemctl daemon-reload
 if systemctl is-enabled shoes >/dev/null 2>&1; then
   systemctl restart shoes
 else
-  systemctl enable --now shoes || true
+  systemctl enable --now shoes >/dev/null 2>&1 || true
 fi
 
-echo
-ver="$(
-  /usr/local/bin/shoes -V 2>/dev/null \
-  || /usr/local/bin/shoes --version 2>/dev/null \
-  || true
-)"
-echo "shoes version: ${ver:-unknown}"
-echo
-
-echo "监听检查（TUIC / UDP 端口 ${TUIC_PORT}）："
-ss -Hnplu 2>/dev/null | grep -E ":${TUIC_PORT}([^0-9]|$)" || echo "未发现 UDP ${TUIC_PORT}"
-echo
+BIN_VER="$(/usr/local/bin/shoes -V 2>/dev/null || /usr/local/bin/shoes --version 2>/dev/null || true)"
+echo "shoes tag: ${SHOES_TAG:-unknown}"
+echo "shoes bin: ${BIN_VER:-unknown}"
