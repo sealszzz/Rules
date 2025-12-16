@@ -71,30 +71,17 @@ server = "[::]:${TUIC_PORT}"
 udp_relay_ipv6 = true
 zero_rtt_handshake = false
 dual_stack = false
-auth_timeout = "8s"
 
 [users]
 "${TUIC_UUID}" = "${TUIC_PASS}"
 
 [tls]
-self_sign = false
 certificate = "${CERT}"
 private_key = "${KEY}"
 alpn = ["h3"]
 
-[quic]
-max_idle_time = "30s" 
-
 [quic.congestion_control]
 controller = "bbr"
-
-[experimental]
-drop_loopback = true
-drop_private = true
-
-[outbound.default]
-type = "direct"
-ip_mode = "v4first"
 EOF
 
   chown root:"$TUIC_GROUP" "$TUIC_CONF_FILE"
