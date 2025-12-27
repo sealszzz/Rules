@@ -84,7 +84,9 @@ table inet filter {
 
     iif lo accept
 
-    ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 10/second accept
+    ip protocol icmp icmp type {
+      echo-request, destination-unreachable, time-exceeded
+    } limit rate 10/second accept
 
     ip6 nexthdr ipv6-icmp icmpv6 type {
       nd-neighbor-solicit, nd-neighbor-advert,
