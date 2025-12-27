@@ -84,9 +84,7 @@ table inet filter {
 
     iif lo accept
 
-    ip protocol icmp icmp type {
-      echo-request, destination-unreachable, time-exceeded
-    } limit rate 10/second accept
+    ip protocol icmp icmp type { echo-request, destination-unreachable, time-exceeded } limit rate 10/second accept
 
     ip6 nexthdr ipv6-icmp icmpv6 type {
       nd-neighbor-solicit, nd-neighbor-advert,
@@ -146,6 +144,17 @@ cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
 EOF
+
+cat >/etc/sysctl.d/99-quic.conf <<'EOF'
+net.netfilter.nf_conntrack_max = 1048576
+net.netfilter.nf_conntrack_udp_timeout = 30
+net.netfilter.nf_conntrack_udp_timeout_stream = 60
+net.core.rmem_max = 26214400
+net.core.wmem_max = 26214400
+net.core.rmem_default = 4194304
+net.core.wmem_default = 4194304
+EOF
+
 sysctl --system >/dev/null || true
 
 sleep 5
