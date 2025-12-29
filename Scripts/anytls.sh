@@ -101,3 +101,4 @@ systemctl restart "$ANYTLS_SERVICE_NAME"
 
 echo "anytls tag: ${tag}"
 "$ANYTLS_BIN" --version 2>/dev/null | head -n1 || true
+echo "anytls password: ${ANYTLS_PASSWORD}"
