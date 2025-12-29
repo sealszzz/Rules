@@ -15,14 +15,13 @@ set -euo pipefail
 : "${CADDY_BIN:=/usr/local/bin/caddy-l4}"
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
 : "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
-
 : "${CADDY_REPO:=sealszzz/Caddy}"
 
 CADDY_SERVICE_NAME="caddy-l4"
-CADDY_STATE_DIR="/var/lib/caddy"
-CADDY_XDG_CONFIG_HOME="${CADDY_STATE_DIR}/.config"
 
 export DEBIAN_FRONTEND=noninteractive
+
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
@@ -52,19 +51,15 @@ tar -xzf "$TMP_DIR/$ASSET" -C "$TMP_DIR"
 
 BIN_SRC="$TMP_DIR/caddy-l4-linux-${ARCH}"
 [ -f "$BIN_SRC" ] || { echo "FATAL: binary missing: $BIN_SRC"; exit 1; }
-
 install -m 0755 "$BIN_SRC" "$CADDY_BIN"
 
 getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
 id -u "$CADDY_USER" >/dev/null 2>&1 || \
-  useradd --system --no-create-home \
-    --gid "$CADDY_GROUP" \
-    --shell /usr/sbin/nologin \
-    "$CADDY_USER"
+  useradd --system --no-create-home --gid "$CADDY_GROUP" --shell /usr/sbin/nologin "$CADDY_USER"
 
-install -d -m 0750 -o "$CADDY_USER" -g "$CADDY_GROUP" "$CADDY_XDG_CONFIG_HOME"
 install -d -m 0750 -o root -g "$CADDY_GROUP" /etc/caddy
 
+# create config only if missing (keep existing caddy.json)
 if [ ! -f "$CADDY_CONF" ]; then
   cat >"$CADDY_CONF" <<EOF
 {
@@ -143,20 +138,27 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-cat >"$CADDY_SERVICE" <<EOF
+# systemd unit (orthodox: StateDirectory + HOME + XDG)
+cat >"$CADDY_SERVICE" <<'EOF'
 [Unit]
 Description=Caddy layer4 TCP+UDP 443 SNI proxy
 After=network.target
 
 [Service]
-User=${CADDY_USER}
-Group=${CADDY_GROUP}
-Environment=XDG_CONFIG_HOME=${CADDY_XDG_CONFIG_HOME}
-ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
+User=caddy
+Group=caddy
+
+# Let systemd create and own /var/lib/caddy
+StateDirectory=caddy
+Environment=HOME=/var/lib/caddy
+Environment=XDG_CONFIG_HOME=/var/lib/caddy/.config
+
+ExecStart=/usr/local/bin/caddy-l4 run --config /etc/caddy/caddy.json
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
+
 Restart=always
 RestartSec=2s
 
@@ -164,7 +166,15 @@ RestartSec=2s
 WantedBy=multi-user.target
 EOF
 
+# If you override CADDY_USER/GROUP/BIN/CONF, patch the unit in-place:
+sed -i \
+  -e "s|^User=caddy$|User=${CADDY_USER}|" \
+  -e "s|^Group=caddy$|Group=${CADDY_GROUP}|" \
+  -e "s|^ExecStart=/usr/local/bin/caddy-l4 run --config /etc/caddy/caddy.json$|ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}|" \
+  "$CADDY_SERVICE"
+
 chmod 644 "$CADDY_SERVICE"
+
 systemctl daemon-reload
 systemctl enable "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$CADDY_SERVICE_NAME"
