@@ -62,18 +62,30 @@ cat >"$CADDY_CONF" <<EOF
           "listen": [":443"],
           "routes": [
             {
-              "match": [{ "tls": { "sni": ["${ANYTLS_SNI}"] } }],
-              "handle": [{
-                "handler": "proxy",
-                "upstreams": [{ "dial": ["tcp/127.0.0.1:${ANYTLS_PORT}"] }]
-              }]
+              "match": [
+                { "tls": { "sni": ["${ANYTLS_SNI}"] } }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["tcp/127.0.0.1:${ANYTLS_PORT}"] }
+                  ]
+                }
+              ]
             },
             {
-              "match": [{ "tls": {} }],
-              "handle": [{
-                "handler": "proxy",
-                "upstreams": [{ "dial": ["tcp/127.0.0.1:${VLESS_PORT}"] }]
-              }]
+              "match": [
+                { "tls": {} }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["tcp/127.0.0.1:${VLESS_PORT}"] }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -81,18 +93,30 @@ cat >"$CADDY_CONF" <<EOF
           "listen": ["udp/:443"],
           "routes": [
             {
-              "match": [{ "quic": { "sni": ["${TUIC_SNI}"] } }],
-              "handle": [{
-                "handler": "proxy",
-                "upstreams": [{ "dial": ["udp/127.0.0.1:${TUIC_PORT}"] }]
-              }]
+              "match": [
+                { "quic": { "sni": ["${TUIC_SNI}"] } }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["udp/127.0.0.1:${TUIC_PORT}"] }
+                  ]
+                }
+              ]
             },
             {
-              "match": [{ "quic": { "sni": ["${JUICITY_SNI}"] } }],
-              "handle": [{
-                "handler": "proxy",
-                "upstreams": [{ "dial": ["udp/127.0.0.1:${JUICITY_PORT}"] }]
-              }]
+              "match": [
+                { "quic": { "sni": ["${JUICITY_SNI}"] } }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["udp/127.0.0.1:${JUICITY_PORT}"] }
+                  ]
+                }
+              ]
             }
           ]
         }
