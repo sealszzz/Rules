@@ -16,14 +16,13 @@ set -euo pipefail
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
 : "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
 : "${CADDY_REPO:=sealszzz/Caddy}"
-
-SERVICE_NAME="caddy-l4"
+: "${SERVICE_NAME:=caddy-l4}"
 
 export DEBIAN_FRONTEND=noninteractive
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update -qq
-apt-get install -y --no-install-recommends curl ca-certificates tar
+apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64) ARCH=amd64 ;;
@@ -31,8 +30,7 @@ case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   *) echo "FATAL: unsupported arch"; exit 1 ;;
 esac
 
-LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-  "https://github.com/${CADDY_REPO}/releases/latest")"
+LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${CADDY_REPO}/releases/latest")"
 TAG="${LATEST_URL##*/}"
 [ -n "$TAG" ] || { echo "FATAL: failed to get tag"; exit 1; }
 
@@ -42,14 +40,14 @@ URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET}"
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-curl -fL "$URL" -o "$TMP/$ASSET"
+curl -fL --retry 3 --retry-delay 1 -o "$TMP/$ASSET" "$URL"
 tar -xzf "$TMP/$ASSET" -C "$TMP"
+
+[ -f "$TMP/caddy-l4-linux-${ARCH}" ] || { echo "FATAL: missing binary in tar"; exit 1; }
 install -m 0755 "$TMP/caddy-l4-linux-${ARCH}" "$CADDY_BIN"
 
 getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
-id -u "$CADDY_USER" >/dev/null 2>&1 || \
-  useradd --system --no-create-home --gid "$CADDY_GROUP" \
-  --shell /usr/sbin/nologin "$CADDY_USER"
+id -u "$CADDY_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$CADDY_GROUP" --shell /usr/sbin/nologin "$CADDY_USER"
 
 install -d -o root -g "$CADDY_GROUP" -m 0750 /etc/caddy
 
@@ -105,7 +103,8 @@ cat >"$CADDY_CONF" <<EOF
 EOF
 fi
 
-chown root:"$CADDY_GROUP" "$CADDY_CONF"
+chown -R root:"$CADDY_GROUP" /etc/caddy
+chmod 0750 /etc/caddy
 chmod 0640 "$CADDY_CONF"
 
 cat >"$CADDY_SERVICE" <<EOF
@@ -140,4 +139,5 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
+"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null
 echo "caddy-l4 installed: $TAG"
