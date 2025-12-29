@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 set -euo pipefail
-
 export DEBIAN_FRONTEND=noninteractive
 
 : "${ANYTLS_LISTEN:=[::]}"
@@ -18,7 +17,7 @@ ANYTLS_SERVICE_NAME="anytls"
 apt-get update
 apt-get install -y --no-install-recommends curl ca-certificates unzip openssl
 
-getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
+getent group "$ANYTLS_GROUP" >/dev/null 2>&1 || groupadd --system "$ANYTLS_GROUP"
 id -u "$ANYTLS_USER" >/dev/null 2>&1 || \
   useradd --system -g "$ANYTLS_GROUP" -M -d "$ANYTLS_STATE_DIR" -s /usr/sbin/nologin "$ANYTLS_USER"
 
@@ -27,10 +26,7 @@ install -d -o "$ANYTLS_USER" -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_STATE_DIR"
 if [ -n "$ANYTLS_TAG" ]; then
   tag="$ANYTLS_TAG"
 else
-  final_url="$(
-    curl -fsSIL -o /dev/null -w '%{url_effective}' \
-      https://github.com/anytls/anytls-go/releases/latest
-  )"
+  final_url="$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/anytls/anytls-go/releases/latest)"
   tag="${final_url##*/}"
 fi
 
@@ -42,7 +38,7 @@ esac
 case "$(uname -m)" in
   x86_64|amd64)  os="linux"; arch="amd64" ;;
   aarch64|arm64) os="linux"; arch="arm64" ;;
-  *) exit 1 ;;
+  *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
 esac
 
 asset="anytls_${version}_${os}_${arch}.zip"
@@ -54,20 +50,17 @@ trap 'rm -rf "$tmpd"' EXIT
 curl -fL "$url" -o "$tmpd/pkg.zip"
 unzip -q "$tmpd/pkg.zip" -d "$tmpd"
 
-[ -f "$tmpd/anytls-server" ] || exit 1
-install -m 0755 "$tmpd/anytls-server" "$ANYTLS_BIN"
+bin="$(find "$tmpd" -type f -name anytls-server -print -quit)"
+[ -n "$bin" ] || { echo "anytls-server not found in zip" >&2; exit 1; }
+install -m 0755 "$bin" "$ANYTLS_BIN"
 
+FIRST_INSTALL=0
 if [ ! -f "$ANYTLS_SERVICE" ]; then
+  FIRST_INSTALL=1
   if [ -z "$ANYTLS_PASSWORD" ]; then
     ANYTLS_PASSWORD="$(openssl rand -hex 16)"
   fi
-else
-  if [ -z "$ANYTLS_PASSWORD" ]; then
-    exit 1
-  fi
-fi
 
-if [ ! -f "$ANYTLS_SERVICE" ]; then
   cat >"$ANYTLS_SERVICE" <<EOF
 [Unit]
 Description=AnyTLS Server
@@ -101,4 +94,6 @@ systemctl restart "$ANYTLS_SERVICE_NAME"
 
 echo "anytls tag: ${tag}"
 "$ANYTLS_BIN" --version 2>/dev/null | head -n1 || true
-echo "anytls password: ${ANYTLS_PASSWORD}"
+if [ "$FIRST_INSTALL" -eq 1 ]; then
+  echo "anytls password: ${ANYTLS_PASSWORD}"
+fi
