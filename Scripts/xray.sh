@@ -3,7 +3,6 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ===== Tunables =====
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"
@@ -19,21 +18,20 @@ XRAY_CONF_FILE="${XRAY_CONF_DIR}/config.json"
 XRAY_BIN="/usr/local/bin/xray"
 XRAY_SERVICE="/etc/systemd/system/xray.service"
 XRAY_SERVICE_NAME="xray"
+XRAY_ASSET_DIR="/usr/local/share/xray"
 
-# ===== Deps =====
 apt-get update
 apt-get install -y --no-install-recommends \
   curl ca-certificates uuid-runtime unzip openssl iproute2
 
-# ===== User & Dirs =====
 getent group "$XRAY_GROUP" >/dev/null || groupadd --system "$XRAY_GROUP"
 id -u "$XRAY_USER" >/dev/null 2>&1 || \
   useradd --system -g "$XRAY_GROUP" -M -d "$XRAY_STATE_DIR" -s /usr/sbin/nologin "$XRAY_USER"
 
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
+install -d -o root        -g root         -m 755 "$XRAY_ASSET_DIR"
 
-# ===== Resolve release tag via /releases/latest 302 =====
 get_latest_tag() {
   if [ -n "${XRAY_TAG:-}" ]; then
     printf '%s\n' "$XRAY_TAG"
@@ -73,7 +71,6 @@ trap 'rm -rf "$tmpd"' EXIT
 dl_file="${tmpd}/${asset_name}"
 curl -fL --retry 3 --retry-delay 1 -o "$dl_file" "$dl_url"
 
-# ===== Extract & install =====
 udir="${tmpd}/u"
 mkdir -p "$udir"
 unzip -q "$dl_file" -d "$udir"
@@ -83,7 +80,6 @@ binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 |
 
 install -m 0755 "$binpath" "$XRAY_BIN"
 
-# ===== Reality keypair (Password ONLY) =====
 parse_reality_keys() {
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r')" || out=""
@@ -101,7 +97,6 @@ parse_reality_keys() {
   XRAY_PUB="$pub"
 }
 
-# ===== First-time config =====
 if [ ! -f "$XRAY_CONF_FILE" ]; then
   XRAY_UUID="$(uuidgen)"
   XRAY_SHORTID="$(openssl rand -hex 8)"
@@ -160,7 +155,6 @@ EOF
   chmod 640 "$XRAY_CONF_FILE"
 fi
 
-# ===== systemd unit =====
 if [ ! -f "$XRAY_SERVICE" ]; then
   cat >"$XRAY_SERVICE" <<EOF
 [Unit]
@@ -172,6 +166,7 @@ Wants=network-online.target
 [Service]
 User=${XRAY_USER}
 Group=${XRAY_GROUP}
+Environment=XRAY_LOCATION_ASSET=${XRAY_ASSET_DIR}
 Type=simple
 UMask=0077
 WorkingDirectory=${XRAY_STATE_DIR}
@@ -189,7 +184,6 @@ EOF
   chmod 644 "$XRAY_SERVICE"
 fi
 
-# ===== Start / Reload =====
 systemctl daemon-reload
 if systemctl is-enabled "$XRAY_SERVICE_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$XRAY_SERVICE_NAME" || systemctl restart "$XRAY_SERVICE_NAME"
