@@ -59,7 +59,6 @@ id -u "$CADDY_USER" >/dev/null 2>&1 || \
 
 install -d -m 0750 -o root -g "$CADDY_GROUP" /etc/caddy
 
-# create config only if missing (keep existing caddy.json)
 if [ ! -f "$CADDY_CONF" ]; then
   cat >"$CADDY_CONF" <<EOF
 {
@@ -138,7 +137,6 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-# systemd unit (orthodox: StateDirectory + HOME + XDG)
 cat >"$CADDY_SERVICE" <<'EOF'
 [Unit]
 Description=Caddy layer4 TCP+UDP 443 SNI proxy
@@ -148,7 +146,6 @@ After=network.target
 User=caddy
 Group=caddy
 
-# Let systemd create and own /var/lib/caddy
 StateDirectory=caddy
 Environment=HOME=/var/lib/caddy
 Environment=XDG_CONFIG_HOME=/var/lib/caddy/.config
@@ -166,7 +163,6 @@ RestartSec=2s
 WantedBy=multi-user.target
 EOF
 
-# If you override CADDY_USER/GROUP/BIN/CONF, patch the unit in-place:
 sed -i \
   -e "s|^User=caddy$|User=${CADDY_USER}|" \
   -e "s|^Group=caddy$|Group=${CADDY_GROUP}|" \
