@@ -1,8 +1,6 @@
 #!/usr/bin/env bash
-# caddy-l4 TCP+UDP 443 SNI STREAM (admin disabled, no home dir)
 set -euo pipefail
 
-# ===== Tunables =====
 : "${ANYTLS_PORT:=8001}"
 : "${VLESS_PORT:=8002}"
 : "${ANYTLS_SNI:=anytls.example.com}"
@@ -21,27 +19,23 @@ set -euo pipefail
 : "${CADDY_REPO:=sealszzz/Caddy}"
 
 CADDY_SERVICE_NAME="caddy-l4"
+CADDY_STATE_DIR="/var/lib/caddy"
+CADDY_XDG_CONFIG_HOME="${CADDY_STATE_DIR}/.config"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ===== Deps (runtime only) =====
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
-# ===== Arch =====
 detect_arch() {
   case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
     amd64|x86_64) echo "amd64" ;;
     arm64|aarch64) echo "arm64" ;;
-    *)
-      echo "FATAL: unsupported arch: $(uname -m)" >&2
-      exit 1
-      ;;
+    *) echo "FATAL: unsupported arch: $(uname -m)" >&2; exit 1 ;;
   esac
 }
 ARCH="$(detect_arch)"
 
-# ===== Resolve latest release via 302 =====
 LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
   "https://github.com/${CADDY_REPO}/releases/latest")"
 TAG="${LATEST_URL##*/}"
@@ -61,9 +55,7 @@ BIN_SRC="$TMP_DIR/caddy-l4-linux-${ARCH}"
 
 install -m 0755 "$BIN_SRC" "$CADDY_BIN"
 
-# ===== User / dirs (NO HOME) =====
 getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
-
 if ! id -u "$CADDY_USER" >/dev/null 2>&1; then
   useradd --system --no-create-home \
     --gid "$CADDY_GROUP" \
@@ -71,11 +63,12 @@ if ! id -u "$CADDY_USER" >/dev/null 2>&1; then
     "$CADDY_USER"
 fi
 
-mkdir -p /etc/caddy
+install -d -m 0750 -o "$CADDY_USER" -g "$CADDY_GROUP" "$CADDY_STATE_DIR" "$CADDY_XDG_CONFIG_HOME"
+
+install -d -m 0750 -o root -g "$CADDY_GROUP" /etc/caddy
 chown root:"$CADDY_GROUP" /etc/caddy
 chmod 750 /etc/caddy
 
-# ===== Config (create-once) =====
 if [ ! -f "$CADDY_CONF" ]; then
   cat >"$CADDY_CONF" <<EOF
 {
@@ -154,16 +147,13 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-# ===== Validate config (silent on success, loud on failure) =====
-if ! _validate_out="$("$CADDY_BIN" validate --config "$CADDY_CONF" 2>&1)"; then
+if ! _validate_out="$("$CADDY_BIN" validate --config "$CADDY_CONF" --adapter json 2>&1)"; then
   echo "FATAL: caddy config validation failed: $CADDY_CONF" >&2
   printf '%s\n' "$_validate_out" >&2
   exit 1
 fi
 
-# ===== systemd (create-once) =====
-if [ ! -f "$CADDY_SERVICE" ]; then
-  cat >"$CADDY_SERVICE" <<EOF
+cat >"$CADDY_SERVICE" <<EOF
 [Unit]
 Description=Caddy layer4 TCP+UDP 443 SNI proxy
 After=network.target
@@ -171,7 +161,8 @@ After=network.target
 [Service]
 User=${CADDY_USER}
 Group=${CADDY_GROUP}
-ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
+Environment=XDG_CONFIG_HOME=${CADDY_XDG_CONFIG_HOME}
+ExecStart=${CADDY_BIN} run --config ${CADDY_CONF} --adapter json
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -182,19 +173,11 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 "$CADDY_SERVICE"
-fi
+chmod 644 "$CADDY_SERVICE"
 
-# ===== Start / restart =====
 systemctl daemon-reload
 systemctl enable "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || true
-
-if systemctl is-active --quiet "$CADDY_SERVICE_NAME"; then
-  systemctl restart "$CADDY_SERVICE_NAME"
-else
-  systemctl start "$CADDY_SERVICE_NAME"
-fi
+systemctl restart "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || systemctl start "$CADDY_SERVICE_NAME"
 
 echo "caddy-l4 updated to version: ${TAG}"
-echo "[*] caddy-l4 binary version:"
 "$CADDY_BIN" version | head -n1
