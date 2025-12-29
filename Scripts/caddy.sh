@@ -56,18 +56,14 @@ BIN_SRC="$TMP_DIR/caddy-l4-linux-${ARCH}"
 install -m 0755 "$BIN_SRC" "$CADDY_BIN"
 
 getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
-if ! id -u "$CADDY_USER" >/dev/null 2>&1; then
+id -u "$CADDY_USER" >/dev/null 2>&1 || \
   useradd --system --no-create-home \
     --gid "$CADDY_GROUP" \
     --shell /usr/sbin/nologin \
     "$CADDY_USER"
-fi
 
-install -d -m 0750 -o "$CADDY_USER" -g "$CADDY_GROUP" "$CADDY_STATE_DIR" "$CADDY_XDG_CONFIG_HOME"
-
+install -d -m 0750 -o "$CADDY_USER" -g "$CADDY_GROUP" "$CADDY_XDG_CONFIG_HOME"
 install -d -m 0750 -o root -g "$CADDY_GROUP" /etc/caddy
-chown root:"$CADDY_GROUP" /etc/caddy
-chmod 750 /etc/caddy
 
 if [ ! -f "$CADDY_CONF" ]; then
   cat >"$CADDY_CONF" <<EOF
@@ -147,12 +143,6 @@ EOF
   chmod 640 "$CADDY_CONF"
 fi
 
-if ! _validate_out="$("$CADDY_BIN" validate --config "$CADDY_CONF" --adapter json 2>&1)"; then
-  echo "FATAL: caddy config validation failed: $CADDY_CONF" >&2
-  printf '%s\n' "$_validate_out" >&2
-  exit 1
-fi
-
 cat >"$CADDY_SERVICE" <<EOF
 [Unit]
 Description=Caddy layer4 TCP+UDP 443 SNI proxy
@@ -162,22 +152,22 @@ After=network.target
 User=${CADDY_USER}
 Group=${CADDY_GROUP}
 Environment=XDG_CONFIG_HOME=${CADDY_XDG_CONFIG_HOME}
-ExecStart=${CADDY_BIN} run --config ${CADDY_CONF} --adapter json
+ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
-Restart=on-failure
-RestartSec=3s
+Restart=always
+RestartSec=2s
 
 [Install]
 WantedBy=multi-user.target
 EOF
-chmod 644 "$CADDY_SERVICE"
 
+chmod 644 "$CADDY_SERVICE"
 systemctl daemon-reload
 systemctl enable "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || true
-systemctl restart "$CADDY_SERVICE_NAME" >/dev/null 2>&1 || systemctl start "$CADDY_SERVICE_NAME"
+systemctl restart "$CADDY_SERVICE_NAME"
 
 echo "caddy-l4 updated to version: ${TAG}"
 "$CADDY_BIN" version | head -n1
