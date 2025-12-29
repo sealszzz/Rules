@@ -71,7 +71,8 @@ if [ ! -f "$ANYTLS_SERVICE" ]; then
   cat >"$ANYTLS_SERVICE" <<EOF
 [Unit]
 Description=AnyTLS Server
-After=network-online.target
+Documentation=https://github.com/anytls/anytls-go
+After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
