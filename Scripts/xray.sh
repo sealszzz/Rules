@@ -3,7 +3,6 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ===== Tunables =====
 : "${XRAY_PORT:=443}"
 : "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"
@@ -20,52 +19,44 @@ XRAY_BIN="/usr/local/bin/xray"
 XRAY_SERVICE="/etc/systemd/system/xray.service"
 XRAY_SERVICE_NAME="xray"
 
-# ===== Deps =====
-apt-get update
-apt-get install -y --no-install-recommends \
-  curl ca-certificates uuid-runtime unzip openssl iproute2
+XRAY_ASSET_DIR="/usr/local/share/xray"
 
-# ===== User & Dirs =====
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
+
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates uuid-runtime unzip openssl iproute2
+
 getent group "$XRAY_GROUP" >/dev/null || groupadd --system "$XRAY_GROUP"
 id -u "$XRAY_USER" >/dev/null 2>&1 || \
   useradd --system -g "$XRAY_GROUP" -M -d "$XRAY_STATE_DIR" -s /usr/sbin/nologin "$XRAY_USER"
 
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
+install -d -m 0755 "$XRAY_ASSET_DIR"
 
-# ===== Resolve release tag via /releases/latest 302 =====
 get_latest_tag() {
   if [ -n "${XRAY_TAG:-}" ]; then
     printf '%s\n' "$XRAY_TAG"
     return 0
   fi
-
   local final
   final="$(
     curl -fsSIL -o /dev/null -w '%{url_effective}' \
       "https://github.com/XTLS/Xray-core/releases/latest"
   )" || return 1
-
   printf '%s\n' "${final##*/}"
 }
 
-echo "[*] Query latest Xray release (no-API, via 302)…"
-tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
+tag="$(get_latest_tag)" || { echo "FATAL: failed to resolve latest tag"; exit 1; }
 
 case "$(uname -m)" in
   x86_64|amd64)  MACHINE="64"        ;;
   aarch64|arm64) MACHINE="arm64-v8a" ;;
-  *)
-    echo "Unsupported arch: $(uname -m)" >&2
-    exit 1
-    ;;
+  *) echo "FATAL: unsupported arch: $(uname -m)" >&2; exit 1 ;;
 esac
 
 asset_name="Xray-linux-${MACHINE}.zip"
 dl_url="https://github.com/XTLS/Xray-core/releases/download/${tag}/${asset_name}"
-
-echo "[*] Install version: ${tag}"
-echo "[*] Asset:          ${asset_name}"
 
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
@@ -73,35 +64,29 @@ trap 'rm -rf "$tmpd"' EXIT
 dl_file="${tmpd}/${asset_name}"
 curl -fL --retry 3 --retry-delay 1 -o "$dl_file" "$dl_url"
 
-# ===== Extract & install =====
 udir="${tmpd}/u"
 mkdir -p "$udir"
 unzip -q "$dl_file" -d "$udir"
 
 binpath="$(find "$udir" -maxdepth 2 -type f -name 'xray' -perm -u+x | head -n1 || true)"
-[ -n "$binpath" ] || { echo "xray binary not found in asset: $asset_name"; exit 1; }
+[ -n "$binpath" ] || { echo "FATAL: xray binary not found in asset: $asset_name"; exit 1; }
 
 install -m 0755 "$binpath" "$XRAY_BIN"
 
-# ===== Reality keypair (Password ONLY) =====
 parse_reality_keys() {
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r')" || out=""
-
-  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {print $2; exit}')"
-  pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *password *$/    {print $2; exit}')"
-
+  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *private *key *$/ {print $2; exit}')"
+  pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *public *key *$/  {print $2; exit}')"
   if [ -z "$priv" ] || [ -z "$pub" ]; then
-    echo "[FATAL] cannot parse xray x25519 output" >&2
+    echo "FATAL: cannot parse xray x25519 output" >&2
     printf '%s\n' "$out" >&2
     exit 1
   fi
-
   XRAY_PRIV="$priv"
   XRAY_PUB="$pub"
 }
 
-# ===== First-time config =====
 if [ ! -f "$XRAY_CONF_FILE" ]; then
   XRAY_UUID="$(uuidgen)"
   XRAY_SHORTID="$(openssl rand -hex 8)"
@@ -140,7 +125,6 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
             "${XRAY_SNI}"
           ],
           "privateKey": "${XRAY_PRIV}",
-          "publicKey": "${XRAY_PUB}",
           "shortIds": [
             "${XRAY_SHORTID}"
           ]
@@ -158,9 +142,13 @@ EOF
 
   chown root:"$XRAY_GROUP" "$XRAY_CONF_FILE"
   chmod 640 "$XRAY_CONF_FILE"
+
+  echo "XRAY_UUID=${XRAY_UUID}"
+  echo "XRAY_SHORTID=${XRAY_SHORTID}"
+  echo "XRAY_PRIVATE_KEY=${XRAY_PRIV}"
+  echo "XRAY_PUBLIC_KEY=${XRAY_PUB}"
 fi
 
-# ===== systemd unit =====
 if [ ! -f "$XRAY_SERVICE" ]; then
   cat >"$XRAY_SERVICE" <<EOF
 [Unit]
@@ -175,6 +163,7 @@ Group=${XRAY_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${XRAY_STATE_DIR}
+Environment=XRAY_LOCATION_ASSET=${XRAY_ASSET_DIR}
 ExecStart=${XRAY_BIN} run -c ${XRAY_CONF_FILE}
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
@@ -187,12 +176,21 @@ RestartSec=3s
 WantedBy=multi-user.target
 EOF
   chmod 644 "$XRAY_SERVICE"
+else
+  if ! grep -q '^Environment=XRAY_LOCATION_ASSET=' "$XRAY_SERVICE"; then
+    sed -i "s|^WorkingDirectory=.*|&\nEnvironment=XRAY_LOCATION_ASSET=${XRAY_ASSET_DIR}|" "$XRAY_SERVICE"
+  else
+    sed -i "s|^Environment=XRAY_LOCATION_ASSET=.*|Environment=XRAY_LOCATION_ASSET=${XRAY_ASSET_DIR}|" "$XRAY_SERVICE"
+  fi
 fi
 
-# ===== Start / Reload =====
 systemctl daemon-reload
 if systemctl is-enabled "$XRAY_SERVICE_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$XRAY_SERVICE_NAME" || systemctl restart "$XRAY_SERVICE_NAME"
 else
   systemctl enable --now "$XRAY_SERVICE_NAME"
 fi
+
+systemctl show -p Environment "$XRAY_SERVICE_NAME" | tr ' ' '\n' | grep XRAY_LOCATION_ASSET || true
+echo "xray installed: ${tag}"
+"$XRAY_BIN" version | head -n1
