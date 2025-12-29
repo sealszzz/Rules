@@ -56,7 +56,6 @@ getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
 id -u "$CADDY_USER" >/dev/null 2>&1 || \
   useradd --system --no-create-home --gid "$CADDY_GROUP" --shell /usr/sbin/nologin "$CADDY_USER"
 
-# /etc/caddy 必须可进入，config 必须可读（避免 permission denied）
 install -d -m 0755 -o root -g "$CADDY_GROUP" /etc/caddy
 
 if [ ! -f "$CADDY_CONF" ]; then
@@ -135,7 +134,6 @@ if [ ! -f "$CADDY_CONF" ]; then
 EOF
 fi
 
-# 无论 config 是否已存在，都强制修复 owner/perm（幂等、抗迁移/覆盖）
 chown root:"$CADDY_GROUP" "$CADDY_CONF" 2>/dev/null || true
 chmod 0644 "$CADDY_CONF" 2>/dev/null || true
 chmod 0755 /etc/caddy 2>/dev/null || true
