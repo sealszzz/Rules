@@ -20,7 +20,6 @@ set -euo pipefail
 CADDY_SERVICE_NAME="caddy-l4"
 
 export DEBIAN_FRONTEND=noninteractive
-
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update >/dev/null
@@ -57,7 +56,8 @@ getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
 id -u "$CADDY_USER" >/dev/null 2>&1 || \
   useradd --system --no-create-home --gid "$CADDY_GROUP" --shell /usr/sbin/nologin "$CADDY_USER"
 
-install -d -m 0750 -o root -g "$CADDY_GROUP" /etc/caddy
+# /etc/caddy 必须可进入，config 必须可读（避免 permission denied）
+install -d -m 0755 -o root -g "$CADDY_GROUP" /etc/caddy
 
 if [ ! -f "$CADDY_CONF" ]; then
   cat >"$CADDY_CONF" <<EOF
@@ -133,9 +133,12 @@ if [ ! -f "$CADDY_CONF" ]; then
   }
 }
 EOF
-  chown root:"$CADDY_GROUP" "$CADDY_CONF"
-  chmod 640 "$CADDY_CONF"
 fi
+
+# 无论 config 是否已存在，都强制修复 owner/perm（幂等、抗迁移/覆盖）
+chown root:"$CADDY_GROUP" "$CADDY_CONF" 2>/dev/null || true
+chmod 0644 "$CADDY_CONF" 2>/dev/null || true
+chmod 0755 /etc/caddy 2>/dev/null || true
 
 cat >"$CADDY_SERVICE" <<'EOF'
 [Unit]
