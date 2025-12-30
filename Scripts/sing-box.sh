@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# sing-box anytls minimal installer: stable only (302 latest tag -> build asset name)
 set -euo pipefail
 
 : "${SINGBOX_USER:=sing-box}"
@@ -12,8 +11,12 @@ set -euo pipefail
 : "${ANYTLS_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${ANYTLS_PASSWORD:=}"     # empty -> generate only when creating config
-: "${SINGBOX_TAG:=}"         # optional override, like v1.12.0
+: "${ANYTLS_PASSWORD:=}"
+: "${SINGBOX_TAG:=}"
+
+: "${TUIC_PORT:=8443}"
+: "${TUIC_UUID:=}"
+: "${TUIC_PASSWORD:=}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -69,23 +72,32 @@ BIN_SRC="${BIN_DIR}/sing-box"
 echo "[*] Install binary -> ${SINGBOX_BIN}"
 install -m 0755 "${BIN_SRC}" "${SINGBOX_BIN}"
 
-# user/group
 getent group "${SINGBOX_GROUP}" >/dev/null || groupadd --system "${SINGBOX_GROUP}"
 if ! id -u "${SINGBOX_USER}" >/dev/null 2>&1; then
   useradd --system --no-create-home --gid "${SINGBOX_GROUP}" --shell /usr/sbin/nologin "${SINGBOX_USER}"
 fi
 
-# dirs (no home)
 install -d -o root -g "${SINGBOX_GROUP}" -m 750 /etc/sing-box
 install -d -o "${SINGBOX_USER}" -g "${SINGBOX_GROUP}" -m 750 /var/lib/sing-box
 
-# config create-if-missing
 if [ ! -f "${SINGBOX_CONF}" ]; then
   [ -r "${CERT}" ] || { echo "FATAL: missing ${CERT}"; exit 1; }
   [ -r "${KEY}"  ] || { echo "FATAL: missing ${KEY}";  exit 1; }
 
   if [ -z "${ANYTLS_PASSWORD}" ]; then
     ANYTLS_PASSWORD="$(openssl rand -hex 16)"
+  fi
+
+  if [ -z "${TUIC_UUID}" ]; then
+    if command -v uuidgen >/dev/null 2>&1; then
+      TUIC_UUID="$(uuidgen)"
+    else
+      TUIC_UUID="$(cat /proc/sys/kernel/random/uuid)"
+    fi
+  fi
+
+  if [ -z "${TUIC_PASSWORD}" ]; then
+    TUIC_PASSWORD="$(openssl rand -hex 16)"
   fi
 
   cat > "${SINGBOX_CONF}" <<EOF
@@ -104,6 +116,23 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
         "certificate_path": "${CERT}",
         "key_path": "${KEY}"
       }
+    },
+    {
+      "type": "tuic",
+      "listen": "::",
+      "listen_port": ${TUIC_PORT},
+      "users": [
+        { "uuid": "${TUIC_UUID}", "password": "${TUIC_PASSWORD}" }
+      ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "${CERT}",
+        "key_path": "${KEY}",
+        "alpn": ["h3"]
+      },
+      "congestion_control": "bbr",
+      "zero_rtt_handshake": false,
+      "heartbeat": "10s"
     }
   ],
   "outbounds": [
@@ -115,11 +144,12 @@ EOF
   chmod 640 "${SINGBOX_CONF}"
   echo "[*] Created config: ${SINGBOX_CONF}"
   echo "[*] AnyTLS password: ${ANYTLS_PASSWORD}"
+  echo "[*] TUIC uuid: ${TUIC_UUID}"
+  echo "[*] TUIC password: ${TUIC_PASSWORD}"
 else
   echo "[*] Config exists, keep unchanged: ${SINGBOX_CONF}"
 fi
 
-# systemd create-if-missing
 if [ ! -f "${SINGBOX_SERVICE}" ]; then
   cat > "${SINGBOX_SERVICE}" <<EOF
 [Unit]
