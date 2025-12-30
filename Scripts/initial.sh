@@ -145,26 +145,25 @@ fi
 apply_sysctl_tuning() {
   install -d -m 0755 /etc/sysctl.d
 
-  cat >/etc/sysctl.d/99-bbr.conf <<'EOF'
+  cat >/etc/sysctl.d/99-sysctl.conf <<'EOF'
+# ===== TCP (BBR) =====
 net.core.default_qdisc = fq
 net.ipv4.tcp_congestion_control = bbr
-EOF
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_max_syn_backlog = 4096
+net.core.somaxconn = 4096
+net.core.netdev_max_backlog = 16384
 
-  cat >/etc/sysctl.d/99-quic.conf <<'EOF'
+# ===== Conntrack / QUIC / UDP =====
 net.netfilter.nf_conntrack_max = 1048576
 net.netfilter.nf_conntrack_udp_timeout = 30
 net.netfilter.nf_conntrack_udp_timeout_stream = 60
+
+# ===== Socket Buffers =====
 net.core.rmem_max = 26214400
 net.core.wmem_max = 26214400
 net.core.rmem_default = 4194304
 net.core.wmem_default = 4194304
-EOF
-
-  cat >/etc/sysctl.d/99-tcp.conf <<'EOF'
-net.ipv4.tcp_max_syn_backlog = 4096
-net.core.netdev_max_backlog = 16384
-net.core.somaxconn = 4096
-net.ipv4.tcp_slow_start_after_idle = 0
 EOF
 
   sysctl --system >/dev/null || true
