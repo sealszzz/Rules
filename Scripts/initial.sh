@@ -64,13 +64,13 @@ table inet filter {
   set tcp_allow {
     type inet_service
     flags interval
-    elements = { 80, 443, 4443, 8443, ${SSH_PORT} }
+    elements = { 80, 443, 8443, ${SSH_PORT} }
   }
 
   set udp_allow {
     type inet_service
     flags interval
-    elements = { 443, 4443, 8443 }
+    elements = { 443, 8443 }
   }
 
   chain input {
