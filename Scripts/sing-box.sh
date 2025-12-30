@@ -21,7 +21,7 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends curl ca-certificates tar openssl >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar openssl uuid-runtime iproute2 >/dev/null
 
 detect_arch() {
   case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
