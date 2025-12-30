@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${ANYTLS_PORT:=8001}"
-: "${VLESS_PORT:=8002}"
+: "${ANYTLS_PORT:=9001}"
+: "${VLESS_PORT:=9002}"
 : "${ANYTLS_SNI:=anytls.example.com}"
 
 : "${TUIC_PORT:=9001}"
