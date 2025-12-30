@@ -102,14 +102,18 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
 
   cat > "${SINGBOX_CONF}" <<EOF
 {
-  "log": { "level": "warn" },
+  "log": {
+    "level": "warn"
+  },
   "inbounds": [
     {
       "type": "anytls",
       "listen": "::",
       "listen_port": ${ANYTLS_PORT},
       "users": [
-        { "password": "${ANYTLS_PASSWORD}" }
+        {
+          "password": "${ANYTLS_PASSWORD}"
+        }
       ],
       "tls": {
         "enabled": true,
@@ -122,7 +126,10 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
       "listen": "::",
       "listen_port": ${TUIC_PORT},
       "users": [
-        { "uuid": "${TUIC_UUID}", "password": "${TUIC_PASSWORD}" }
+        {
+          "uuid": "${TUIC_UUID}",
+          "password": "${TUIC_PASSWORD}"
+        }
       ],
       "tls": {
         "enabled": true,
@@ -136,7 +143,9 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
     }
   ],
   "outbounds": [
-    { "type": "direct" }
+    {
+      "type": "direct"
+    }
   ]
 }
 EOF
