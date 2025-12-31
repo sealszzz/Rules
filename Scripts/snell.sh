@@ -111,6 +111,4 @@ else
   systemctl enable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
 fi
 
-echo "Snell TAG:  ${SN_VER}"
-echo -n "Snell BIN:  "
-"$SN_BIN" -v 2>/dev/null || echo "<unknown>"
+echo "Snell BIN:  $("$SN_BIN" -v 2>/dev/null | head -n1 || echo '<unknown>')"
