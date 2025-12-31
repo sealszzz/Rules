@@ -15,7 +15,6 @@ USER="leaf"
 GROUP="leaf"
 
 export DEBIAN_FRONTEND=noninteractive
-
 [ "${EUID:-$(id -u)}" -eq 0 ] || exit 1
 
 dpkg -s curl ca-certificates gzip openssl >/dev/null 2>&1 || {
@@ -54,9 +53,11 @@ if [ ! -f "$CONF" ]; then
   cat >"$CONF" <<EOF
 {
   "log": { "level": "warn" },
+
   "inbounds": [
     {
       "protocol": "shadowsocks",
+      "tag": "ss_in",
       "settings": {
         "address": "::",
         "port": ${PORT},
@@ -65,9 +66,23 @@ if [ ! -f "$CONF" ]; then
       }
     }
   ],
+
   "outbounds": [
-    { "protocol": "direct" }
-  ]
+    {
+      "protocol": "direct",
+      "tag": "direct"
+    }
+  ],
+
+  "routing": {
+    "rules": [
+      {
+        "type": "field",
+        "inboundTag": ["ss_in"],
+        "outboundTag": "direct"
+      }
+    ]
+  }
 }
 EOF
   chown root:"$GROUP" "$CONF"
