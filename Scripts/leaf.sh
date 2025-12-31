@@ -58,12 +58,10 @@ if [ ! -f "$CONF" ]; then
     {
       "protocol": "shadowsocks",
       "tag": "ss_in",
-      "settings": {
-        "address": "::",
-        "port": ${PORT},
-        "method": "${METHOD}",
-        "password": "${PASSWORD}"
-      }
+      "address": "::",
+      "port": ${PORT},
+      "method": "${METHOD}",
+      "password": "${PASSWORD}"
     }
   ],
 
