@@ -111,4 +111,9 @@ else
   systemctl enable --now "$SERVICE_NAME" >/dev/null 2>&1 || true
 fi
 
-echo "Snell BIN:  $("$SN_BIN" -v 2>&1 | head -n1 || echo '<unknown>')"
+echo "Snell BIN:  $(
+  "$SN_BIN" -v 2>&1 \
+  | grep -oE 'v[0-9]+\.[0-9]+\.[0-9]+' \
+  | head -n1 \
+  || echo '<unknown>'
+)"
