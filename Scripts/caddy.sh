@@ -1,14 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${ANYTLS_PORT:=9001}"
-: "${VLESS_PORT:=9002}"
-: "${ANYTLS_SNI:=anytls.example.com}"
-
-: "${TUIC_PORT:=9001}"
-: "${JUICITY_PORT:=9002}"
-: "${TUIC_SNI:=tuic.example.com}"
-: "${JUICITY_SNI:=juicity.example.com}"
+: "${PORT_1:=9001}"
+: "${PORT_2:=9002}"
+: "${SNI_1:=www.example.com}"
+: "${SNI_2:=*.example.com}"
 
 : "${CADDY_USER:=caddy}"
 : "${CADDY_GROUP:=caddy}"
@@ -63,26 +59,26 @@ cat >"$CADDY_CONF" <<EOF
           "routes": [
             {
               "match": [
-                { "tls": { "sni": ["${ANYTLS_SNI}"] } }
+                { "tls": { "sni": ["${SNI_1}"] } }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:${ANYTLS_PORT}"] }
+                    { "dial": ["tcp/127.0.0.1:${PORT_1}"] }
                   ]
                 }
               ]
             },
             {
               "match": [
-                { "tls": {} }
+                { "tls": { "sni": ["${SNI_2}"] } }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:${VLESS_PORT}"] }
+                    { "dial": ["tcp/127.0.0.1:${PORT_2}"] }
                   ]
                 }
               ]
@@ -94,26 +90,26 @@ cat >"$CADDY_CONF" <<EOF
           "routes": [
             {
               "match": [
-                { "quic": { "sni": ["${TUIC_SNI}"] } }
+                { "quic": { "sni": ["${SNI_1}"] } }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["udp/127.0.0.1:${TUIC_PORT}"] }
+                    { "dial": ["udp/127.0.0.1:${PORT_1}"] }
                   ]
                 }
               ]
             },
             {
               "match": [
-                { "quic": { "sni": ["${JUICITY_SNI}"] } }
+                { "quic": { "sni": ["${SNI_2}"] } }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["udp/127.0.0.1:${JUICITY_PORT}"] }
+                    { "dial": ["udp/127.0.0.1:${PORT_2}"] }
                   ]
                 }
               ]
