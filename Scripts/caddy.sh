@@ -6,8 +6,6 @@ set -euo pipefail
 : "${SNI_1:=www.example.com}"
 : "${SNI_2:=*.example.com}"
 
-: "${CADDY_USER:=caddy}"
-: "${CADDY_GROUP:=caddy}"
 : "${CADDY_BIN:=/usr/local/bin/caddy-l4}"
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
 : "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
@@ -133,19 +131,16 @@ Description=Caddy layer4 TCP+UDP 443 SNI proxy
 After=network.target
 
 [Service]
-User=${CADDY_USER}
-Group=${CADDY_GROUP}
-
+User=caddy
+Group=caddy
 StateDirectory=caddy
 Environment=HOME=/var/lib/caddy
 Environment=XDG_CONFIG_HOME=/var/lib/caddy/.config
-
 ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
-
 Restart=always
 RestartSec=2s
 
@@ -159,5 +154,4 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
-"$CADDY_BIN" validate --config "$CADDY_CONF" >/dev/null
 echo "caddy-l4 installed: $TAG"
