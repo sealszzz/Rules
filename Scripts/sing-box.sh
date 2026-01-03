@@ -8,10 +8,10 @@ set -euo pipefail
 : "${SINGBOX_SERVICE:=/etc/systemd/system/sing-box.service}"
 : "${SINGBOX_REPO:=SagerNet/sing-box}"
 
-: "${SINGBOX_TAG:=}"
-: "${SINGBOX_PRERELEASE:=0}"
-: "${SINGBOX_LIBC:=glibc}"
-: "${GITHUB_TOKEN:=}"
+: "${SINGBOX_TAG:=}"            # 可选：强制指定 tag（如 1.13.0-alpha.36 / v1.13.0-alpha.36）
+: "${SINGBOX_PRERELEASE:=0}"    # 0=稳定版（302 /releases/latest）；1=最新 pre-release（API）
+: "${SINGBOX_LIBC:=glibc}"      # glibc | musl | plain（plain=无后缀资产名）
+: "${GITHUB_TOKEN:=}"           # 可选：提高 API 限流额度（pre-release 时建议填）
 
 : "${ANYTLS_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
