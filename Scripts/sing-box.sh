@@ -189,8 +189,7 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
         "alpn": ["h3"]
       },
       "congestion_control": "bbr",
-      "zero_rtt_handshake": false,
-      "heartbeat": "10s"
+      "zero_rtt_handshake": false
     }
   ],
   "outbounds": [
