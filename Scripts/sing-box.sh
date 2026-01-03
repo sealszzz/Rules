@@ -116,7 +116,7 @@ curl -fL --retry 3 --retry-delay 1 -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"
 echo "[*] Extract..."
 tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
 
-BIN_DIR="${TMP_DIR}/sing-box-${VERSION}-linux-${ARCH}"
+BIN_DIR="${TMP_DIR}/${ASSET_NAME%.tar.gz}"
 BIN_SRC="${BIN_DIR}/sing-box"
 [ -f "${BIN_SRC}" ] || { echo "FATAL: binary not found: ${BIN_SRC}"; exit 1; }
 
