@@ -47,7 +47,3 @@ DOMAIN,zerossl.ocsp.sectigo.com
 # 其它
 DOMAIN-SUFFIX,poe.com     # Quora AI 聊天，依赖 OpenAI 模型
 DOMAIN-SUFFIX,chat.com    # Premium 域名，部分被接入
-# OpenAI 托管 ASN
-IP-ASN,31898,no-resolve     # Oracle Cloud - OpenAI 主托管
-IP-ASN,20473,no-resolve     # Vultr / The Constant Company
-IP-ASN,14061,no-resolve     # DigitalOcean (实验/辅助)
