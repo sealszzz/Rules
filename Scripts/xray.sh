@@ -120,7 +120,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "fallbacks": [
           {
             "dest": "${XRAY_DEST}",
-            "xver": 2
+            "xver": 0
           }
         ]
       },
@@ -130,7 +130,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "realitySettings": {
           "show": false,
           "target": "${XRAY_TARGET}",
-          "xver": 2,
+          "xver": 0,
           "serverNames": [
             "${XRAY_SNI}"
           ],
