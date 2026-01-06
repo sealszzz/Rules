@@ -23,8 +23,3 @@ DOMAIN-SUFFIX,telegram.org
 DOMAIN-SUFFIX,telegram-cdn.org
 DOMAIN-SUFFIX,telesco.pe
 DOMAIN-KEYWORD,telegram
-# IP-ASN,44907,no-resolve
-# IP-ASN,59930,no-resolve
-# IP-ASN,62014,no-resolve
-# IP-ASN,62041,no-resolve
-# IP-ASN,211157,no-resolve
