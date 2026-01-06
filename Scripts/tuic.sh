@@ -80,8 +80,12 @@ certificate = "${CERT}"
 private_key = "${KEY}"
 alpn = ["h3"]
 
-[quic.congestion_control]
+[quic]
 controller = "bbr"
+
+[outbound]
+type = "direct"
+ip_mode = "v4first"
 EOF
 
   chown root:"$TUIC_GROUP" "$TUIC_CONF_FILE"
