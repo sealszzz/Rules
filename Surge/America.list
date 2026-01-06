@@ -5,7 +5,6 @@ DOMAIN-SUFFIX,githubusercontent.com
 DOMAIN-SUFFIX,rawgit.com
 DOMAIN-SUFFIX,rawgithub.com
 DOMAIN-KEYWORD,github
-IP-ASN,36459,no-resolve
 # Gitlab
 DOMAIN-SUFFIX,gitlab.com
 DOMAIN-KEYWORD,gitlab
@@ -28,14 +27,6 @@ DOMAIN-SUFFIX,x.com
 DOMAIN-SUFFIX,x.ai
 DOMAIN-KEYWORD,grok
 DOMAIN-KEYWORD,twitter
-IP-ASN,13414,no-resolve
-IP-ASN,35995,no-resolve
-IP-ASN,54888,no-resolve
-IP-ASN,63179,no-resolve
-# Facebook
-IP-ASN,32934,no-resolve
-IP-ASN,54115,no-resolve
-IP-ASN,63293,no-resolve
 # Instagram
 DOMAIN-SUFFIX,facebook.com
 DOMAIN-SUFFIX,fbcdn.net
