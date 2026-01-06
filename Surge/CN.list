@@ -36,7 +36,6 @@ DOMAIN-SUFFIX,servicewechat.com
 DOMAIN-SUFFIX,weixinbridge.com
 DOMAIN-KEYWORD,wechat
 DOMAIN-KEYWORD,weixin
-IP-ASN,132203,no-resolve
 # Email
 DOMAIN,outlook.live.com
 DOMAIN-SUFFIX,hotmail.com
