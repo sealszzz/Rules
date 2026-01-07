@@ -194,7 +194,8 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
   ],
   "outbounds": [
     {
-      "type": "direct"
+      "type": "direct",
+      "domain_strategy": "prefer_ipv4"
     }
   ]
 }
