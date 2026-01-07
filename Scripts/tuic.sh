@@ -80,10 +80,10 @@ certificate = "${CERT}"
 private_key = "${KEY}"
 alpn = ["h3"]
 
-[quic]
+[quic.congestion_control]
 controller = "bbr"
 
-[outbound]
+[outbound.default]
 type = "direct"
 ip_mode = "v4first"
 EOF
