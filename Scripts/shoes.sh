@@ -120,7 +120,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
     password: "${T_PASS}"
     zero_rtt_handshake: false
     
-- address: "0.0.0.0:${VLESS_PORT}"
+- address: "[::]:${VLESS_PORT}"
   protocol:
     type: tls
     reality_targets:
@@ -136,7 +136,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
           udp_enabled: true
           fallback: "127.0.0.1:9999"
 
-- address: "0.0.0.0:${ANYTLS_PORT}"
+- address: "[::]:${ANYTLS_PORT}"
   protocol:
     type: tls
     tls_targets:
