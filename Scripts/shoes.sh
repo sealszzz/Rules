@@ -1,18 +1,25 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TUIC_PORT:=4443}"
+: "${TUIC_PORT:=4443}"      # UDP/QUIC
+: "${VLESS_PORT:=4443}"     # TCP/Reality
+: "${ANYTLS_PORT:=8443}"    # TCP/TLS
+
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
 : "${T_UUID:=}"   # optional override; empty -> generate on first config
 : "${T_PASS:=}"   # optional override; empty -> generate on first config
 
+: "${V_UUID:=}"   # optional override; empty -> generate on first config
+: "${ANY_PASS:=}" # optional override; empty -> generate on first config
+
 export DEBIAN_FRONTEND=noninteractive
 
 apt update
 apt install -y --no-install-recommends \
-  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2
+  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2 \
+  python3 python3-cryptography
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
@@ -60,10 +67,44 @@ install_shoes_release() {
 SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
 install_shoes_release
 
+# ===== generate Reality X25519 keypair (base64) + short_id (hex) WITHOUT xray =====
+gen_reality() {
+python3 - <<'PY'
+import base64, os
+from cryptography.hazmat.primitives.asymmetric import x25519
+from cryptography.hazmat.primitives import serialization
+
+priv = x25519.X25519PrivateKey.generate()
+pub  = priv.public_key()
+
+priv_raw = priv.private_bytes(
+    encoding=serialization.Encoding.Raw,
+    format=serialization.PrivateFormat.Raw,
+    encryption_algorithm=serialization.NoEncryption()
+)
+pub_raw = pub.public_bytes(
+    encoding=serialization.Encoding.Raw,
+    format=serialization.PublicFormat.Raw
+)
+
+print(base64.b64encode(priv_raw).decode())
+print(base64.b64encode(pub_raw).decode())
+print(os.urandom(8).hex())  # 16 hex chars
+PY
+}
+
 # ===== config: create only if missing =====
 if [ ! -f /etc/shoes/config.yaml ]; then
   [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
   [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
+
+  [ -n "$V_UUID" ] || V_UUID="$(uuidgen)"
+  [ -n "$ANY_PASS" ] || ANY_PASS="$(openssl rand -hex 16)"
+
+  mapfile -t R < <(gen_reality)
+  REALITY_PRIV="${R[0]}"
+  REALITY_PUB="${R[1]}"
+  REALITY_SID="${R[2]}"
 
   cat >/etc/shoes/config.yaml <<EOF
 - address: "[::]:${TUIC_PORT}"
@@ -78,6 +119,37 @@ if [ ! -f /etc/shoes/config.yaml ]; then
     uuid: "${T_UUID}"
     password: "${T_PASS}"
     zero_rtt_handshake: false
+    
+- address: "0.0.0.0:${VLESS_PORT}"
+  protocol:
+    type: tls
+    reality_targets:
+      "www.cloudflare.com":
+        private_key: "${REALITY_PRIV}"
+        public_key: "${REALITY_PUB}"
+        short_ids: ["${REALITY_SID}"]
+        dest: "www.cloudflare.com:443"
+        vision: true
+        protocol:
+          type: vless
+          user_id: "${V_UUID}"
+          udp_enabled: true
+          fallback: "127.0.0.1:9999"
+
+- address: "0.0.0.0:${ANYTLS_PORT}"
+  protocol:
+    type: tls
+    tls_targets:
+      "127.0.0.1:9999":
+        cert: "${CERT}"
+        key:  "${KEY}"
+        protocol:
+          type: anytls
+          users:
+            - name: user1
+              password: "${ANY_PASS}"
+          udp_enabled: true
+          fallback: "127.0.0.1:9999"
   rules:
     - allow-all-direct
 EOF
