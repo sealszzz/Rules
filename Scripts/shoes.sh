@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${ANYTLS_PORT:=8443}"    # TCP/TLS
+: "${ANYTLS_PORT:=4443}"    # TCP/TLS
 : "${TUIC_PORT:=4443}"      # UDP/QUIC
 
 : "${CERT:=/etc/tls/cert.pem}"
@@ -66,10 +66,9 @@ install_shoes_release
 
 # ===== config: create only if missing =====
 if [ ! -f /etc/shoes/config.yaml ]; then
+  [ -n "$ANY_PASS" ] || ANY_PASS="$(openssl rand -hex 16)"
   [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
   [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
-
-  [ -n "$ANY_PASS" ] || ANY_PASS="$(openssl rand -hex 16)"
 
   cat >/etc/shoes/config.yaml <<EOF
 - address: "[::]:${ANYTLS_PORT}"
@@ -113,6 +112,7 @@ if [ ! -f /etc/systemd/system/shoes.service ]; then
   cat >/etc/systemd/system/shoes.service <<'EOF'
 [Unit]
 Description=Shoes Server
+Documentation=https://github.com/cfal/shoes
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
