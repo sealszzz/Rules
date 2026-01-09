@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TUIC_PORT:=4443}"      # UDP/QUIC
 : "${ANYTLS_PORT:=8443}"    # TCP/TLS
+: "${TUIC_PORT:=4443}"      # UDP/QUIC
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
+: "${ANY_PASS:=}" # optional override; empty -> generate on first config
 : "${T_UUID:=}"   # optional override; empty -> generate on first config
 : "${T_PASS:=}"   # optional override; empty -> generate on first config
-
-: "${ANY_PASS:=}" # optional override; empty -> generate on first config
 
 export DEBIAN_FRONTEND=noninteractive
 
