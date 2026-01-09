@@ -83,6 +83,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
             - name: user1
               password: "${ANY_PASS}"
           udp_enabled: true
+          fallback: "127.0.0.1:80"
           
 - address: "[::]:${TUIC_PORT}"
   transport: quic
