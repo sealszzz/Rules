@@ -84,7 +84,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
               password: "${ANY_PASS}"
           udp_enabled: true
           fallback: "127.0.0.1:80"
-          
+
 - address: "[::]:${TUIC_PORT}"
   transport: quic
   quic_settings:
@@ -98,7 +98,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
     password: "${T_PASS}"
     zero_rtt_handshake: false
     udp_enabled: true
-    
+
   rules:
     - allow-all-direct
 EOF
