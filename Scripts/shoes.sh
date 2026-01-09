@@ -13,10 +13,9 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-apt update
-apt install -y --no-install-recommends \
-  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2 \
-  python3 python3-cryptography
+apt-get update
+apt-get install -y --no-install-recommends \
+  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
