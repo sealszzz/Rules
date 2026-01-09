@@ -145,7 +145,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
   ],
   "outbounds": [
     {
-      "protocol": "freedom"
+      "protocol": "freedom",
       "settings": {
         "targetStrategy": "UseIPv4v6"
       }
