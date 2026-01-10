@@ -69,9 +69,12 @@ install_shoes_release
 # ===== generate Reality X25519 keypair (base64) + short_id (hex) WITHOUT xray =====
 gen_reality() {
 python3 - <<'PY'
-import base64, os
+import os, base64
 from cryptography.hazmat.primitives.asymmetric import x25519
 from cryptography.hazmat.primitives import serialization
+
+def b64url_no_pad(b: bytes) -> str:
+    return base64.urlsafe_b64encode(b).decode().rstrip("=")
 
 pri = x25519.X25519PrivateKey.generate()
 pub = pri.public_key()
@@ -86,8 +89,8 @@ pub_raw = pub.public_bytes(
     format=serialization.PublicFormat.Raw
 )
 
-print(base64.b64encode(pri_raw).decode())
-print(base64.b64encode(pub_raw).decode())
+print(b64url_no_pad(pri_raw))
+print(b64url_no_pad(pub_raw))
 print(os.urandom(8).hex())  # 16 hex chars
 PY
 }
