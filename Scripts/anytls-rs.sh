@@ -58,6 +58,10 @@ install_anytls_release() {
   chmod 0755 "$bin"
   install -m 0755 "$bin" /usr/local/bin/anytls-server
 
+  # keep original, but also provide /usr/local/bin/anytls for nicer process name
+  cp -f /usr/local/bin/anytls-server /usr/local/bin/anytls
+  chmod 0755 /usr/local/bin/anytls
+
   trap - RETURN
 }
 
@@ -83,7 +87,7 @@ Group=anytls
 Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/anytls
-ExecStart=/usr/local/bin/anytls-server -l [::]:${ANYTLS_PORT} -p ${A_PASS} --cert ${CERT} --key ${KEY}
+ExecStart=/usr/local/bin/anytls -l [::]:${ANYTLS_PORT} -p ${A_PASS} --cert ${CERT} --key ${KEY}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -105,7 +109,7 @@ else
 fi
 
 # ===== final output (tag + bin + password) =====
-BIN_VER="$(/usr/local/bin/anytls-server -V 2>/dev/null || /usr/local/bin/anytls-server --version 2>/dev/null || true)"
+BIN_VER="$(/usr/local/bin/anytls -V 2>/dev/null || /usr/local/bin/anytls --version 2>/dev/null || true)"
 echo "anytls tag: ${ANYTLS_TAG:-unknown}"
 echo "anytls bin: ${BIN_VER:-unknown}"
 if [ "$FIRST_INSTALL" -eq 1 ]; then
