@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${ANYTLS_PORT:=4443}"    # TCP/TLS
 : "${CERT:=/etc/tls/cert.pem}"
-: "${KEY:=/etc/tls/key.pem}"
+: "${KEY:=/etc/tls/key.pk8}"
 : "${A_PASS:=}"
 
 export DEBIAN_FRONTEND=noninteractive
