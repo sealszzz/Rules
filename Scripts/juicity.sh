@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# juicity-min: no-API latest tag, glibc only (x86_64/arm64), plain binary install
 set -euo pipefail
 
-: "${J_PORT:=443}"
+: "${J_PORT:=4443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${J_CONG:=bbr}"
-: "${J_LOG:=warn}"
-: "${J_DISABLE_UDP443:=true}"
 
 J_USER="juicity"
 J_GROUP="juicity"
@@ -16,13 +12,12 @@ J_STATE_DIR="/var/lib/juicity"
 J_ETC_DIR="/etc/juicity"
 J_CONF="${J_ETC_DIR}/server.json"
 
-J_BIN="/usr/local/bin/juicity-server"
-J_SVC_NAME="juicity-server"
-J_SVC="/etc/systemd/system/${J_SVC_NAME}.service"
+J_BIN="/usr/local/bin/juicity"
+J_SVC="/etc/systemd/system/juicity.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ---- deps (一次性，允许重复但不破坏幂等) ----
+# ---- deps ----
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends \
   curl ca-certificates unzip openssl uuid-runtime iproute2 >/dev/null
@@ -57,7 +52,7 @@ esac
 ASSET="juicity-linux-${ARCH}.zip"
 URL="https://github.com/juicity/juicity/releases/download/${TAG}/${ASSET}"
 
-# ---- download & install bin (always) ----
+# ---- download & install (server only) ----
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
 
@@ -65,7 +60,8 @@ curl -fL --retry 3 --retry-delay 1 -o "${tmpd}/${ASSET}" "$URL"
 unzip -q "${tmpd}/${ASSET}" -d "$tmpd"
 
 [ -f "${tmpd}/juicity-server" ] || { echo "FATAL: juicity-server not found"; exit 1; }
-install -m 0755 "${tmpd}/juicity-server" "$J_BIN"
+
+install -m 0755 "${tmpd}/juicity-server" /usr/local/bin/juicity
 
 # ---- first-time config only ----
 if [ ! -f "$J_CONF" ]; then
@@ -80,9 +76,9 @@ if [ ! -f "$J_CONF" ]; then
   },
   "certificate": "${CERT}",
   "private_key": "${KEY}",
-  "congestion_control": "${J_CONG}",
-  "disable_outbound_udp443": ${J_DISABLE_UDP443},
-  "log_level": "${J_LOG}"
+  "congestion_control": "bbr",
+  "disable_outbound_udp443": true,
+  "log_level": "warn"
 }
 EOF
 
@@ -108,7 +104,7 @@ Group=${J_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${J_STATE_DIR}
-ExecStart=${J_BIN} run -c ${J_CONF} --disable-timestamp
+ExecStart=/usr/local/bin/juicity run -c ${J_CONF} --disable-timestamp
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -124,10 +120,10 @@ fi
 
 # ---- start / reload ----
 systemctl daemon-reload
-if systemctl is-enabled "$J_SVC_NAME" >/dev/null 2>&1; then
-  systemctl try-reload-or-restart "$J_SVC_NAME" || systemctl restart "$J_SVC_NAME"
+if systemctl is-enabled juicity >/dev/null 2>&1; then
+  systemctl try-reload-or-restart juicity || systemctl restart juicity
 else
-  systemctl enable --now "$J_SVC_NAME" || true
+  systemctl enable --now juicity || true
 fi
 
-"$J_BIN" --version 2>/dev/null || true
+/usr/local/bin/juicity --version 2>/dev/null || true
