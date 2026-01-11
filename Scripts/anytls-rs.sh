@@ -4,7 +4,7 @@ set -euo pipefail
 : "${ANYTLS_PORT:=4443}"    # TCP/TLS
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${A_PASS:=}" 
+: "${A_PASS:=}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -29,7 +29,7 @@ get_anytls_tag() {
   printf '%s\n' "${u##*/}"
 }
 
-# ===== install anytls-rs =====
+# ===== install anytls-rs (server only) =====
 install_anytls_release() {
   case "$(uname -m)" in
     x86_64|amd64)  ASSET="anytls_linux_x86_64.tar.gz"  ;;
@@ -56,9 +56,9 @@ install_anytls_release() {
   }
 
   chmod 0755 "$bin"
-  install -m 0755 "$bin" /usr/local/bin/anytls
+  install -m 0755 "$bin" /usr/local/bin/anytls-server
 
-    trap - RETURN
+  trap - RETURN
 }
 
 ANYTLS_TAG="$(get_anytls_tag 2>/dev/null || true)"
@@ -83,7 +83,7 @@ Group=anytls
 Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/anytls
-ExecStart=/usr/local/bin/anytls -l [::]:${ANYTLS_PORT} -p ${A_PASS} --cert ${CERT} --key ${KEY}
+ExecStart=/usr/local/bin/anytls-server -l [::]:${ANYTLS_PORT} -p ${A_PASS} --cert ${CERT} --key ${KEY}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -105,7 +105,7 @@ else
 fi
 
 # ===== final output (tag + bin + password) =====
-BIN_VER="$(/usr/local/bin/anytls -V 2>/dev/null || /usr/local/bin/anytls --version 2>/dev/null || true)"
+BIN_VER="$(/usr/local/bin/anytls-server -V 2>/dev/null || /usr/local/bin/anytls-server --version 2>/dev/null || true)"
 echo "anytls tag: ${ANYTLS_TAG:-unknown}"
 echo "anytls bin: ${BIN_VER:-unknown}"
 if [ "$FIRST_INSTALL" -eq 1 ]; then
