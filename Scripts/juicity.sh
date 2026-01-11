@@ -13,7 +13,8 @@ J_ETC_DIR="/etc/juicity"
 J_CONF="${J_ETC_DIR}/server.json"
 
 J_BIN="/usr/local/bin/juicity"
-J_SVC="/etc/systemd/system/juicity.service"
+J_SVC_NAME="juicity"
+J_SVC="/etc/systemd/system/${J_SVC_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -61,7 +62,7 @@ unzip -q "${tmpd}/${ASSET}" -d "$tmpd"
 
 [ -f "${tmpd}/juicity-server" ] || { echo "FATAL: juicity-server not found"; exit 1; }
 
-install -m 0755 "${tmpd}/juicity-server" /usr/local/bin/juicity
+install -m 0755 "${tmpd}/juicity-server" "$J_BIN"
 
 # ---- first-time config only ----
 if [ ! -f "$J_CONF" ]; then
@@ -104,7 +105,7 @@ Group=${J_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${J_STATE_DIR}
-ExecStart=/usr/local/bin/juicity run -c ${J_CONF} --disable-timestamp
+ExecStart=${J_BIN} run -c ${J_CONF} --disable-timestamp
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -120,10 +121,10 @@ fi
 
 # ---- start / reload ----
 systemctl daemon-reload
-if systemctl is-enabled juicity >/dev/null 2>&1; then
-  systemctl try-reload-or-restart juicity || systemctl restart juicity
+if systemctl is-enabled "$J_SVC_NAME" >/dev/null 2>&1; then
+  systemctl try-reload-or-restart "$J_SVC_NAME" || systemctl restart "$J_SVC_NAME"
 else
-  systemctl enable --now juicity || true
+  systemctl enable --now "$J_SVC_NAME" || true
 fi
 
-/usr/local/bin/juicity --version 2>/dev/null || true
+"$J_BIN" --version 2>/dev/null || true
