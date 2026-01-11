@@ -112,7 +112,7 @@ table inet filter {
     tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop
 
     tcp dport @tcp_allow accept
-    udp dport @udp_allow accept
+    udp dport @udp_allow ct state { new, established, related } accept
   }
 
   chain forward {
