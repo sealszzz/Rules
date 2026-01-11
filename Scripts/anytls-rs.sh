@@ -2,11 +2,9 @@
 set -euo pipefail
 
 : "${ANYTLS_PORT:=4443}"    # TCP/TLS
-
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-
-: "${A_PASS:=}"             # optional override; empty -> generate on first install
+: "${A_PASS:=}" 
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -49,11 +47,18 @@ install_anytls_release() {
   tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
   local bin
-  bin="$(find "$tmpd/unpack" -type f -name anytls -perm -u+x | head -n1 || true)"
-  [ -n "$bin" ] || { echo "FATAL: anytls binary not found"; exit 1; }
+  bin="$(find "$tmpd/unpack" -type f -name anytls-server | head -n1 || true)"
+  [ -n "$bin" ] || {
+    echo "FATAL: anytls-server not found in archive" >&2
+    echo "archive content (top):" >&2
+    tar -tzf "$tmpd/pkg.tgz" | sed -n '1,50p' >&2
+    exit 1
+  }
 
+  chmod 0755 "$bin"
   install -m 0755 "$bin" /usr/local/bin/anytls
-  trap - RETURN
+
+    trap - RETURN
 }
 
 ANYTLS_TAG="$(get_anytls_tag 2>/dev/null || true)"
