@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${HY_PORT:=443}"
+: "${HY_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 : "${SNI_GUARD:=strict}"                 # strict | disable | dns-san
