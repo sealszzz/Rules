@@ -68,9 +68,6 @@ case "$uname_m" in
   aarch64|arm64)
     ASSET="hysteria-linux-arm64"
     ;;
-  armv7l|armv7|armhf|arm)
-    ASSET="hysteria-linux-arm"
-    ;;
   *)
     echo "Unsupported arch: $uname_m" >&2
     exit 1
