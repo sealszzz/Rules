@@ -35,7 +35,7 @@ systemctl restart systemd-timesyncd || true
 for i in $(seq 1 30); do
   v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
   [ "$v" = "yes" ] && break
-  (( i % 10 == 0 )) && echo "[ntp] waiting... ${i}/30"
+  (( i % 5 == 0 )) && echo "[ntp] waiting... ${i}/30"
   sleep 2
 done
 
