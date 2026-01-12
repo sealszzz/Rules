@@ -1,11 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${PORT_1:=9001}"
-: "${PORT_2:=9002}"
-: "${SNI_1:=www.example.com}"
-: "${SNI_2:=*.example.com}"
-
 : "${CADDY_USER:=caddy}"
 : "${CADDY_GROUP:=caddy}"
 : "${CADDY_BIN:=/usr/local/bin/caddy-l4}"
@@ -47,8 +42,9 @@ id -u "$CADDY_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "
 
 install -d -o root -g "$CADDY_GROUP" -m 0750 /etc/caddy
 
+# Write config once (only if not exists)
 if [ ! -f "$CADDY_CONF" ]; then
-cat >"$CADDY_CONF" <<EOF
+cat >"$CADDY_CONF" <<'EOF'
 {
   "admin": { "disabled": true },
   "apps": {
@@ -56,60 +52,133 @@ cat >"$CADDY_CONF" <<EOF
       "servers": {
         "tcp443": {
           "listen": [":443"],
+          "matching_timeout": "5s",
           "routes": [
             {
               "match": [
-                { "tls": { "sni": ["${SNI_1}"] } }
+                { "not": [ { "tls": {} } ] }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:${PORT_1}"] }
+                    { "dial": ["tcp/127.0.0.1:9999"] }
                   ]
                 }
               ]
             },
             {
               "match": [
-                { "tls": { "sni": ["${SNI_2}"] } }
+                { "tls": {} }
               ],
               "handle": [
                 {
-                  "handler": "proxy",
-                  "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:${PORT_2}"] }
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "match": [
+                        { "tls": { "sni": ["example.com"] } }
+                      ],
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["tcp/127.0.0.1:9001"] }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "match": [
+                        { "tls": { "sni": ["*.example.com"] } }
+                      ],
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["tcp/127.0.0.1:9002"] }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["tcp/127.0.0.1:9999"] }
+                          ]
+                        }
+                      ]
+                    }
                   ]
                 }
               ]
             }
           ]
         },
+
         "udp443": {
           "listen": ["udp/:443"],
+          "matching_timeout": "5s",
           "routes": [
             {
               "match": [
-                { "quic": { "sni": ["${SNI_1}"] } }
+                { "not": [ { "quic": {} } ] }
               ],
               "handle": [
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["udp/127.0.0.1:${PORT_1}"] }
+                    { "dial": ["udp/127.0.0.1:9003"] }
                   ]
                 }
               ]
             },
             {
               "match": [
-                { "quic": { "sni": ["${SNI_2}"] } }
+                { "quic": {} }
               ],
               "handle": [
                 {
-                  "handler": "proxy",
-                  "upstreams": [
-                    { "dial": ["udp/127.0.0.1:${PORT_2}"] }
+                  "handler": "subroute",
+                  "routes": [
+                    {
+                      "match": [
+                        { "quic": { "sni": ["example.com"] } }
+                      ],
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["udp/127.0.0.1:9001"] }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "match": [
+                        { "quic": { "sni": ["*.example.com"] } }
+                      ],
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["udp/127.0.0.1:9002"] }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "proxy",
+                          "upstreams": [
+                            { "dial": ["udp/127.0.0.1:9003"] }
+                          ]
+                        }
+                      ]
+                    }
                   ]
                 }
               ]
@@ -160,3 +229,8 @@ systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
 echo "caddy-l4 installed: $TAG"
+echo
+echo "=== caddy-l4 binary version ==="
+if ! "${CADDY_BIN}" version 2>/dev/null; then
+  "${CADDY_BIN}" --version 2>/dev/null || true
+fi
