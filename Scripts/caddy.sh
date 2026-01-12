@@ -56,19 +56,6 @@ cat >"$CADDY_CONF" <<'EOF'
           "routes": [
             {
               "match": [
-                { "not": [ { "tls": {} } ] }
-              ],
-              "handle": [
-                {
-                  "handler": "proxy",
-                  "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:9999"] }
-                  ]
-                }
-              ]
-            },
-            {
-              "match": [
                 { "tls": {} }
               ],
               "handle": [
@@ -114,6 +101,19 @@ cat >"$CADDY_CONF" <<'EOF'
                   ]
                 }
               ]
+            },
+            {
+              "match": [
+                { "not": [ { "tls": {} } ] }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["tcp/127.0.0.1:9999"] }
+                  ]
+                }
+              ]
             }
           ]
         },
@@ -122,19 +122,6 @@ cat >"$CADDY_CONF" <<'EOF'
           "listen": ["udp/:443"],
           "matching_timeout": "5s",
           "routes": [
-            {
-              "match": [
-                { "not": [ { "quic": {} } ] }
-              ],
-              "handle": [
-                {
-                  "handler": "proxy",
-                  "upstreams": [
-                    { "dial": ["udp/127.0.0.1:9003"] }
-                  ]
-                }
-              ]
-            },
             {
               "match": [
                 { "quic": {} }
@@ -179,6 +166,19 @@ cat >"$CADDY_CONF" <<'EOF'
                         }
                       ]
                     }
+                  ]
+                }
+              ]
+            },
+            {
+              "match": [
+                { "not": [ { "quic": {} } ] }
+              ],
+              "handle": [
+                {
+                  "handler": "proxy",
+                  "upstreams": [
+                    { "dial": ["udp/127.0.0.1:9003"] }
                   ]
                 }
               ]
