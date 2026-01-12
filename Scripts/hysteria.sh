@@ -80,7 +80,13 @@ URL="https://github.com/apernet/hysteria/releases/download/${TAG}/${ASSET}"
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
 
-curl -fL --retry 3 --retry-delay 1 -o "${tmpd}/${ASSET}" "$URL"
+if ! curl -fL --retry 3 --retry-delay 1 -o "${tmpd}/${ASSET}" "$URL"; then
+  echo "FATAL: download failed: $URL" >&2
+  exit 1
+fi
+
+[ -s "${tmpd}/${ASSET}" ] || { echo "FATAL: downloaded file is empty: ${tmpd}/${ASSET}" >&2; exit 1; }
+
 chmod 0755 "${tmpd}/${ASSET}"
 install -m 0755 "${tmpd}/${ASSET}" "$HY_BIN"
 
