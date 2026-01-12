@@ -136,6 +136,10 @@ tls:
   key: ${KEY}
   sniGuard: ${SNI_GUARD}
 
+auth:
+  type: password
+  password: ${AUTH_PASS}
+
 obfs:
   type: salamander
   salamander:
@@ -155,10 +159,6 @@ speedTest: false
 
 disableUDP: false
 udpIdleTimeout: 60s
-
-auth:
-  type: password
-  password: ${AUTH_PASS}
 
 outbounds:
   - name: direct
