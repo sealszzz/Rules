@@ -156,7 +156,7 @@ net.core.somaxconn = 4096
 net.core.netdev_max_backlog = 16384
 
 # ===== Conntrack / QUIC / UDP =====
-net.netfilter.nf_conntrack_max = 1048576
+net.netfilter.nf_conntrack_max = 262144
 net.netfilter.nf_conntrack_udp_timeout = 30
 net.netfilter.nf_conntrack_udp_timeout_stream = 60
 
