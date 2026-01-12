@@ -10,6 +10,12 @@ set -euo pipefail
 : "${DIRECT_MODE:=46}"                   # auto | 64 | 46 | 6 | 4
 : "${FASTOPEN:=false}"
 
+# Optional: pin version like VERSION=v2.7.0
+: "${VERSION:=}"
+
+# Same approach as official installer
+: "${HY2_API_BASE_URL:=https://api.hy2.io/v1}"
+
 HY_USER="hysteria"
 HY_GROUP="hysteria"
 
@@ -39,19 +45,10 @@ id -u "$HY_USER" >/dev/null 2>&1 || \
 install -d -o "$HY_USER" -g "$HY_GROUP" -m 750 "$HY_STATE_DIR"
 install -d -o root      -g "$HY_GROUP" -m 750 "$HY_ETC_DIR"
 
-# ---- latest tag via 302 ----
-get_latest_tag() {
-  local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-    https://github.com/apernet/hysteria/releases/latest)" || return 1
-  printf '%s\n' "${u##*/}"
-}
-
-TAG="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
-
 # ---- pick asset by arch ----
 uname_m="$(uname -m)"
 ASSET=""
+ARCHITECTURE=""
 
 has_avx() {
   grep -qE '(^|\s)avx(\s|$)' /proc/cpuinfo 2>/dev/null
@@ -59,6 +56,7 @@ has_avx() {
 
 case "$uname_m" in
   x86_64|amd64)
+    ARCHITECTURE="amd64"
     if has_avx; then
       ASSET="hysteria-linux-amd64-avx"
     else
@@ -66,6 +64,7 @@ case "$uname_m" in
     fi
     ;;
   aarch64|arm64)
+    ARCHITECTURE="arm64"
     ASSET="hysteria-linux-arm64"
     ;;
   *)
@@ -74,7 +73,37 @@ case "$uname_m" in
     ;;
 esac
 
-URL="https://github.com/apernet/hysteria/releases/download/${TAG}/${ASSET}"
+# ---- latest version via HY2 API (official approach) ----
+get_latest_version() {
+  if [ -n "${VERSION}" ]; then
+    printf '%s\n' "${VERSION}"
+    return 0
+  fi
+
+  local tmp
+  tmp="$(mktemp)"
+  if ! curl -fsSL \
+    "${HY2_API_BASE_URL}/update?cver=installscript&plat=linux&arch=${ARCHITECTURE}&chan=release&side=server" \
+    -o "$tmp"; then
+    echo "FATAL: failed to query Hy2 API: ${HY2_API_BASE_URL}/update" >&2
+    rm -f "$tmp"
+    return 1
+  fi
+
+  # Extract "lver":"vX.Y.Z"
+  local lver
+  lver="$(grep -oP '"lver":\s*\K"v.*?"' "$tmp" | head -1 | tr -d '"')" || true
+  rm -f "$tmp"
+
+  [ -n "$lver" ] || { echo "FATAL: failed to parse latest version from Hy2 API" >&2; return 1; }
+  printf '%s\n' "$lver"
+}
+
+VERSION="$(get_latest_version)" || exit 1
+
+# Official download URL format:
+# https://github.com/apernet/hysteria/releases/download/app/<version>/hysteria-linux-<arch>...
+URL="https://github.com/apernet/hysteria/releases/download/app/${VERSION}/${ASSET}"
 
 # ---- download & install ----
 tmpd="$(mktemp -d)"
@@ -142,7 +171,7 @@ EOF
   chown root:"$HY_GROUP" "$HY_CONF"
   chmod 640 "$HY_CONF"
 
-  echo "HYSTERIA TAG:  ${TAG}"
+  echo "HYSTERIA VER:  ${VERSION}"
   echo "HYSTERIA ASSET:${ASSET}"
   echo "HYSTERIA AUTH: ${AUTH_PASS}"
   echo "HYSTERIA OBFS: ${OBFS_PASS}"
