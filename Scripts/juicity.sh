@@ -26,6 +26,35 @@ apt-get install -y --no-install-recommends \
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
+# ---- detect primary egress IPv4 for send_through ----
+detect_egress_ipv4() {
+  local ip=""
+  # Best: default route chosen src IPv4
+  ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true)"
+  if [[ -z "${ip}" ]]; then
+    # Fallback: first global IPv4 on any interface
+    ip="$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 || true)"
+  fi
+  # Basic validation
+  if [[ "${ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    printf '%s\n' "${ip}"
+    return 0
+  fi
+  return 1
+}
+
+J_SEND_THROUGH=""
+if J_SEND_THROUGH="$(detect_egress_ipv4)"; then
+  echo "Detected egress IPv4 for send_through: ${J_SEND_THROUGH}"
+else
+  echo "WARN: failed to detect egress IPv4; will not set send_through automatically."
+fi
+
+SEND_THROUGH_LINE=""
+if [[ -n "${J_SEND_THROUGH}" ]]; then
+  SEND_THROUGH_LINE="  \"send_through\": \"${J_SEND_THROUGH}\","
+fi
+
 # ---- user / dir ----
 getent group "$J_GROUP" >/dev/null || groupadd --system "$J_GROUP"
 id -u "$J_USER" >/dev/null 2>&1 || \
@@ -79,6 +108,7 @@ if [ ! -f "$J_CONF" ]; then
   "private_key": "${KEY}",
   "congestion_control": "bbr",
   "disable_outbound_udp443": true,
+${SEND_THROUGH_LINE}
   "log_level": "warn"
 }
 EOF
@@ -88,6 +118,12 @@ EOF
 
   echo "JUICITY UUID: ${J_UUID}"
   echo "JUICITY PASS: ${J_PASS}"
+else
+  # Config already exists; do not edit automatically (side-effects minimal).
+  echo "INFO: ${J_CONF} already exists; not modifying it."
+  if [[ -n "${J_SEND_THROUGH}" ]]; then
+    echo "      If you want, add this line into JSON: \"send_through\": \"${J_SEND_THROUGH}\","
+  fi
 fi
 
 # ---- systemd unit (create once) ----
