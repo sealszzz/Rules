@@ -52,7 +52,7 @@ cat >"$CADDY_CONF" <<'EOF'
       "servers": {
         "tcp443": {
           "listen": [":443"],
-          "matching_timeout": "5s",
+          "matching_timeout": "1s",
           "routes": [
             {
               "match": [
@@ -77,7 +77,7 @@ cat >"$CADDY_CONF" <<'EOF'
                     },
                     {
                       "match": [
-                        { "tls": { "sni": ["*.example.com"] } }
+                        { "tls": { "sni": ["www.example.com"] } }
                       ],
                       "handle": [
                         {
@@ -89,6 +89,9 @@ cat >"$CADDY_CONF" <<'EOF'
                       ]
                     },
                     {
+                      "match": [
+                        { "tls": { "sni": ["*.example.com"] } }
+                      ],
                       "handle": [
                         {
                           "handler": "proxy",
@@ -120,7 +123,7 @@ cat >"$CADDY_CONF" <<'EOF'
 
         "udp443": {
           "listen": ["udp/:443"],
-          "matching_timeout": "5s",
+          "matching_timeout": "1s",
           "routes": [
             {
               "match": [
@@ -145,7 +148,7 @@ cat >"$CADDY_CONF" <<'EOF'
                     },
                     {
                       "match": [
-                        { "quic": { "sni": ["*.example.com"] } }
+                        { "quic": { "sni": ["www.example.com"] } }
                       ],
                       "handle": [
                         {
@@ -157,6 +160,9 @@ cat >"$CADDY_CONF" <<'EOF'
                       ]
                     },
                     {
+                      "match": [
+                        { "quic": { "sni": ["*.example.com"] } }
+                      ],
                       "handle": [
                         {
                           "handler": "proxy",
