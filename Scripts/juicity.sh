@@ -26,16 +26,13 @@ apt-get install -y --no-install-recommends \
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ---- detect primary egress IPv4 for send_through ----
+# ---- detect egress IPv4 for send_through (only used on dual-stack) ----
 detect_egress_ipv4() {
   local ip=""
-  # Best: default route chosen src IPv4
   ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true)"
   if [[ -z "${ip}" ]]; then
-    # Fallback: first global IPv4 on any interface
     ip="$(ip -4 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 || true)"
   fi
-  # Basic validation
   if [[ "${ip}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
     printf '%s\n' "${ip}"
     return 0
@@ -43,16 +40,41 @@ detect_egress_ipv4() {
   return 1
 }
 
-J_SEND_THROUGH=""
-if J_SEND_THROUGH="$(detect_egress_ipv4)"; then
-  echo "Detected egress IPv4 for send_through: ${J_SEND_THROUGH}"
-else
-  echo "WARN: failed to detect egress IPv4; will not set send_through automatically."
-fi
+# ---- detect if IPv6 is actually usable (default route + src) ----
+detect_egress_ipv6() {
+  local ip=""
+  # Cloudflare IPv6 anycast for route test
+  ip="$(ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true)"
+  if [[ -z "${ip}" ]]; then
+    ip="$(ip -6 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 || true)"
+  fi
+  # very loose validation: contains ':' and not empty
+  if [[ -n "${ip}" && "${ip}" == *:* ]]; then
+    printf '%s\n' "${ip}"
+    return 0
+  fi
+  return 1
+}
 
+# ---- dual-stack => include send_through (IPv4) ; otherwise omit ----
 SEND_THROUGH_LINE=""
-if [[ -n "${J_SEND_THROUGH}" ]]; then
-  SEND_THROUGH_LINE="  \"send_through\": \"${J_SEND_THROUGH}\","
+J_IPV4=""
+J_IPV6=""
+
+if J_IPV4="$(detect_egress_ipv4)"; then :; else J_IPV4=""; fi
+if J_IPV6="$(detect_egress_ipv6)"; then :; else J_IPV6=""; fi
+
+if [[ -n "${J_IPV4}" && -n "${J_IPV6}" ]]; then
+  echo "Dual-stack detected (IPv4=${J_IPV4}, IPv6=${J_IPV6}); enabling send_through=${J_IPV4}"
+  SEND_THROUGH_LINE="  \"send_through\": \"${J_IPV4}\","
+else
+  if [[ -n "${J_IPV4}" ]]; then
+    echo "IPv4-only (or IPv6 not usable); omitting send_through."
+  elif [[ -n "${J_IPV6}" ]]; then
+    echo "IPv6-only (no usable IPv4); omitting send_through."
+  else
+    echo "WARN: could not detect usable IPv4/IPv6; omitting send_through."
+  fi
 fi
 
 # ---- user / dir ----
@@ -73,13 +95,20 @@ get_latest_tag() {
 
 TAG="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
 
+# ---- asset: pin x86_64 to highest-perf build ----
 case "$(uname -m)" in
-  x86_64|amd64)  ARCH="x86_64" ;;
-  aarch64|arm64) ARCH="arm64"  ;;
-  *) echo "Unsupported arch: $(uname -m)" >&2; exit 1 ;;
+  x86_64|amd64)
+    ASSET="juicity-linux-x86_64_v3_avx2.zip"
+    ;;
+  aarch64|arm64)
+    ASSET="juicity-linux-arm64.zip"
+    ;;
+  *)
+    echo "Unsupported arch: $(uname -m)" >&2
+    exit 1
+    ;;
 esac
 
-ASSET="juicity-linux-${ARCH}.zip"
 URL="https://github.com/juicity/juicity/releases/download/${TAG}/${ASSET}"
 
 # ---- download & install (server only) ----
@@ -119,10 +148,9 @@ EOF
   echo "JUICITY UUID: ${J_UUID}"
   echo "JUICITY PASS: ${J_PASS}"
 else
-  # Config already exists; do not edit automatically (side-effects minimal).
   echo "INFO: ${J_CONF} already exists; not modifying it."
-  if [[ -n "${J_SEND_THROUGH}" ]]; then
-    echo "      If you want, add this line into JSON: \"send_through\": \"${J_SEND_THROUGH}\","
+  if [[ -n "${SEND_THROUGH_LINE}" ]]; then
+    echo "      (dual-stack) If you want, add this line into JSON: ${SEND_THROUGH_LINE}"
   fi
 fi
 
