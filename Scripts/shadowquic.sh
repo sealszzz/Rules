@@ -2,33 +2,34 @@
 # shadowquic-min: no-API latest/download, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-: "${SHQ_PORT:=443}"
-: "${SHQ_UPSTREAM_HOST:=www.debian.org}"
-: "${SHQ_UPSTREAM_PORT:=443}"
-: "${SHQ_LOG_LEVEL:=warn}"
+: "${SQ_PORT:=443}"
+: "${SQ_UPSTREAM_HOST:=www.debian.org}"
+: "${SQ_UPSTREAM_PORT:=443}"
+: "${SQ_LOG_LEVEL:=warn}"           # trace | debug | info | warn | error
+: "${SQ_DNS_STRATEGY:=prefer-ipv4}" # prefer-ipv4 | prefer-ipv6 | ipv4-only | ipv6-only
 
-SHQ_USER="shadowquic"
-SHQ_GROUP="shadowquic"
+SQ_USER="shadowquic"
+SQ_GROUP="shadowquic"
 
-SHQ_STATE_DIR="/var/lib/shadowquic"
-SHQ_CONF_DIR="/etc/shadowquic"
-SHQ_CONF_FILE="${SHQ_CONF_DIR}/server.yaml"
+SQ_STATE_DIR="/var/lib/shadowquic"
+SQ_CONF_DIR="/etc/shadowquic"
+SQ_CONF_FILE="${SQ_CONF_DIR}/server.yaml"
 
-SHQ_BIN="/usr/local/bin/shadowquic"
-SHQ_SERVICE_NAME="shadowquic"
-SHQ_SERVICE="/etc/systemd/system/${SHQ_SERVICE_NAME}.service"
+SQ_BIN="/usr/local/bin/shadowquic"
+SQ_SERVICE_NAME="shadowquic"
+SQ_SERVICE="/etc/systemd/system/${SQ_SERVICE_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends curl ca-certificates openssl iproute2 >/dev/null
 
-getent group "$SHQ_GROUP" >/dev/null || groupadd --system "$SHQ_GROUP"
-id -u "$SHQ_USER" >/dev/null 2>&1 || \
-  useradd --system -g "$SHQ_GROUP" -M -d "$SHQ_STATE_DIR" -s /usr/sbin/nologin "$SHQ_USER"
+getent group "$SQ_GROUP" >/dev/null || groupadd --system "$SQ_GROUP"
+id -u "$SQ_USER" >/dev/null 2>&1 || \
+  useradd --system -g "$SQ_GROUP" -M -d "$SQ_STATE_DIR" -s /usr/sbin/nologin "$SQ_USER"
 
-install -d -o "$SHQ_USER" -g "$SHQ_GROUP" -m 750 "$SHQ_STATE_DIR"
-install -d -o root -g "$SHQ_GROUP" -m 750 "$SHQ_CONF_DIR"
+install -d -o "$SQ_USER" -g "$SQ_GROUP" -m 750 "$SQ_STATE_DIR"
+install -d -o root -g "$SQ_GROUP" -m 750 "$SQ_CONF_DIR"
 
 case "$(uname -m)" in
   x86_64|amd64)  ASSET="shadowquic-x86_64-linux" ;;
@@ -42,36 +43,36 @@ tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' EXIT
 bin_dl="${tmpd}/${ASSET}"
 
 curl -fL --retry 3 --retry-delay 1 -o "$bin_dl" "${BASE_URL}/${ASSET}"
-install -m 0755 "$bin_dl" "$SHQ_BIN"
+install -m 0755 "$bin_dl" "$SQ_BIN"
 
-if [ ! -f "$SHQ_CONF_FILE" ]; then
-  SHQ_GEN_USER="${SHQ_GEN_USER:-$(openssl rand -hex 8)}"
-  SHQ_GEN_PASS="${SHQ_GEN_PASS:-$(openssl rand -hex 16)}"
+if [ ! -f "$SQ_CONF_FILE" ]; then
+  SQ_GEN_USER="${SQ_GEN_USER:-$(openssl rand -hex 8)}"
+  SQ_GEN_PASS="${SQ_GEN_PASS:-$(openssl rand -hex 16)}"
 
-  cat >"$SHQ_CONF_FILE" <<EOF
+  cat >"$SQ_CONF_FILE" <<EOF
 inbound:
   type: shadowquic
-  bind-addr: "[::]:${SHQ_PORT}"
+  bind-addr: "[::]:${SQ_PORT}"
   users:
-    - username: "${SHQ_GEN_USER}"
-      password: "${SHQ_GEN_PASS}"
+    - username: "${SQ_GEN_USER}"
+      password: "${SQ_GEN_PASS}"
   jls-upstream:
-    addr: "${SHQ_UPSTREAM_HOST}:${SHQ_UPSTREAM_PORT}"
+    addr: "${SQ_UPSTREAM_HOST}:${SQ_UPSTREAM_PORT}"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
 outbound:
   type: direct
-  dns-strategy: prefer-ipv4
-log-level: "${SHQ_LOG_LEVEL}"
+  dns-strategy: ${SQ_DNS_STRATEGY}
+log-level: "${SQ_LOG_LEVEL}"
 EOF
 
-  chown root:"$SHQ_GROUP" "$SHQ_CONF_FILE"
-  chmod 640 "$SHQ_CONF_FILE"
+  chown root:"$SQ_GROUP" "$SQ_CONF_FILE"
+  chmod 640 "$SQ_CONF_FILE"
 fi
 
-if [ ! -f "$SHQ_SERVICE" ]; then
-  cat >"$SHQ_SERVICE" <<EOF
+if [ ! -f "$SQ_SERVICE" ]; then
+  cat >"$SQ_SERVICE" <<EOF
 [Unit]
 Description=ShadowQUIC Server
 Documentation=https://github.com/spongebob888/shadowquic
@@ -79,12 +80,12 @@ After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
-User=${SHQ_USER}
-Group=${SHQ_GROUP}
+User=${SQ_USER}
+Group=${SQ_GROUP}
 Type=simple
 UMask=0077
-WorkingDirectory=${SHQ_STATE_DIR}
-ExecStart=${SHQ_BIN} -c ${SHQ_CONF_FILE}
+WorkingDirectory=${SQ_STATE_DIR}
+ExecStart=${SQ_BIN} -c ${SQ_CONF_FILE}
 Restart=on-failure
 RestartSec=3s
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
@@ -95,16 +96,16 @@ LimitNOFILE=262144
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 "$SHQ_SERVICE"
+  chmod 644 "$SQ_SERVICE"
 fi
 
 systemctl daemon-reload
-if systemctl is-enabled "$SHQ_SERVICE_NAME" >/dev/null 2>&1; then
-  systemctl try-reload-or-restart "$SHQ_SERVICE_NAME" || systemctl restart "$SHQ_SERVICE_NAME"
+if systemctl is-enabled "$SQ_SERVICE_NAME" >/dev/null 2>&1; then
+  systemctl try-reload-or-restart "$SQ_SERVICE_NAME" || systemctl restart "$SQ_SERVICE_NAME"
 else
-  systemctl enable --now "$SHQ_SERVICE_NAME" || true
+  systemctl enable --now "$SQ_SERVICE_NAME" || true
 fi
 
 echo
 echo "[*] ShadowQUIC version:"
-"$SHQ_BIN" -V 2>/dev/null || "$SHQ_BIN" --version 2>/dev/null || true
+"$SQ_BIN" -V 2>/dev/null || "$SQ_BIN" --version 2>/dev/null || true
