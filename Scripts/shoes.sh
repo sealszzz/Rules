@@ -13,6 +13,15 @@ set -euo pipefail
 : "${T_PASS:=}"   # optional override; empty -> generate on first config
 : "${V_UUID:=}"   # optional override; empty -> generate on first config
 
+SHOES_USER="shoes"
+SHOES_GROUP="shoes"
+SHOES_STATE_DIR="/var/lib/shoes"
+SHOES_CONF_DIR="/etc/shoes"
+SHOES_CONF_FILE="${SHOES_CONF_DIR}/config.yaml"
+SHOES_BIN="/usr/local/bin/shoes"
+SHOES_SERVICE_NAME="shoes"
+SHOES_SERVICE="/etc/systemd/system/${SHOES_SERVICE_NAME}.service"
+
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
@@ -22,14 +31,13 @@ apt-get install -y --no-install-recommends \
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-getent group shoes >/dev/null || groupadd --system shoes
-id -u shoes >/dev/null 2>&1 || \
-  useradd --system -g shoes -M -d /var/lib/shoes -s /usr/sbin/nologin shoes
+getent group "$SHOES_GROUP" >/dev/null || groupadd --system "$SHOES_GROUP"
+id -u "$SHOES_USER" >/dev/null 2>&1 || \
+  useradd --system -g "$SHOES_GROUP" -M -d "$SHOES_STATE_DIR" -s /usr/sbin/nologin "$SHOES_USER"
 
-install -d -o shoes -g shoes -m 750 /var/lib/shoes
-install -d -o root  -g shoes -m 750 /etc/shoes
+install -d -o "$SHOES_USER" -g "$SHOES_GROUP" -m 750 "$SHOES_STATE_DIR"
+install -d -o root -g "$SHOES_GROUP" -m 750 "$SHOES_CONF_DIR"
 
-# ===== resolve latest tag via 302 =====
 get_shoes_tag() {
   local u
   u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
@@ -37,7 +45,6 @@ get_shoes_tag() {
   printf '%s\n' "${u##*/}"
 }
 
-# ===== install shoes =====
 install_shoes_release() {
   case "$(uname -m)" in
     x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
@@ -58,7 +65,7 @@ install_shoes_release() {
   bin="$(find "$tmpd/unpack" -type f -name shoes -perm -u+x | head -n1 || true)"
   [ -n "$bin" ] || { echo "FATAL: shoes binary not found"; exit 1; }
 
-  install -m 0755 "$bin" /usr/local/bin/shoes
+  install -m 0755 "$bin" "$SHOES_BIN"
   trap - RETURN
 }
 
@@ -69,12 +76,12 @@ install_shoes_release
 gen_reality() {
   local out pri pub sid
 
-  command -v /usr/local/bin/shoes >/dev/null 2>&1 || {
-    echo "FATAL: /usr/local/bin/shoes not found" >&2
+  command -v "$SHOES_BIN" >/dev/null 2>&1 || {
+    echo "FATAL: ${SHOES_BIN} not found" >&2
     exit 1
   }
 
-  out="$(/usr/local/bin/shoes generate-reality-keypair 2>/dev/null || true)"
+  out="$("$SHOES_BIN" generate-reality-keypair 2>/dev/null || true)"
 
   pri="$(printf '%s\n' "$out" | awk -F': ' '/REALITY private key:/ {print $2; exit}')"
   pub="$(printf '%s\n' "$out" | awk -F': ' '/REALITY public key:/  {print $2; exit}')"
@@ -91,8 +98,7 @@ gen_reality() {
   printf '%s\n' "$sid"
 }
 
-# ===== config: create only if missing =====
-if [ ! -f /etc/shoes/config.yaml ]; then
+if [ ! -f "$SHOES_CONF_FILE" ]; then
   [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
   [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
   [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
@@ -103,7 +109,7 @@ if [ ! -f /etc/shoes/config.yaml ]; then
   REALITY_PUB="${R[1]}"
   REALITY_SID="${R[2]}"
 
-  cat >/etc/shoes/config.yaml <<EOF
+  cat >"$SHOES_CONF_FILE" <<EOF
 - address: "[::]:${ANYTLS_PORT}"
   protocol:
     type: tls
@@ -148,18 +154,15 @@ if [ ! -f /etc/shoes/config.yaml ]; then
     password: "${T_PASS}"
     zero_rtt_handshake: false
     udp_enabled: true
-
-  rules:
-    - allow-all-direct
 EOF
 
-  chown root:shoes /etc/shoes/config.yaml
-  chmod 640 /etc/shoes/config.yaml
+  chown root:"$SHOES_GROUP" "$SHOES_CONF_FILE"
+  chmod 640 "$SHOES_CONF_FILE"
 fi
 
 # ===== systemd unit =====
-if [ ! -f /etc/systemd/system/shoes.service ]; then
-  cat >/etc/systemd/system/shoes.service <<'EOF'
+if [ ! -f "$SHOES_SERVICE" ]; then
+  cat >"$SHOES_SERVICE" <<EOF
 [Unit]
 Description=Shoes Server
 Documentation=https://github.com/cfal/shoes
@@ -167,12 +170,12 @@ After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
-User=shoes
-Group=shoes
+User=${SHOES_USER}
+Group=${SHOES_GROUP}
 Type=simple
 UMask=0077
-WorkingDirectory=/var/lib/shoes
-ExecStart=/usr/local/bin/shoes /etc/shoes/config.yaml
+WorkingDirectory=${SHOES_STATE_DIR}
+ExecStart=${SHOES_BIN} ${SHOES_CONF_FILE}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -183,17 +186,17 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 /etc/systemd/system/shoes.service
+  chmod 644 "$SHOES_SERVICE"
 fi
 
 systemctl daemon-reload
-if systemctl is-enabled shoes >/dev/null 2>&1; then
-  systemctl restart shoes
+if systemctl is-enabled "$SHOES_SERVICE_NAME" >/dev/null 2>&1; then
+  systemctl restart "$SHOES_SERVICE_NAME"
 else
-  systemctl enable --now shoes >/dev/null 2>&1 || true
+  systemctl enable --now "$SHOES_SERVICE_NAME" >/dev/null 2>&1 || true
 fi
 
 # ===== final output (ONLY tag + bin) =====
-BIN_VER="$(/usr/local/bin/shoes -V 2>/dev/null || /usr/local/bin/shoes --version 2>/dev/null || true)"
+BIN_VER="$("$SHOES_BIN" -V 2>/dev/null || "$SHOES_BIN" --version 2>/dev/null || true)"
 echo "shoes tag: ${SHOES_TAG:-unknown}"
 echo "shoes bin: ${BIN_VER:-unknown}"
