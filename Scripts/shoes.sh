@@ -72,7 +72,6 @@ install_shoes_release() {
 SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
 install_shoes_release
 
-# ===== generate Reality X25519 keypair (base64url) + short_id (hex) via shoes =====
 gen_reality() {
   local out pri pub sid
 
@@ -196,7 +195,6 @@ else
   systemctl enable --now "$SHOES_SERVICE_NAME" >/dev/null 2>&1 || true
 fi
 
-# ===== final output (ONLY tag + bin) =====
 BIN_VER="$("$SHOES_BIN" -V 2>/dev/null || "$SHOES_BIN" --version 2>/dev/null || true)"
 echo "shoes tag: ${SHOES_TAG:-unknown}"
 echo "shoes bin: ${BIN_VER:-unknown}"
