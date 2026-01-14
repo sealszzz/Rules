@@ -17,8 +17,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
 apt-get install -y --no-install-recommends \
-  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2 \
-  python3 python3-cryptography
+  curl ca-certificates tar xz-utils uuid-runtime openssl iproute2
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
@@ -66,33 +65,30 @@ install_shoes_release() {
 SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
 install_shoes_release
 
-# ===== generate Reality X25519 keypair (base64) + short_id (hex) WITHOUT xray =====
+# ===== generate Reality X25519 keypair (base64url) + short_id (hex) via shoes =====
 gen_reality() {
-python3 - <<'PY'
-import os, base64
-from cryptography.hazmat.primitives.asymmetric import x25519
-from cryptography.hazmat.primitives import serialization
+  local out pri pub sid
 
-def b64url_no_pad(b: bytes) -> str:
-    return base64.urlsafe_b64encode(b).decode().rstrip("=")
+  command -v /usr/local/bin/shoes >/dev/null 2>&1 || {
+    echo "FATAL: /usr/local/bin/shoes not found" >&2
+    exit 1
+  }
 
-pri = x25519.X25519PrivateKey.generate()
-pub = pri.public_key()
+  out="$(/usr/local/bin/shoes generate-reality-keypair 2>/dev/null || true)"
 
-pri_raw = pri.private_bytes(
-    encoding=serialization.Encoding.Raw,
-    format=serialization.PrivateFormat.Raw,
-    encryption_algorithm=serialization.NoEncryption()
-)
-pub_raw = pub.public_bytes(
-    encoding=serialization.Encoding.Raw,
-    format=serialization.PublicFormat.Raw
-)
+  pri="$(printf '%s\n' "$out" | awk -F': ' '/REALITY private key:/ {print $2; exit}')"
+  pub="$(printf '%s\n' "$out" | awk -F': ' '/REALITY public key:/  {print $2; exit}')"
 
-print(b64url_no_pad(pri_raw))
-print(b64url_no_pad(pub_raw))
-print(os.urandom(8).hex())  # 16 hex chars
-PY
+  if [ -z "${pri:-}" ] || [ -z "${pub:-}" ]; then
+    echo "FATAL: failed to parse shoes generate-reality-keypair output" >&2
+    echo "$out" >&2
+    exit 1
+  fi
+
+  sid="$(openssl rand -hex 8)"  # 16 hex chars
+  printf '%s\n' "$pri"
+  printf '%s\n' "$pub"
+  printf '%s\n' "$sid"
 }
 
 # ===== config: create only if missing =====
