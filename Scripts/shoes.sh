@@ -2,15 +2,12 @@
 set -euo pipefail
 
 : "${ANYTLS_PORT:=4443}"    # TCP/TLS
-: "${TUIC_PORT:=4443}"      # UDP/QUIC
 : "${VLESS_PORT:=8443}"     # TCP/Reality
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
 : "${A_PASS:=}"   # optional override; empty -> generate on first config
-: "${T_UUID:=}"   # optional override; empty -> generate on first config
-: "${T_PASS:=}"   # optional override; empty -> generate on first config
 : "${V_UUID:=}"   # optional override; empty -> generate on first config
 
 SHOES_USER="shoes"
@@ -99,8 +96,6 @@ gen_reality() {
 
 if [ ! -f "$SHOES_CONF_FILE" ]; then
   [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
-  [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
-  [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
   [ -n "$V_UUID" ] || V_UUID="$(uuidgen)"
 
   mapfile -t R < <(gen_reality)
@@ -138,21 +133,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           type: vless
           user_id: "${V_UUID}"
           udp_enabled: true
-          fallback: "127.0.0.1:80"
-
-- address: "[::]:${TUIC_PORT}"
-  transport: quic
-  quic_settings:
-    cert: "${CERT}"
-    key:  "${KEY}"
-    alpn_protocols: ["h3"]
-    congestion_control: bbr
-  protocol:
-    type: tuic
-    uuid: "${T_UUID}"
-    password: "${T_PASS}"
-    zero_rtt_handshake: false
-    udp_enabled: true
 EOF
 
   chown root:"$SHOES_GROUP" "$SHOES_CONF_FILE"
