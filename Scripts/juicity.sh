@@ -18,7 +18,6 @@ J_SVC="/etc/systemd/system/${J_SVC_NAME}.service"
 
 export DEBIAN_FRONTEND=noninteractive
 
-# ---- deps ----
 apt-get update >/dev/null
 apt-get install -y --no-install-recommends \
   curl ca-certificates unzip openssl uuid-runtime iproute2 >/dev/null
@@ -26,7 +25,6 @@ apt-get install -y --no-install-recommends \
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
 
-# ---- detect egress IPv4 for send_through (only used on dual-stack) ----
 detect_egress_ipv4() {
   local ip=""
   ip="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true)"
@@ -40,15 +38,12 @@ detect_egress_ipv4() {
   return 1
 }
 
-# ---- detect if IPv6 is actually usable (default route + src) ----
 detect_egress_ipv6() {
   local ip=""
-  # Cloudflare IPv6 anycast for route test
   ip="$(ip -6 route get 2606:4700:4700::1111 2>/dev/null | awk '{for(i=1;i<=NF;i++) if ($i=="src") {print $(i+1); exit}}' || true)"
   if [[ -z "${ip}" ]]; then
     ip="$(ip -6 -o addr show scope global 2>/dev/null | awk '{print $4}' | cut -d/ -f1 | head -n1 || true)"
   fi
-  # very loose validation: contains ':' and not empty
   if [[ -n "${ip}" && "${ip}" == *:* ]]; then
     printf '%s\n' "${ip}"
     return 0
@@ -56,7 +51,6 @@ detect_egress_ipv6() {
   return 1
 }
 
-# ---- dual-stack => include send_through (IPv4) ; otherwise omit ----
 SEND_THROUGH_LINE=""
 J_IPV4=""
 J_IPV6=""
@@ -77,7 +71,6 @@ else
   fi
 fi
 
-# ---- user / dir ----
 getent group "$J_GROUP" >/dev/null || groupadd --system "$J_GROUP"
 id -u "$J_USER" >/dev/null 2>&1 || \
   useradd --system -g "$J_GROUP" -M -d "$J_STATE_DIR" -s /usr/sbin/nologin "$J_USER"
@@ -85,7 +78,6 @@ id -u "$J_USER" >/dev/null 2>&1 || \
 install -d -o "$J_USER" -g "$J_GROUP" -m 750 "$J_STATE_DIR"
 install -d -o root      -g "$J_GROUP" -m 750 "$J_ETC_DIR"
 
-# ---- latest tag via 302 ----
 get_latest_tag() {
   local u
   u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
@@ -95,7 +87,6 @@ get_latest_tag() {
 
 TAG="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
 
-# ---- asset: pin x86_64 to highest-perf build ----
 case "$(uname -m)" in
   x86_64|amd64)
     ASSET="juicity-linux-x86_64_v3_avx2.zip"
@@ -111,7 +102,6 @@ esac
 
 URL="https://github.com/juicity/juicity/releases/download/${TAG}/${ASSET}"
 
-# ---- download & install (server only) ----
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
 
@@ -122,25 +112,24 @@ unzip -q "${tmpd}/${ASSET}" -d "$tmpd"
 
 install -m 0755 "${tmpd}/juicity-server" "$J_BIN"
 
-# ---- first-time config only ----
 if [ ! -f "$J_CONF" ]; then
   J_UUID="$(uuidgen)"
   J_PASS="$(openssl rand -hex 16)"
 
-  cat >"$J_CONF" <<EOF
-{
-  "listen": "[::]:${J_PORT}",
-  "users": {
-    "${J_UUID}": "${J_PASS}"
-  },
-  "certificate": "${CERT}",
-  "private_key": "${KEY}",
-  "congestion_control": "bbr",
-  "disable_outbound_udp443": true,
-${SEND_THROUGH_LINE}
-  "log_level": "warn"
-}
-EOF
+  {
+    printf '{\n'
+    printf '  "listen": "[::]:%s",\n' "${J_PORT}"
+    printf '  "users": {\n'
+    printf '    "%s": "%s"\n' "${J_UUID}" "${J_PASS}"
+    printf '  },\n'
+    printf '  "certificate": "%s",\n' "${CERT}"
+    printf '  "private_key": "%s",\n' "${KEY}"
+    printf '  "congestion_control": "bbr",\n'
+    printf '  "disable_outbound_udp443": true,\n'
+    [[ -n "${SEND_THROUGH_LINE}" ]] && printf '%s\n' "${SEND_THROUGH_LINE}"
+    printf '  "log_level": "warn"\n'
+    printf '}\n'
+  } >"$J_CONF"
 
   chown root:"$J_GROUP" "$J_CONF"
   chmod 640 "$J_CONF"
@@ -154,7 +143,6 @@ else
   fi
 fi
 
-# ---- systemd unit (create once) ----
 if [ ! -f "$J_SVC" ]; then
   cat >"$J_SVC" <<EOF
 [Unit]
@@ -183,7 +171,6 @@ EOF
   chmod 644 "$J_SVC"
 fi
 
-# ---- start / reload ----
 systemctl daemon-reload
 if systemctl is-enabled "$J_SVC_NAME" >/dev/null 2>&1; then
   systemctl try-reload-or-restart "$J_SVC_NAME" || systemctl restart "$J_SVC_NAME"
