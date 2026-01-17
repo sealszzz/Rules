@@ -113,7 +113,7 @@ cat >"$CADDY_CONF" <<'EOF'
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:9999"] }
+                    { "dial": ["tcp/127.0.0.1:9009"] }
                   ]
                 }
               ]
@@ -184,7 +184,7 @@ cat >"$CADDY_CONF" <<'EOF'
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["udp/127.0.0.1:9003"] }
+                    { "dial": ["udp/127.0.0.1:9009"] }
                   ]
                 }
               ]
