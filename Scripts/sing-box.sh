@@ -170,6 +170,23 @@ if [ ! -f "${SINGBOX_CONF}" ]; then
       "type": "hysteria2",
       "listen": "::",
       "listen_port": ${HY2_PORT},
+      "users": [
+        {
+          "name": "${HY2_NAME}",
+          "password": "${HY2_PASSWORD}"
+        }
+      ],
+      "ignore_client_bandwidth": true,
+      "tls": {
+        "enabled": true,
+        "certificate_path": "${CERT}",
+        "key_path": "${KEY}"
+      }
+    },
+    {
+      "type": "hysteria2",
+      "listen": "::",
+      "listen_port": ${HY2_PORT},
       "obfs": {
         "type": "salamander",
         "password": "${HY2_OBFS_PASSWORD}"
