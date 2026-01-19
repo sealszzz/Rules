@@ -100,6 +100,15 @@ cat >"$CADDY_CONF" <<'EOF'
                           ]
                         }
                       ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "throttle",
+                          "read_bytes_per_second": 1,
+                          "read_burst_size": 1
+                        }
+                      ]
                     }
                   ]
                 }
@@ -111,10 +120,9 @@ cat >"$CADDY_CONF" <<'EOF'
               ],
               "handle": [
                 {
-                  "handler": "proxy",
-                  "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:9009"] }
-                  ]
+                  "handler": "throttle",
+                  "read_bytes_per_second": 1,
+                  "read_burst_size": 1
                 }
               ]
             }
@@ -169,6 +177,15 @@ cat >"$CADDY_CONF" <<'EOF'
                           "upstreams": [
                             { "dial": ["udp/127.0.0.1:9003"] }
                           ]
+                        }
+                      ]
+                    },
+                    {
+                      "handle": [
+                        {
+                          "handler": "throttle",
+                          "read_bytes_per_second": 1,
+                          "read_burst_size": 1
                         }
                       ]
                     }
