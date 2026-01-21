@@ -93,14 +93,13 @@ gen_reality() {
     exit 1
   fi
 
-  sid="$(openssl rand -hex 8)"  # 16 hex chars
+  sid="$(openssl rand -hex 8)"
   printf '%s\n' "$pri"
   printf '%s\n' "$pub"
   printf '%s\n' "$sid"
 }
 
 if [ ! -f "$SHOES_CONF_FILE" ]; then
-  # unified: all secrets use the same one-liner
   [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
   [ -n "$V_UUID" ] || V_UUID="$(uuidgen)"
   [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
@@ -174,7 +173,6 @@ EOF
   chmod 640 "$SHOES_CONF_FILE"
 fi
 
-# ===== systemd unit =====
 if [ ! -f "$SHOES_SERVICE" ]; then
   cat >"$SHOES_SERVICE" <<EOF
 [Unit]
