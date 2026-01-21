@@ -1,14 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${ANYTLS_PORT:=4443}"    # TCP/TLS
-: "${VLESS_PORT:=8443}"     # TCP/Reality
+: "${A_PORT:=4443}"         # TCP/TLS (AnyTLS)
+: "${V_PORT:=8443}"         # TCP/Reality (VLESS)
+: "${T_PORT:=4443}"         # UDP/QUIC (TUIC v5)
+: "${H_PORT:=8443}"         # UDP/QUIC (Hysteria2)
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-: "${A_PASS:=}"   # optional override; empty -> generate on first config
-: "${V_UUID:=}"   # optional override; empty -> generate on first config
+: "${A_PASS:=}"             # optional override; empty -> generate on first config
+: "${V_UUID:=}"             # optional override; empty -> generate on first config
+: "${T_UUID:=}"             # optional override; empty -> generate on first config
+: "${T_PASS:=}"             # optional override; empty -> generate on first config
+: "${H_PASS:=}"             # optional override; empty -> generate on first config
 
 SHOES_USER="shoes"
 SHOES_GROUP="shoes"
@@ -95,8 +100,12 @@ gen_reality() {
 }
 
 if [ ! -f "$SHOES_CONF_FILE" ]; then
+  # unified: all secrets use the same one-liner
   [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
   [ -n "$V_UUID" ] || V_UUID="$(uuidgen)"
+  [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
+  [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
+  [ -n "$H_PASS" ] || H_PASS="$(openssl rand -hex 16)"
 
   mapfile -t R < <(gen_reality)
   REALITY_PRI="${R[0]}"
@@ -104,7 +113,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
   REALITY_SID="${R[2]}"
 
   cat >"$SHOES_CONF_FILE" <<EOF
-- address: "[::]:${ANYTLS_PORT}"
+- address: "[::]:${A_PORT}"
   protocol:
     type: tls
     tls_targets:
@@ -119,7 +128,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
           fallback: "127.0.0.1:80"
 
-- address: "[::]:${VLESS_PORT}"
+- address: "[::]:${V_PORT}"
   protocol:
     type: tls
     reality_targets:
@@ -133,6 +142,32 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           type: vless
           user_id: "${V_UUID}"
           udp_enabled: true
+
+- address: "[::]:${T_PORT}"
+  transport: quic
+  quic_settings:
+    cert: "${CERT}"
+    key:  "${KEY}"
+    alpn_protocols:
+      - h3
+  protocol:
+    type: tuic
+    uuid: "${T_UUID}"
+    password: "${T_PASS}"
+    zero_rtt_handshake: false
+    udp_enabled: true
+
+- address: "[::]:${H_PORT}"
+  transport: quic
+  quic_settings:
+    cert: "${CERT}"
+    key:  "${KEY}"
+    alpn_protocols:
+      - h3
+  protocol:
+    type: hysteria2
+    password: "${H_PASS}"
+    udp_enabled: true
 EOF
 
   chown root:"$SHOES_GROUP" "$SHOES_CONF_FILE"
