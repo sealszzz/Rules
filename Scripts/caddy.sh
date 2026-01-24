@@ -52,7 +52,7 @@ cat >"$CADDY_CONF" <<'EOF'
       "servers": {
         "tcp443": {
           "listen": [":443"],
-          "matching_timeout": "1s",
+          "matching_timeout": "500ms",
           "routes": [
             {
               "match": [
@@ -105,8 +105,8 @@ cat >"$CADDY_CONF" <<'EOF'
                       "handle": [
                         {
                           "handler": "throttle",
-                          "read_bytes_per_second": 1,
-                          "read_burst_size": 1
+                          "read_bytes_per_second": 8,
+                          "read_burst_size": 8
                         }
                       ]
                     }
@@ -121,8 +121,8 @@ cat >"$CADDY_CONF" <<'EOF'
               "handle": [
                 {
                   "handler": "throttle",
-                  "read_bytes_per_second": 1,
-                  "read_burst_size": 1
+                  "read_bytes_per_second": 8,
+                  "read_burst_size": 8
                 }
               ]
             }
@@ -131,7 +131,7 @@ cat >"$CADDY_CONF" <<'EOF'
 
         "udp443": {
           "listen": ["udp/:443"],
-          "matching_timeout": "1s",
+          "matching_timeout": "500ms",
           "routes": [
             {
               "match": [
@@ -184,8 +184,8 @@ cat >"$CADDY_CONF" <<'EOF'
                       "handle": [
                         {
                           "handler": "throttle",
-                          "read_bytes_per_second": 1,
-                          "read_burst_size": 1
+                          "read_bytes_per_second": 8,
+                          "read_burst_size": 8
                         }
                       ]
                     }
