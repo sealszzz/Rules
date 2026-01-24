@@ -92,14 +92,6 @@ table inet filter {
     meta nfproto ipv6 tcp flags syn tcp dport != @tcp_allow ct state new \
       ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
 
-    udp dport != @udp_allow ct state new counter drop
-
-    tcp dport @tcp_allow ct state new tcp flags & (fin|syn|rst|ack) != syn counter drop
-
-    tcp flags & (fin|syn|rst|psh|ack|urg) == fin|syn counter drop
-    tcp flags & (fin|syn|rst|psh|ack|urg) == 0x0   counter drop
-    tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop
-
     tcp dport @tcp_allow accept
     udp dport @udp_allow accept
   }
