@@ -80,23 +80,12 @@ table inet filter {
     ip  saddr @blacklist4 counter drop
     ip6 saddr @blacklist6 counter drop
 
-    ct state invalid counter drop
     ct state { established, related } accept
 
     iif lo accept
 
-    ip protocol icmp icmp type {
-      echo-request, destination-unreachable, time-exceeded
-    } limit rate 10/second accept
-
-    ip6 nexthdr ipv6-icmp icmpv6 type {
-      nd-neighbor-solicit, nd-neighbor-advert,
-      nd-router-solicit, nd-router-advert
-    } accept
-
-    ip6 nexthdr ipv6-icmp icmpv6 type {
-      echo-request, destination-unreachable, time-exceeded, packet-too-big, parameter-problem
-    } limit rate 10/second accept
+    ip protocol icmp accept
+    ip6 nexthdr ipv6-icmp accept
 
     meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
       ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
@@ -112,7 +101,7 @@ table inet filter {
     tcp flags & (fin|psh|urg) == fin|psh|urg       counter drop
 
     tcp dport @tcp_allow accept
-    udp dport @udp_allow ct state { new, established, related } accept
+    udp dport @udp_allow accept
   }
 
   chain forward {
