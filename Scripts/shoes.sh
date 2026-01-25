@@ -118,7 +118,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
         protocol:
           type: anytls
           users:
-            - name: user1
+            - name: anytls
               password: "${PASS}"
           udp_enabled: true
           fallback: "127.0.0.1:80"
