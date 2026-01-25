@@ -1,19 +1,18 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${A_PORT:=4443}"         # TCP/TLS (AnyTLS)
-: "${V_PORT:=8443}"         # TCP/Reality (VLESS)
-: "${T_PORT:=4443}"         # UDP/QUIC (TUIC v5)
-: "${H_PORT:=8443}"         # UDP/QUIC (Hysteria2)
+: "${A_PORT:=4443}"
+: "${V_PORT:=5443}"
+: "${N_PORT:=6443}"
+: "${S_PORT:=7443}"
+: "${T_PORT:=4443}"
+: "${H_PORT:=5443}"
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 
-: "${A_PASS:=}"             # optional override; empty -> generate on first config
-: "${V_UUID:=}"             # optional override; empty -> generate on first config
-: "${T_UUID:=}"             # optional override; empty -> generate on first config
-: "${T_PASS:=}"             # optional override; empty -> generate on first config
-: "${H_PASS:=}"             # optional override; empty -> generate on first config
+: "${PASS:=}"
+: "${UUID:=}"
 
 SHOES_USER="shoes"
 SHOES_GROUP="shoes"
@@ -100,11 +99,8 @@ gen_reality() {
 }
 
 if [ ! -f "$SHOES_CONF_FILE" ]; then
-  [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
-  [ -n "$V_UUID" ] || V_UUID="$(uuidgen)"
-  [ -n "$T_UUID" ] || T_UUID="$(uuidgen)"
-  [ -n "$T_PASS" ] || T_PASS="$(openssl rand -hex 16)"
-  [ -n "$H_PASS" ] || H_PASS="$(openssl rand -hex 16)"
+  [ -n "$PASS" ] || PASS="$(openssl rand -hex 16)"
+  [ -n "$UUID" ] || UUID="$(uuidgen)"
 
   mapfile -t R < <(gen_reality)
   REALITY_PRI="${R[0]}"
@@ -123,7 +119,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           type: anytls
           users:
             - name: user1
-              password: "${A_PASS}"
+              password: "${PASS}"
           udp_enabled: true
           fallback: "127.0.0.1:80"
 
@@ -139,8 +135,31 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
         vision: true
         protocol:
           type: vless
-          user_id: "${V_UUID}"
+          user_id: "${UUID}"
           udp_enabled: true
+
+- address: "[::]:${N_PORT}"
+  protocol:
+    type: tls
+    reality_targets:
+      "www.cloudflare.com":
+        private_key: "${REALITY_PRI}"
+        #public_key: "${REALITY_PUB}"
+        short_ids: ["${REALITY_SID}"]
+        dest: "localhost:9999"
+        protocol:
+          type: naiveproxy
+          users:
+            - username: naive
+              password: "${PASS}"
+          udp_enabled: true
+
+- address: "[::]:${S_PORT}"
+  protocol:
+    type: shadowsocks
+    cipher: aes-128-gcm
+    password: "${PASS}"
+    udp_enabled: true
 
 - address: "[::]:${T_PORT}"
   transport: quic
@@ -151,8 +170,8 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
       - h3
   protocol:
     type: tuic
-    uuid: "${T_UUID}"
-    password: "${T_PASS}"
+    uuid: "${UUID}"
+    password: "${PASS}"
     zero_rtt_handshake: false
     udp_enabled: true
 
@@ -165,7 +184,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
       - h3
   protocol:
     type: hysteria2
-    password: "${H_PASS}"
+    password: "${PASS}"
     udp_enabled: true
 EOF
 
