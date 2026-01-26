@@ -137,6 +137,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           type: vless
           user_id: "${UUID}"
           udp_enabled: true
+        fallback: "127.0.0.1:9999"
 
 - address: "[::]:${N_PORT}"
   protocol:
@@ -153,6 +154,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
             - username: naive
               password: "${PASS}"
           udp_enabled: true
+        fallback: "127.0.0.1:9999"
 
 - address: "[::]:${S_PORT}"
   protocol:
