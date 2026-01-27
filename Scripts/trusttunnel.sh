@@ -15,9 +15,8 @@ TT_BIN="/usr/local/bin/trusttunnel"
 TT_STATE_DIR="/var/lib/trusttunnel"
 TT_CONF_DIR="/etc/trusttunnel"
 
-TT_VPN_CONF="${TT_CONF_DIR}/vpn.toml"
-TT_HOSTS_CONF="${TT_CONF_DIR}/hosts.toml"
-TT_RULES_CONF="${TT_CONF_DIR}/rules.toml"
+TT_VPN="${TT_CONF_DIR}/vpn.toml"
+TT_HOSTS="${TT_CONF_DIR}/hosts.toml"
 
 TT_SVC_NAME="trusttunnel"
 TT_SVC="/etc/systemd/system/${TT_SVC_NAME}.service"
@@ -90,45 +89,13 @@ gen_user_pass() {
 
 TAG="$(install_tt_release_minimal)"
 
-if [ ! -f "$TT_RULES_CONF" ]; then
-  cat >"$TT_RULES_CONF" <<'EOF'
-# Rules are evaluated in order, first matching rule's action is applied.
-# If no rules match, the connection is allowed by default.
-
-# Deny connections from specific IP range
-[[rule]]
-cidr = "192.168.1.0/24"
-action = "deny"
-
-# Allow connections with specific TLS client random prefix
-[[rule]]
-client_random_prefix = "aabbcc"
-action = "allow"
-
-# Deny connections matching both IP and client random with mask
-[[rule]]
-cidr = "10.0.0.0/8"
-client_random_prefix = "a0b0/f0f0"
-action = "deny"
-EOF
-  chown root:"$TT_GROUP" "$TT_RULES_CONF"
-  chmod 640 "$TT_RULES_CONF"
-fi
-
-if [ ! -f "$TT_VPN_CONF" ]; then
+if [ ! -f "$TT_VPN" ]; then
   mapfile -t UP < <(gen_user_pass)
   TT_USERNAME="${UP[0]}"
   TT_PASSWORD="${UP[1]}"
 
-  cat >"$TT_VPN_CONF" <<EOF
+  cat >"$TT_VPN" <<EOF
 listen_address = "[::]:${TT_PORT}"
-
-[[client]]
-username = "${TT_USERNAME}"
-password = "${TT_PASSWORD}"
-
-rules_file = "${TT_RULES_CONF}"
-
 ipv6_available = false
 allow_private_network_connections = false
 tls_handshake_timeout_secs = 10
@@ -138,15 +105,28 @@ tcp_connections_timeout_secs = 604800
 udp_connections_timeout_secs = 300
 speedtest_enable = false
 
-[forward_protocol]
-direct = {}
-[forward_protocol.direct]
+[[client]]
+username = "${TT_USERNAME}"
+password = "${TT_PASSWORD}"
 
-# Reverse proxy settings (optional)
-# [reverse_proxy]
-# server_address = "127.0.0.1:8080"
-# path_mask = "/api"
-# h3_backward_compatibility = false
+# Rules are evaluated in order, first matching rule's action is applied.
+# If no rules match, the connection is allowed by default.
+
+# Deny connections from specific IP range
+# [[rule]]
+# cidr = "192.168.1.0/24"
+# action = "deny"
+
+# Allow connections with specific TLS client random prefix
+# [[rule]]
+# client_random_prefix = "aabbcc"
+# action = "allow"
+
+# Deny connections matching both IP and client random with mask
+# [[rule]]
+# cidr = "10.0.0.0/8"
+# client_random_prefix = "a0b0/f0f0"
+# action = "deny"
 
 [listen_protocols]
 
@@ -174,36 +154,39 @@ max_stream_window = 16777216
 disable_active_migration = true
 enable_early_data = true
 message_queue_capacity = 4096
-# # The ICMP forwarding settings.
-# # Setting up this feature requires superuser rights on some systems.
+
+# Forward protocol (optional, defaults to direct)
+[forward_protocol]
+direct = {}
+
+# Reverse proxy settings (optional)
+# [reverse_proxy]
+# server_address = "127.0.0.1:8080"
+# path_mask = "/api"
+# h3_backward_compatibility = false
+
+# ICMP settings (optional, requires superuser)
 # [icmp]
-# # The name of a network interface to bind the outbound ICMP socket to
 # interface_name = "eth0"
-# # Timeout of tunneled ICMP requests
 # request_timeout_secs = 3
-# # The capacity of the ICMP multiplexer received messages queue.
-# # Decreasing it may cause packet dropping in case the multiplexer cannot keep up the pace.
-# # Increasing it may lead to high memory consumption.
-# # Each client has its own queue.
 # recv_message_queue_capacity = 256
-# # The metrics gathering request handler settings
+
+# Metrics settings (optional)
 # [metrics]
-# # The address to listen on for settings export requests
-# address = "0.0.0.0:1987"
-# # Timeout of a metrics request
+# address = "127.0.0.1:1987"
 # request_timeout_secs = 3
 EOF
 
-  chown root:"$TT_GROUP" "$TT_VPN_CONF"
-  chmod 640 "$TT_VPN_CONF"
+  chown root:"$TT_GROUP" "$TT_VPN"
+  chmod 640 "$TT_VPN"
 
-  echo "Generated credentials (inline in ${TT_VPN_CONF}):"
+  echo "Generated credentials (inline in ${TT_VPN}):"
   echo "  username: ${TT_USERNAME}"
   echo "  password: ${TT_PASSWORD}"
 fi
 
-if [ ! -f "$TT_HOSTS_CONF" ]; then
-  cat >"$TT_HOSTS_CONF" <<EOF
+if [ ! -f "$TT_HOSTS" ]; then
+  cat >"$TT_HOSTS" <<EOF
 [[main_hosts]]
 hostname = "${TT_HOSTNAME}"
 cert_chain_path = "${CERT}"
@@ -211,13 +194,13 @@ private_key_path = "${KEY}"
 allowed_sni = ["${TT_ALLOWED_SNI}"]
 
 ping_hosts = []
-[[ping_hosts]]
+# [[ping_hosts]]
 # hostname = "ping.vpn.example.com"
 # cert_chain_path = "certs/cert.pem"
 # private_key_path = "certs/key.pem"
 
 speedtest_hosts = []
-[[speedtest_hosts]]
+# [[speedtest_hosts]]
 # hostname = "speed.vpn.example.com"
 # cert_chain_path = "certs/cert.pem"
 # private_key_path = "certs/key.pem"
@@ -229,8 +212,8 @@ reverse_proxy_hosts = []
 # private_key_path = "certs/key.pem"
 EOF
 
-  chown root:"$TT_GROUP" "$TT_HOSTS_CONF"
-  chmod 640 "$TT_HOSTS_CONF"
+  chown root:"$TT_GROUP" "$TT_HOSTS"
+  chmod 640 "$TT_HOSTS"
 fi
 
 if [ ! -f "$TT_SVC" ]; then
@@ -247,7 +230,7 @@ Group=${TT_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${TT_STATE_DIR}
-ExecStart=${TT_BIN} ${TT_VPN_CONF} ${TT_HOSTS_CONF}
+ExecStart=${TT_BIN} ${TT_VPN} ${TT_HOSTS}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
