@@ -14,7 +14,10 @@ TT_GROUP="trusttunnel"
 TT_BIN="/usr/local/bin/trusttunnel"
 TT_STATE_DIR="/var/lib/trusttunnel"
 TT_CONF_DIR="/etc/trusttunnel"
-TT_CONF="${TT_CONF_DIR}/trusttunnel.toml"
+
+TT_VPN_CONF="${TT_CONF_DIR}/vpn.toml"
+TT_HOSTS_CONF="${TT_CONF_DIR}/hosts.toml"
+TT_RULES_CONF="${TT_CONF_DIR}/rules.toml"
 
 TT_SVC_NAME="trusttunnel"
 TT_SVC="/etc/systemd/system/${TT_SVC_NAME}.service"
@@ -87,22 +90,46 @@ gen_user_pass() {
 
 TAG="$(install_tt_release_minimal)"
 
-if [ ! -f "$TT_CONF" ]; then
+if [ ! -f "$TT_RULES_CONF" ]; then
+  cat >"$TT_RULES_CONF" <<'EOF'
+# Rules are evaluated in order, first matching rule's action is applied.
+# If no rules match, the connection is allowed by default.
+
+# Deny connections from specific IP range
+[[rule]]
+cidr = "192.168.1.0/24"
+action = "deny"
+
+# Allow connections with specific TLS client random prefix
+[[rule]]
+client_random_prefix = "aabbcc"
+action = "allow"
+
+# Deny connections matching both IP and client random with mask
+[[rule]]
+cidr = "10.0.0.0/8"
+client_random_prefix = "a0b0/f0f0"
+action = "deny"
+EOF
+  chown root:"$TT_GROUP" "$TT_RULES_CONF"
+  chmod 640 "$TT_RULES_CONF"
+fi
+
+if [ ! -f "$TT_VPN_CONF" ]; then
   mapfile -t UP < <(gen_user_pass)
   TT_USERNAME="${UP[0]}"
   TT_PASSWORD="${UP[1]}"
 
-  cat >"$TT_CONF" <<EOF
+  cat >"$TT_VPN_CONF" <<EOF
 listen_address = "[::]:${TT_PORT}"
 
 [[client]]
 username = "${TT_USERNAME}"
 password = "${TT_PASSWORD}"
 
-# rules_file = "rules.toml"
+rules_file = "${TT_RULES_CONF}"
 
-# "vpn.toml"
-ipv6_available = true
+ipv6_available = false
 allow_private_network_connections = false
 tls_handshake_timeout_secs = 10
 client_listener_timeout_secs = 600
@@ -137,17 +164,16 @@ header_table_size = 65536
 recv_udp_payload_size = 1350
 send_udp_payload_size = 1350
 initial_max_data = 104857600
-max_stream_data_bidi_local = 1048576
-max_stream_data_bidi_remote = 1048576
-max_stream_data_uni = 1048576
-max_streams_bidi = 4096
-max_streams_uni = 4096
+initial_max_stream_data_bidi_local = 1048576
+initial_max_stream_data_bidi_remote = 1048576
+initial_max_stream_data_uni = 1048576
+initial_max_streams_bidi = 4096
+initial_max_streams_uni = 4096
 max_connection_window = 25165824
 max_stream_window = 16777216
 disable_active_migration = true
 enable_early_data = true
 message_queue_capacity = 4096
-
 # # The ICMP forwarding settings.
 # # Setting up this feature requires superuser rights on some systems.
 # [icmp]
@@ -166,8 +192,18 @@ message_queue_capacity = 4096
 # address = "0.0.0.0:1987"
 # # Timeout of a metrics request
 # request_timeout_secs = 3
+EOF
 
-# "hosts.toml"
+  chown root:"$TT_GROUP" "$TT_VPN_CONF"
+  chmod 640 "$TT_VPN_CONF"
+
+  echo "Generated credentials (inline in ${TT_VPN_CONF}):"
+  echo "  username: ${TT_USERNAME}"
+  echo "  password: ${TT_PASSWORD}"
+fi
+
+if [ ! -f "$TT_HOSTS_CONF" ]; then
+  cat >"$TT_HOSTS_CONF" <<EOF
 [[main_hosts]]
 hostname = "${TT_HOSTNAME}"
 cert_chain_path = "${CERT}"
@@ -193,12 +229,8 @@ reverse_proxy_hosts = []
 # private_key_path = "certs/key.pem"
 EOF
 
-  chown root:"$TT_GROUP" "$TT_CONF"
-  chmod 640 "$TT_CONF"
-
-  echo "Generated credentials (in ${TT_CONF}):"
-  echo "  username: ${TT_USERNAME}"
-  echo "  password: ${TT_PASSWORD}"
+  chown root:"$TT_GROUP" "$TT_HOSTS_CONF"
+  chmod 640 "$TT_HOSTS_CONF"
 fi
 
 if [ ! -f "$TT_SVC" ]; then
@@ -215,7 +247,7 @@ Group=${TT_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${TT_STATE_DIR}
-ExecStart=${TT_BIN} ${TT_CONF}
+ExecStart=${TT_BIN} ${TT_VPN_CONF} ${TT_HOSTS_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -239,4 +271,3 @@ fi
 VER="$("$TT_BIN" --version 2>/dev/null || "$TT_BIN" -V 2>/dev/null || true)"
 echo "trusttunnel tag: ${TAG:-unknown}"
 echo "trusttunnel bin: ${VER:-unknown}"
-echo "config: ${TT_CONF}"
