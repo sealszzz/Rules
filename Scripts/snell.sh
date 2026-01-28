@@ -73,7 +73,7 @@ if [ ! -f "$SN_CONFIG" ]; then
 
   cat >"$SN_CONFIG" <<EOF
 [snell-server]
-listen = ::0:${SN_PORT}
+listen = [::]:${SN_PORT}
 psk = ${PSK}
 ipv6 = false
 EOF
