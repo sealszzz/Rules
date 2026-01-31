@@ -52,9 +52,15 @@ install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
 
 if [ ! -f "$TOBARU_CONF" ]; then
 cat >"$TOBARU_CONF" <<'EOF'
-- address: 0.0.0.0:443
+- address: "[::]:443"
   transport: tcp
   targets:
+    - location: 127.0.0.1:1
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: none
+        
     - location: 127.0.0.1:9001
       allowlist: 0.0.0.0/0
       server_tls:
@@ -81,6 +87,13 @@ cat >"$TOBARU_CONF" <<'EOF'
 
     - location: 127.0.0.1:9009
       allowlist: 0.0.0.0/0
+
+- address: "[::]:443"
+  transport: udp
+  target:
+    addresses:
+      - 127.0.0.1:9003
+    allowlist: 0.0.0.0/0
 EOF
 fi
 
