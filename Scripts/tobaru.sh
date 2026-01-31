@@ -23,7 +23,7 @@ detect_arch() {
 install_deps_debian() {
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -y >/dev/null
-  apt-get install -y --no-install-recommends curl ca-certificates tar gzip unzip >/dev/null
+  apt-get install -y --no-install-recommends curl ca-certificates tar gzip unzip file >/dev/null
 }
 
 pick_asset_url_gnu_only() {
@@ -56,8 +56,6 @@ pick_asset_url_gnu_only() {
 
   if [[ -z "$picked" ]]; then
     echo "ERROR: No GNU (non-musl) Linux asset found in latest release for arch=$arch."
-    echo "All assets:"
-    printf '%s\n' "$urls" | sed 's/^/  - /'
     return 1
   fi
 
@@ -69,7 +67,7 @@ download_and_install() {
   local tmpdir archive extracted_bin
 
   tmpdir="$(mktemp -d)"
-  trap 'rm -rf "$tmpdir"' EXIT
+  trap 'rm -rf "${tmpdir:-}"' EXIT
 
   echo "Downloading: $url"
   archive="$tmpdir/asset"
@@ -77,13 +75,13 @@ download_and_install() {
 
   mkdir -p "$tmpdir/out"
 
-  if file "$archive" | grep -qi 'zip'; then
+  if file "$archive" | grep -qi 'Zip archive'; then
     unzip -q "$archive" -d "$tmpdir/out"
   else
     tar -xf "$archive" -C "$tmpdir/out"
   fi
 
-  extracted_bin="$(find "$tmpdir/out" -type f -name 'tobaru' 2>/dev/null | head -n1 || true)"
+  extracted_bin="$(find "$tmpdir/out" -type f -name 'tobaru*' | head -n1 || true)"
   [[ -n "$extracted_bin" ]] || { echo "ERROR: tobaru binary not found in asset."; exit 1; }
 
   install -m 0755 "$extracted_bin" "$BIN_PATH"
@@ -136,9 +134,12 @@ Wants=network-online.target
 [Service]
 Type=simple
 ExecStart=${BIN_PATH} ${CONF_PATH}
-Restart=on-failure
-RestartSec=1
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
+LimitNOFILE=262144
+Restart=on-failure
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
@@ -152,11 +153,11 @@ EOF
 main() {
   need_root
 
-  if ! cmd_exists curl || ! cmd_exists tar; then
+  if ! cmd_exists curl || ! cmd_exists tar || ! cmd_exists file; then
     if cmd_exists apt-get; then
       install_deps_debian
     else
-      echo "Missing deps (curl/tar). Please install them and re-run."
+      echo "Missing deps (curl/tar/file). Please install them and re-run."
       exit 1
     fi
   fi
