@@ -1,97 +1,58 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-REPO="cfal/tobaru"
-BIN_PATH="/usr/local/bin/tobaru"
-CONF_DIR="/etc/tobaru"
-CONF_PATH="${CONF_DIR}/sni_passthrough.yml"
-SERVICE_PATH="/etc/systemd/system/tobaru.service"
+: "${TOBARU_USER:=tobaru}"
+: "${TOBARU_GROUP:=tobaru}"
+: "${TOBARU_BIN:=/usr/local/bin/tobaru}"
+: "${TOBARU_CONF_DIR:=/etc/tobaru}"
+: "${TOBARU_CONF:=/etc/tobaru/tobaru.yml}"
+: "${TOBARU_SERVICE:=/etc/systemd/system/tobaru.service}"
+: "${TOBARU_REPO:=cfal/tobaru}"
+: "${SERVICE_NAME:=tobaru}"
 
-need_root() { [[ ${EUID:-$(id -u)} -eq 0 ]] || { echo "Please run as root"; exit 1; }; }
-cmd_exists() { command -v "$1" >/dev/null 2>&1; }
+export DEBIAN_FRONTEND=noninteractive
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
-detect_arch() {
-  local m
-  m="$(uname -m)"
-  case "$m" in
-    x86_64|amd64) echo "amd64" ;;
-    aarch64|arm64) echo "arm64" ;;
-    *) echo "unsupported:$m" ;;
-  esac
-}
+apt-get update -qq
+apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
-install_deps_debian() {
-  export DEBIAN_FRONTEND=noninteractive
-  apt-get update -y >/dev/null
-  apt-get install -y --no-install-recommends curl ca-certificates tar gzip unzip file >/dev/null
-}
+case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
+  amd64|x86_64) ASSET_ARCH=x86_64 ;;
+  arm64|aarch64) ASSET_ARCH=aarch64 ;;
+  *) echo "FATAL: unsupported arch"; exit 1 ;;
+esac
 
-pick_asset_url_gnu_only() {
-  local arch="$1"
-  local api json urls picked
+LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${TOBARU_REPO}/releases/latest")"
+TAG="${LATEST_URL##*/}"
+[ -n "$TAG" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
 
-  api="https://api.github.com/repos/${REPO}/releases/latest"
-  json="$(curl -fsSL "$api")"
+ASSET="tobaru-${ASSET_ARCH}-unknown-linux-gnu.tar.gz"
+URL="https://github.com/${TOBARU_REPO}/releases/download/${TAG}/${ASSET}"
 
-  urls="$(printf '%s' "$json" \
-    | grep -Eo '"browser_download_url":[ ]*"[^"]+"' \
-    | sed -E 's/^"browser_download_url":[ ]*"//; s/"$//' \
-    | sort -u)"
+TMP="$(mktemp -d)"
+trap 'rm -rf "$TMP"' EXIT
 
-  if [[ "$arch" == "amd64" ]]; then
-    picked="$(printf '%s\n' "$urls" \
-      | grep -Ei 'linux' \
-      | grep -Ei '(x86_64|amd64)' \
-      | grep -Ei 'gnu' \
-      | grep -Eiv 'musl' \
-      | head -n1 || true)"
-  else
-    picked="$(printf '%s\n' "$urls" \
-      | grep -Ei 'linux' \
-      | grep -Ei '(aarch64|arm64)' \
-      | grep -Ei 'gnu' \
-      | grep -Eiv 'musl' \
-      | head -n1 || true)"
-  fi
+curl -fL --retry 3 --retry-delay 1 -o "$TMP/$ASSET" "$URL"
+tar -xzf "$TMP/$ASSET" -C "$TMP"
 
-  if [[ -z "$picked" ]]; then
-    echo "ERROR: No GNU (non-musl) Linux asset found in latest release for arch=$arch."
-    return 1
-  fi
+# The tarball usually contains a single binary named "tobaru"
+if [ -f "$TMP/tobaru" ]; then
+  install -m 0755 "$TMP/tobaru" "$TOBARU_BIN"
+else
+  # Fallback: find it if the archive has subdirs or different paths
+  FOUND_BIN="$(find "$TMP" -maxdepth 3 -type f -name 'tobaru' | head -n1 || true)"
+  [ -n "${FOUND_BIN:-}" ] || { echo "FATAL: missing tobaru binary in tar"; exit 1; }
+  install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
+fi
 
-  echo "$picked"
-}
+getent group "$TOBARU_GROUP" >/dev/null || groupadd --system "$TOBARU_GROUP"
+id -u "$TOBARU_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$TOBARU_GROUP" --shell /usr/sbin/nologin "$TOBARU_USER"
 
-download_and_install() {
-  local url="$1"
-  local tmpdir archive extracted_bin
+install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
 
-  tmpdir="$(mktemp -d)"
-  trap 'rm -rf "${tmpdir:-}"' EXIT
-
-  echo "Downloading: $url"
-  archive="$tmpdir/asset"
-  curl -fL --retry 3 --retry-delay 1 -o "$archive" "$url"
-
-  mkdir -p "$tmpdir/out"
-
-  if file "$archive" | grep -qi 'Zip archive'; then
-    unzip -q "$archive" -d "$tmpdir/out"
-  else
-    tar -xf "$archive" -C "$tmpdir/out"
-  fi
-
-  extracted_bin="$(find "$tmpdir/out" -type f -name 'tobaru*' | head -n1 || true)"
-  [[ -n "$extracted_bin" ]] || { echo "ERROR: tobaru binary not found in asset."; exit 1; }
-
-  install -m 0755 "$extracted_bin" "$BIN_PATH"
-  echo "Installed: $BIN_PATH"
-}
-
-write_config() {
-  install -d -m 0755 "$CONF_DIR"
-
-  cat >"$CONF_PATH" <<'YAML'
+# Write config once (only if not exists)
+if [ ! -f "$TOBARU_CONF" ]; then
+cat >"$TOBARU_CONF" <<'YAML'
 - address: 0.0.0.0:443
   transport: tcp
   targets:
@@ -120,20 +81,23 @@ write_config() {
         mode: passthrough
         sni_hostnames: none
 YAML
+fi
 
-  echo "Wrote config: $CONF_PATH"
-}
+chown -R root:"$TOBARU_GROUP" "$TOBARU_CONF_DIR"
+chmod 0750 "$TOBARU_CONF_DIR"
+chmod 0640 "$TOBARU_CONF" || true
 
-write_systemd() {
-  cat >"$SERVICE_PATH" <<EOF
+cat >"$TOBARU_SERVICE" <<EOF
 [Unit]
 Description=tobaru TLS SNI passthrough router
 After=network-online.target
 Wants=network-online.target
 
 [Service]
+User=${TOBARU_USER}
+Group=${TOBARU_GROUP}
 Type=simple
-ExecStart=${BIN_PATH} ${CONF_PATH}
+ExecStart=${TOBARU_BIN} ${TOBARU_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -145,36 +109,14 @@ RestartSec=3s
 WantedBy=multi-user.target
 EOF
 
-  systemctl daemon-reload
-  systemctl enable --now tobaru
-  echo "Systemd service enabled and started: tobaru"
-}
+chmod 0644 "$TOBARU_SERVICE"
 
-main() {
-  need_root
+systemctl daemon-reload
+systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+systemctl restart "$SERVICE_NAME"
 
-  if ! cmd_exists curl || ! cmd_exists tar || ! cmd_exists file; then
-    if cmd_exists apt-get; then
-      install_deps_debian
-    else
-      echo "Missing deps (curl/tar/file). Please install them and re-run."
-      exit 1
-    fi
-  fi
-
-  arch="$(detect_arch)"
-  [[ "$arch" != unsupported:* ]] || { echo "Unsupported arch: ${arch#unsupported:}"; exit 1; }
-
-  url="$(pick_asset_url_gnu_only "$arch")"
-  download_and_install "$url"
-  write_config
-  write_systemd
-
-  echo
-  echo "Done."
-  echo "Binary : $BIN_PATH"
-  echo "Config : $CONF_PATH"
-  echo "Status : systemctl status tobaru --no-pager"
-}
-
-main "$@"
+echo
+echo "tobaru installed: $TAG"
+echo "Binary : $TOBARU_BIN"
+echo "Config : $TOBARU_CONF"
+echo "Status : systemctl status $SERVICE_NAME --no-pager"
