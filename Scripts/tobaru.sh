@@ -94,29 +94,30 @@ write_config() {
   install -d -m 0755 "$CONF_DIR"
 
   cat >"$CONF_PATH" <<'YAML'
-- address: [::]:443
+- address: 0.0.0.0:443
   transport: tcp
   targets:
     - location: 127.0.0.1:9001
-      allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
         sni_hostnames: "example.com"
 
     - location: 127.0.0.1:9002
-      allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: "*.example.com"
+        sni_hostnames: "www.example.com"
 
     - location: 127.0.0.1:9003
-      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: "global.example.com"
+
+    - location: 127.0.0.1:9999
       server_tls:
         mode: passthrough
         sni_hostnames: any
 
-    - location: 127.0.0.1:9999
-      allowlist: 0.0.0.0/0
+    - location: 127.0.0.1:9009
       server_tls:
         mode: passthrough
         sni_hostnames: none
