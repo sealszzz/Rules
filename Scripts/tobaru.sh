@@ -26,7 +26,7 @@ LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com
 TAG="${LATEST_URL##*/}"
 [ -n "$TAG" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
 
-ASSET="tobaru-${ASSET_ARCH}-unknown-linux-gnu.tar.gz"
+ASSET="tobaru-${ASSET_ARCH}-unknown-linux-gnu-${TAG}.tar.gz"
 URL="https://github.com/${TOBARU_REPO}/releases/download/${TAG}/${ASSET}"
 
 TMP="$(mktemp -d)"
