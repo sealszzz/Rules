@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：caddy / xray / sing-box / tuic / juicity / shoes / shadowquic / snell / hysteria / anytls
+# 覆盖：caddy / xray / sing-box / tuic / juicity / shoes / shadowquic / snell / hysteria / anytls / tobaru
 # 说明：不再兼容任何 *-server / anytls-go / anytls-rust 等旧命名；只按“当前安装脚本”的命名卸载
 set -euo pipefail
 
@@ -202,8 +202,20 @@ uninstall_anytls() {
   echo "[OK] AnyTLS 卸载完成。"
 }
 
+uninstall_tobaru() {
+  echo ">>> 卸载 Tobaru ..."
+  stop_disable_service "tobaru"
+  remove_unit_artifacts "tobaru"
+  remove_paths \
+    /usr/local/bin/tobaru \
+    /etc/tobaru /var/lib/tobaru /var/log/tobaru \
+    /etc/logrotate.d/tobaru
+  remove_user_group "tobaru" || true
+  echo "[OK] Tobaru 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -214,10 +226,11 @@ uninstall_all() {
   uninstall_snell
   uninstall_hysteria
   uninstall_anytls
+  uninstall_tobaru
   echo "[OK] 所有组件已卸载。"
 }
 
-# ---------------- 选择式菜单：0 执行卸载；11 卸载所有 ----------------
+# ---------------- 选择式菜单：0 执行卸载；00 卸载所有 ----------------
 declare -A SEL=(
   [caddy]=0
   [xray]=0
@@ -229,6 +242,7 @@ declare -A SEL=(
   [snell]=0
   [hysteria]=0
   [anytls]=0
+  [tobaru]=0
 )
 
 toggle() {
@@ -239,7 +253,7 @@ toggle() {
 run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
@@ -253,6 +267,7 @@ run_selected() {
         snell)      uninstall_snell ;;
         hysteria)   uninstall_hysteria ;;
         anytls)     uninstall_anytls ;;
+        tobaru)     uninstall_tobaru ;;
       esac
       echo
     fi
@@ -271,7 +286,7 @@ main_menu() {
 ==================== 卸载菜单 ====================
 输入编号可【勾选/取消勾选】，然后：
   0  执行卸载（卸载当前已勾选）
-  11 卸载所有
+  00 卸载所有
   q  退出
 
  1) [$([ "${SEL[caddy]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Caddy (含 caddy-l4)
@@ -284,6 +299,7 @@ main_menu() {
  8) [$([ "${SEL[snell]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Snell
  9) [$([ "${SEL[hysteria]}"   -eq 1 ] && echo x || echo ' ')] 卸载 Hysteria2
 10) [$([ "${SEL[anytls]}"     -eq 1 ] && echo x || echo ' ')] 卸载 AnyTLS
+11) [$([ "${SEL[tobaru]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
 ==================================================
 MENU
 
@@ -307,7 +323,8 @@ MENU
         8)  toggle snell ;;
         9)  toggle hysteria ;;
         10) toggle anytls ;;
-        11) uninstall_all; pause ;;
+        11) toggle tobaru ;;
+        00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
         *)  echo "无效输入：$t" ;;
