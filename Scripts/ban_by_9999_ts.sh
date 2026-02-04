@@ -3,6 +3,8 @@ set -euo pipefail
 
 TARGET="/usr/local/sbin/ban_by_9999_ts.sh"
 
+SELF_URL="${SELF_URL:-https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ban_by_9999_ts.sh}"
+
 HTTP_LOG="${HTTP_LOG:-/var/log/nginx/http_9999_access.log}"
 STREAM_LOG="${STREAM_LOG:-/var/log/nginx/stream_access.log}"
 
@@ -27,6 +29,13 @@ Usage:
   ban_by_9999_ts.sh --install
   ban_by_9999_ts.sh --run
   ban_by_9999_ts.sh --uninstall
+
+Env:
+  SELF_URL
+  HTTP_LOG STREAM_LOG
+  WINDOW_MIN MIN_HITS BAN_TIMEOUT
+  TAIL_LINES_HTTP TAIL_LINES_STREAM
+  NFT_FAMILY NFT_TABLE NFT_SET
 USAGE
 }
 
@@ -134,18 +143,10 @@ run_once() {
 install_units() {
   need_root
 
-  umask 022
   mkdir -p "$(dirname "$TARGET")"
-
-  if [[ -r "$0" ]]; then
-    cat "$0" >"$TARGET"
-    chmod 0755 "$TARGET"
-  else
-    echo "FATAL: cannot read self ($0). Please download to a file then run --install." >&2
-    exit 1
-  fi
-
-  [[ -s "$TARGET" ]] || { echo "FATAL: $TARGET is empty (copy failed)" >&2; exit 1; }
+  curl -fsSL "$SELF_URL" -o "$TARGET"
+  chmod 0755 "$TARGET"
+  [[ -s "$TARGET" ]] || { echo "FATAL: $TARGET is empty (download failed)" >&2; exit 1; }
 
   cat >"$SVC_PATH" <<EOF
 [Unit]
