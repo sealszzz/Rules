@@ -32,26 +32,16 @@ Env overrides:
   WINDOW_MIN MIN_HITS BAN_TIMEOUT
   TAIL_LINES_HTTP TAIL_LINES_STREAM
   HTTP_LOG STREAM_LOG
-  NFT_FAMILY NFT_TABLE NFT_SET
 USAGE
 }
 
 need_root() {
-  if [[ "$(id -u)" -ne 0 ]]; then
-    echo "FATAL: need root" >&2
-    exit 1
-  fi
+  [[ "$(id -u)" -eq 0 ]] || { echo "FATAL: need root" >&2; exit 1; }
 }
 
 is_blacklisted() {
   local ip="$1"
   nft get element "$NFT_FAMILY" "$NFT_TABLE" "$NFT_SET" "{ $ip }" >/dev/null 2>&1
-}
-
-ts_to_epoch() {
-  local ts="$1"
-  local d="${ts/:/ }"
-  date -d "$d" +%s 2>/dev/null || true
 }
 
 run_once() {
@@ -77,14 +67,9 @@ run_once() {
       close(cmd)
       return e+0
     }
-
-    {
-      has_sni = match($0, /sni="([^"]*)"/, s)
-      if (has_sni) {
-        if (s[1] == "-" || s[1] == "") next
-      }
+    match($0, /sni="([^"]*)"/, s) {
+      if (s[1] == "-" || s[1] == "") next
     }
-
     match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
       ts=t[1]
       if (to_epoch(ts) >= cutoff) print ts
@@ -97,9 +82,9 @@ run_once() {
   fi
 
   while read -r ts; do
-    [[ -z "$ts" ]] && continue
-    e="$(ts_to_epoch "$ts")"
-    [[ -z "$e" ]] && continue
+    [[ -z "${ts:-}" ]] && continue
+    e="$(date -d "$ts" +%s 2>/dev/null || true)"
+    [[ -z "${e:-}" ]] && continue
     date -d "@$((e-1))" "+%d/%b/%Y:%H:%M:%S"
     date -d "@$e"        "+%d/%b/%Y:%H:%M:%S"
     date -d "@$((e+1))" "+%d/%b/%Y:%H:%M:%S"
@@ -139,13 +124,10 @@ run_once() {
 install_units() {
   need_root
 
-  local src
-  src="$(readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || true)"
-  if [[ -n "${src:-}" && -r "$src" ]]; then
-    install -m 0755 "$src" "$TARGET"
+  if [[ "$(readlink -f "$0")" != "$TARGET" ]]; then
+    install -m 0755 "$(readlink -f "$0")" "$TARGET"
   else
-    echo "FATAL: cannot locate readable script source to self-install. Please save the script to a file then run --install." >&2
-    exit 1
+    chmod 0755 "$TARGET"
   fi
 
   cat >"$SVC_PATH" <<EOF
@@ -173,6 +155,9 @@ EOF
 
   systemctl daemon-reload
   systemctl enable --now "${SVC_NAME}.timer"
+
+  "${TARGET}" --run || true
+
   echo "OK: installed ${TARGET} and enabled ${SVC_NAME}.timer"
 }
 
