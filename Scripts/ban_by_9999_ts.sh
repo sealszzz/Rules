@@ -124,10 +124,14 @@ run_once() {
 install_units() {
   need_root
 
-  if [[ "$(readlink -f "$0")" != "$TARGET" ]]; then
-    install -m 0755 "$(readlink -f "$0")" "$TARGET"
-  else
+  local src="${BASH_SOURCE[0]:-$0}"
+  if [[ -r "$src" ]]; then
+    umask 022
+    cat "$src" >"$TARGET"
     chmod 0755 "$TARGET"
+  else
+    echo "FATAL: cannot read script source ($src) for self-install" >&2
+    exit 1
   fi
 
   cat >"$SVC_PATH" <<EOF
@@ -155,9 +159,7 @@ EOF
 
   systemctl daemon-reload
   systemctl enable --now "${SVC_NAME}.timer"
-
   "${TARGET}" --run || true
-
   echo "OK: installed ${TARGET} and enabled ${SVC_NAME}.timer"
 }
 
