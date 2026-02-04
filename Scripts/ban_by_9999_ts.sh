@@ -32,6 +32,7 @@ Env overrides:
   WINDOW_MIN MIN_HITS BAN_TIMEOUT
   TAIL_LINES_HTTP TAIL_LINES_STREAM
   HTTP_LOG STREAM_LOG
+  NFT_FAMILY NFT_TABLE NFT_SET
 USAGE
 }
 
@@ -47,6 +48,12 @@ is_blacklisted() {
   nft get element "$NFT_FAMILY" "$NFT_TABLE" "$NFT_SET" "{ $ip }" >/dev/null 2>&1
 }
 
+ts_to_epoch() {
+  local ts="$1"
+  local d="${ts/:/ }"
+  date -d "$d" +%s 2>/dev/null || true
+}
+
 run_once() {
   [[ -r "$HTTP_LOG" ]] || exit 0
   [[ -r "$STREAM_LOG" ]] || exit 0
@@ -54,11 +61,11 @@ run_once() {
   local cutoff_epoch
   cutoff_epoch="$(date -d "-${WINDOW_MIN} min" +%s)"
 
-  local tmp_times tmp_out tmp_times2
+  local tmp_times tmp_times2 tmp_out
   tmp_times="$(mktemp)"
-  tmp_out="$(mktemp)"
   tmp_times2="$(mktemp)"
-  
+  tmp_out="$(mktemp)"
+
   tail -n "$TAIL_LINES_HTTP" "$HTTP_LOG" \
   | awk -v cutoff="$cutoff_epoch" '
     function to_epoch(ts,    cmd, e, a, b) {
@@ -70,9 +77,12 @@ run_once() {
       close(cmd)
       return e+0
     }
-    
-    match($0, /sni="([^"]*)"/, s) {
-      if (s[1] == "-" || s[1] == "") next
+
+    {
+      has_sni = match($0, /sni="([^"]*)"/, s)
+      if (has_sni) {
+        if (s[1] == "-" || s[1] == "") next
+      }
     }
 
     match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
@@ -85,19 +95,18 @@ run_once() {
     rm -f "$tmp_times" "$tmp_times2" "$tmp_out"
     exit 0
   fi
-  
+
   while read -r ts; do
     [[ -z "$ts" ]] && continue
-    # "04/Feb/2026:04:45:18" -> "04/Feb/2026 04:45:18"
-    e="$(date -d "${ts/:/ }" +%s 2>/dev/null || true)"
+    e="$(ts_to_epoch "$ts")"
     [[ -z "$e" ]] && continue
     date -d "@$((e-1))" "+%d/%b/%Y:%H:%M:%S"
     date -d "@$e"        "+%d/%b/%Y:%H:%M:%S"
-    date -d "@$((e+1))"  "+%d/%b/%Y:%H:%M:%S"
+    date -d "@$((e+1))" "+%d/%b/%Y:%H:%M:%S"
   done <"$tmp_times" | sort -u >"$tmp_times2"
 
   mv -f "$tmp_times2" "$tmp_times"
-  
+
   tail -n "$TAIL_LINES_STREAM" "$STREAM_LOG" \
   | awk '
     BEGIN {
@@ -130,10 +139,13 @@ run_once() {
 install_units() {
   need_root
 
-  if [[ "$(readlink -f "$0")" != "$TARGET" ]]; then
-    install -m 0755 "$(readlink -f "$0")" "$TARGET"
+  local src
+  src="$(readlink -f "${BASH_SOURCE[0]:-$0}" 2>/dev/null || true)"
+  if [[ -n "${src:-}" && -r "$src" ]]; then
+    install -m 0755 "$src" "$TARGET"
   else
-    chmod 0755 "$TARGET"
+    echo "FATAL: cannot locate readable script source to self-install. Please save the script to a file then run --install." >&2
+    exit 1
   fi
 
   cat >"$SVC_PATH" <<EOF
