@@ -24,9 +24,9 @@ TIMER_PATH="/etc/systemd/system/${SVC_NAME}.timer"
 usage() {
   cat <<'USAGE'
 Usage:
-  ban_by_9999_ts.sh --install     # self-copy to /usr/local/sbin + install systemd timer (5min) + enable
-  ban_by_9999_ts.sh --run         # run once (ban logic)
-  ban_by_9999_ts.sh --uninstall   # disable timer + remove unit files
+  ban_by_9999_ts.sh --install
+  ban_by_9999_ts.sh --run
+  ban_by_9999_ts.sh --uninstall
 
 Env overrides:
   WINDOW_MIN MIN_HITS BAN_TIMEOUT
@@ -74,6 +74,7 @@ run_once() {
     match($0, /sni="([^"]*)"/, s) {
       if (s[1] == "-" || s[1] == "") next
     }
+
     match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
       ts=t[1]
       if (to_epoch(ts) >= cutoff) print ts
@@ -87,14 +88,15 @@ run_once() {
   
   while read -r ts; do
     [[ -z "$ts" ]] && continue
-    e="$(date -d "${ts/ :/ }" +%s 2>/dev/null || true)"
+    # "04/Feb/2026:04:45:18" -> "04/Feb/2026 04:45:18"
+    e="$(date -d "${ts/:/ }" +%s 2>/dev/null || true)"
     [[ -z "$e" ]] && continue
     date -d "@$((e-1))" "+%d/%b/%Y:%H:%M:%S"
     date -d "@$e"        "+%d/%b/%Y:%H:%M:%S"
-    date -d "@$((e+1))" "+%d/%b/%Y:%H:%M:%S"
+    date -d "@$((e+1))"  "+%d/%b/%Y:%H:%M:%S"
   done <"$tmp_times" | sort -u >"$tmp_times2"
 
-  mv -f "$tmp_times2" "$tmp_times
+  mv -f "$tmp_times2" "$tmp_times"
   
   tail -n "$TAIL_LINES_STREAM" "$STREAM_LOG" \
   | awk '
@@ -127,7 +129,7 @@ run_once() {
 
 install_units() {
   need_root
-  
+
   if [[ "$(readlink -f "$0")" != "$TARGET" ]]; then
     install -m 0755 "$(readlink -f "$0")" "$TARGET"
   else
