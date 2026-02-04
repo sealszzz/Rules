@@ -2,7 +2,6 @@
 set -euo pipefail
 
 TARGET="/usr/local/sbin/ban_by_9999_ts.sh"
-
 SELF_URL="${SELF_URL:-https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ban_by_9999_ts.sh}"
 
 HTTP_LOG="${HTTP_LOG:-/var/log/nginx/http_9999_access.log}"
@@ -84,14 +83,18 @@ run_once() {
       return e+0
     }
     {
-      has_sni = match($0, /sni="([^"]*)"/, s)
-      if (has_sni) {
-        if (s[1] == "-" || s[1] == "") next
+      if ($0 ~ /sni="/) {
+        s = $0
+        sub(/.*sni="/, "", s)
+        sub(/".*/, "", s)
+        if (s == "-" || s == "") next
       }
     }
-    match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
-      ts=t[1]
-      if (to_epoch(ts) >= cutoff) print ts
+    {
+      if (match($0, /\[[0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2} [+-][0-9]{4}\]/)) {
+        ts = substr($0, RSTART+1, 20)
+        if (to_epoch(ts) >= cutoff) print ts
+      }
     }
   ' | sort -u >"$tmp_times"
 
@@ -118,11 +121,13 @@ run_once() {
       close(ARGV[1])
       ARGV[1]=""
     }
-    match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
-      ts=t[1]
-      if (!(ts in times)) next
-      ip=$1
-      if (ip ~ /^([0-9]{1,3}\.){3}[0-9]{1,3}$/) cnt[ip]++
+    {
+      if (match($0, /\[[0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2} [+-][0-9]{4}\]/)) {
+        ts = substr($0, RSTART+1, 20)
+        if (!(ts in times)) next
+        ip = $1
+        if (ip ~ /^([0-9]{1,3}\.){3}[0-9]{1,3}$/) cnt[ip]++
+      }
     }
     END { for (ip in cnt) print ip, cnt[ip] }
   ' "$tmp_times" /dev/stdin \
@@ -173,7 +178,9 @@ EOF
 
   systemctl daemon-reload
   systemctl enable --now "${SVC_NAME}.timer"
+
   "$TARGET" --run || true
+
   echo "OK"
 }
 
