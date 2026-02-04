@@ -2,7 +2,6 @@
 set -euo pipefail
 
 TARGET="/usr/local/sbin/ban_by_9999_ts.sh"
-SELF_URL="${SELF_URL:-https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ban_by_9999_ts.sh}"
 
 HTTP_LOG="${HTTP_LOG:-/var/log/nginx/http_9999_access.log}"
 STREAM_LOG="${STREAM_LOG:-/var/log/nginx/stream_access.log}"
@@ -28,12 +27,6 @@ Usage:
   ban_by_9999_ts.sh --install
   ban_by_9999_ts.sh --run
   ban_by_9999_ts.sh --uninstall
-
-Env overrides:
-  WINDOW_MIN MIN_HITS BAN_TIMEOUT
-  TAIL_LINES_HTTP TAIL_LINES_STREAM
-  HTTP_LOG STREAM_LOG
-  SELF_URL
 USAGE
 }
 
@@ -44,6 +37,18 @@ need_root() {
 is_blacklisted() {
   local ip="$1"
   nft get element "$NFT_FAMILY" "$NFT_TABLE" "$NFT_SET" "{ $ip }" >/dev/null 2>&1
+}
+
+ts_to_epoch() {
+  local ts="$1"
+  local d
+  d="$(printf '%s\n' "$ts" | sed -E 's#^([0-9]{2})/([A-Za-z]{3})/([0-9]{4}):([0-9]{2}):([0-9]{2}):([0-9]{2})#\1 \2 \3 \4:\5:\6#')"
+  date -d "$d" +%s 2>/dev/null || true
+}
+
+epoch_to_ts() {
+  local e="$1"
+  date -d "@$e" "+%d/%b/%Y:%H:%M:%S" 2>/dev/null || true
 }
 
 run_once() {
@@ -69,8 +74,11 @@ run_once() {
       close(cmd)
       return e+0
     }
-    match($0, /sni="([^"]*)"/, s) {
-      if (s[1] == "-" || s[1] == "") next
+    {
+      has_sni = match($0, /sni="([^"]*)"/, s)
+      if (has_sni) {
+        if (s[1] == "-" || s[1] == "") next
+      }
     }
     match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
       ts=t[1]
@@ -84,12 +92,12 @@ run_once() {
   fi
 
   while read -r ts; do
-    [[ -z "${ts:-}" ]] && continue
-    e="$(date -d "$ts" +%s 2>/dev/null || true)"
-    [[ -z "${e:-}" ]] && continue
-    date -d "@$((e-1))" "+%d/%b/%Y:%H:%M:%S"
-    date -d "@$e"        "+%d/%b/%Y:%H:%M:%S"
-    date -d "@$((e+1))" "+%d/%b/%Y:%H:%M:%S"
+    [[ -n "$ts" ]] || continue
+    e="$(ts_to_epoch "$ts")"
+    [[ -n "$e" ]] || continue
+    epoch_to_ts "$((e-1))"
+    epoch_to_ts "$e"
+    epoch_to_ts "$((e+1))"
   done <"$tmp_times" | sort -u >"$tmp_times2"
 
   mv -f "$tmp_times2" "$tmp_times"
@@ -112,8 +120,8 @@ run_once() {
   | sort -k2,2nr >"$tmp_out"
 
   while read -r ip hits; do
-    [[ -z "${ip:-}" ]] && continue
-    [[ "${hits:-0}" -lt "$MIN_HITS" ]] && continue
+    [[ -n "${ip:-}" ]] || continue
+    [[ "${hits:-0}" -ge "$MIN_HITS" ]] || continue
     if is_blacklisted "$ip"; then
       continue
     fi
@@ -123,29 +131,21 @@ run_once() {
   rm -f "$tmp_times" "$tmp_out"
 }
 
-write_self_to_target() {
-  umask 022
-  local src="${BASH_SOURCE[0]:-$0}"
-
-  if [[ -r "$src" ]]; then
-    cat "$src" >"$TARGET"
-    chmod 0755 "$TARGET"
-    return 0
-  fi
-
-  if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$SELF_URL" >"$TARGET"
-    chmod 0755 "$TARGET"
-    return 0
-  fi
-
-  echo "FATAL: cannot self-install (source unreadable and curl missing)" >&2
-  exit 1
-}
-
 install_units() {
   need_root
-  write_self_to_target
+
+  umask 022
+  mkdir -p "$(dirname "$TARGET")"
+
+  if [[ -r "$0" ]]; then
+    cat "$0" >"$TARGET"
+    chmod 0755 "$TARGET"
+  else
+    echo "FATAL: cannot read self ($0). Please download to a file then run --install." >&2
+    exit 1
+  fi
+
+  [[ -s "$TARGET" ]] || { echo "FATAL: $TARGET is empty (copy failed)" >&2; exit 1; }
 
   cat >"$SVC_PATH" <<EOF
 [Unit]
@@ -154,12 +154,12 @@ After=network.target
 
 [Service]
 Type=oneshot
-ExecStart=${TARGET} --run
+ExecStart=$TARGET --run
 EOF
 
   cat >"$TIMER_PATH" <<EOF
 [Unit]
-Description=Run ${SVC_NAME} every 5 minutes
+Description=Run $SVC_NAME every 5 minutes
 
 [Timer]
 OnBootSec=2min
@@ -172,8 +172,8 @@ EOF
 
   systemctl daemon-reload
   systemctl enable --now "${SVC_NAME}.timer"
-  "${TARGET}" --run || true
-  echo "OK: installed ${TARGET} and enabled ${SVC_NAME}.timer"
+  "$TARGET" --run || true
+  echo "OK"
 }
 
 uninstall_units() {
@@ -181,7 +181,7 @@ uninstall_units() {
   systemctl disable --now "${SVC_NAME}.timer" >/dev/null 2>&1 || true
   rm -f "$SVC_PATH" "$TIMER_PATH"
   systemctl daemon-reload
-  echo "OK: removed ${SVC_NAME}.service/.timer"
+  echo "OK"
 }
 
 main() {
