@@ -54,11 +54,11 @@ run_once() {
   local cutoff_epoch
   cutoff_epoch="$(date -d "-${WINDOW_MIN} min" +%s)"
 
-  local tmp_times tmp_out
+  local tmp_times tmp_out tmp_times2
   tmp_times="$(mktemp)"
   tmp_out="$(mktemp)"
-
-  # ①②：从 http_9999_access.log 抽取最近 WINDOW_MIN 分钟内（精确到秒）的时间戳
+  tmp_times2="$(mktemp)"
+  
   tail -n "$TAIL_LINES_HTTP" "$HTTP_LOG" \
   | awk -v cutoff="$cutoff_epoch" '
     function to_epoch(ts,    cmd, e, a, b) {
@@ -70,6 +70,10 @@ run_once() {
       close(cmd)
       return e+0
     }
+    
+    match($0, /sni="([^"]*)"/, s) {
+      if (s[1] == "-" || s[1] == "") next
+    }
     match($0, /\[([0-9]{2}\/[A-Za-z]{3}\/[0-9]{4}:[0-9]{2}:[0-9]{2}:[0-9]{2}) [+-][0-9]{4}\]/, t) {
       ts=t[1]
       if (to_epoch(ts) >= cutoff) print ts
@@ -77,11 +81,21 @@ run_once() {
   ' | sort -u >"$tmp_times"
 
   if [[ ! -s "$tmp_times" ]]; then
-    rm -f "$tmp_times" "$tmp_out"
+    rm -f "$tmp_times" "$tmp_times2" "$tmp_out"
     exit 0
   fi
+  
+  while read -r ts; do
+    [[ -z "$ts" ]] && continue
+    e="$(date -d "${ts/ :/ }" +%s 2>/dev/null || true)"
+    [[ -z "$e" ]] && continue
+    date -d "@$((e-1))" "+%d/%b/%Y:%H:%M:%S"
+    date -d "@$e"        "+%d/%b/%Y:%H:%M:%S"
+    date -d "@$((e+1))" "+%d/%b/%Y:%H:%M:%S"
+  done <"$tmp_times" | sort -u >"$tmp_times2"
 
-  # ③④：在 stream_access.log 里按“同一秒”找真实源 IP 并计数（近似：只扫尾部）
+  mv -f "$tmp_times2" "$tmp_times
+  
   tail -n "$TAIL_LINES_STREAM" "$STREAM_LOG" \
   | awk '
     BEGIN {
@@ -113,8 +127,7 @@ run_once() {
 
 install_units() {
   need_root
-
-  # 自安装：把自己复制到 /usr/local/sbin，并确保可执行
+  
   if [[ "$(readlink -f "$0")" != "$TARGET" ]]; then
     install -m 0755 "$(readlink -f "$0")" "$TARGET"
   else
