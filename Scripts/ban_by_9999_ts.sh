@@ -2,6 +2,7 @@
 set -euo pipefail
 
 TARGET="/usr/local/sbin/ban_by_9999_ts.sh"
+SELF_URL="${SELF_URL:-https://raw.githubusercontent.com/sealszzz/Rules/refs/heads/master/Scripts/ban_by_9999_ts.sh}"
 
 HTTP_LOG="${HTTP_LOG:-/var/log/nginx/http_9999_access.log}"
 STREAM_LOG="${STREAM_LOG:-/var/log/nginx/stream_access.log}"
@@ -32,6 +33,7 @@ Env overrides:
   WINDOW_MIN MIN_HITS BAN_TIMEOUT
   TAIL_LINES_HTTP TAIL_LINES_STREAM
   HTTP_LOG STREAM_LOG
+  SELF_URL
 USAGE
 }
 
@@ -121,18 +123,29 @@ run_once() {
   rm -f "$tmp_times" "$tmp_out"
 }
 
-install_units() {
-  need_root
-
+write_self_to_target() {
+  umask 022
   local src="${BASH_SOURCE[0]:-$0}"
+
   if [[ -r "$src" ]]; then
-    umask 022
     cat "$src" >"$TARGET"
     chmod 0755 "$TARGET"
-  else
-    echo "FATAL: cannot read script source ($src) for self-install" >&2
-    exit 1
+    return 0
   fi
+
+  if command -v curl >/dev/null 2>&1; then
+    curl -fsSL "$SELF_URL" >"$TARGET"
+    chmod 0755 "$TARGET"
+    return 0
+  fi
+
+  echo "FATAL: cannot self-install (source unreadable and curl missing)" >&2
+  exit 1
+}
+
+install_units() {
+  need_root
+  write_self_to_target
 
   cat >"$SVC_PATH" <<EOF
 [Unit]
