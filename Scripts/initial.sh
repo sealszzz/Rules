@@ -51,14 +51,14 @@ sync_time_sane() {
     systemctl restart systemd-timesyncd 2>/dev/null || true
   fi
 
-  for i in $(seq 1 30); do
+  for i in $(seq 1 15); do
     v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
     [ "$v" = "yes" ] && { echo "[ntp] synchronized"; return 0; }
-    (( i % 5 == 0 )) && echo "[ntp] waiting... ${i}/30"
-    sleep 2
+    (( i % 5 == 0 )) && echo "[ntp] waiting... ${i}/15"
+    sleep 1
   done
 
-  echo "[ntp] warning: not synchronized yet (continue anyway)"
+  echo "[ntp] warning: ntp not synchronized (continue anyway)"
   return 0
 }
 
