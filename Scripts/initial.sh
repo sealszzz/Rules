@@ -2,44 +2,99 @@
 set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 
-need_root(){ [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }; }
-wait_for_apt(){ while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do sleep 1; done; }
-get_ssh_port(){
+need_root() {
+  [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }
+}
+
+wait_for_apt() {
+  while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
+    sleep 1
+  done
+}
+
+get_ssh_port() {
   if command -v sshd >/dev/null 2>&1; then
-    local p; p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
+    local p
+    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
     [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
   fi
-  local g; g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
+
+  local g
+  g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
   [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 8888
 }
 
-need_root
+sync_time_sane() {
+  echo "[ntp] timezone -> Etc/UTC"
+  timedatectl set-timezone Etc/UTC 2>/dev/null || true
 
-timedatectl set-timezone Etc/UTC || true
-
-if [ "$(timedatectl show -p LocalRTC --value 2>/dev/null || echo no)" = "yes" ]; then
-  timedatectl set-local-rtc 0 || true
-fi
-
-if ! systemctl status systemd-timesyncd.service >/dev/null 2>&1; then
-  if ! systemctl cat systemd-timesyncd.service >/dev/null 2>&1; then
-    wait_for_apt; apt-get update
-    wait_for_apt; apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+  if ! systemd-detect-virt --container >/dev/null 2>&1; then
+    if [ "$(timedatectl show -p LocalRTC --value 2>/dev/null || echo no)" = "yes" ]; then
+      timedatectl set-local-rtc 0 2>/dev/null || true
+    fi
   fi
-fi
 
-systemctl unmask systemd-timesyncd.service 2>/dev/null || true
-systemctl enable --now systemd-timesyncd || true
-systemctl restart systemd-timesyncd || true
+  if systemctl is-active --quiet chronyd 2>/dev/null || systemctl is-active --quiet ntp 2>/dev/null; then
+    echo "[ntp] chrony/ntpd active, skip timesyncd"
+  else
+    if ! systemctl cat systemd-timesyncd.service >/dev/null 2>&1; then
+      wait_for_apt
+      apt-get update
 
-for i in $(seq 1 30); do
-  v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
-  [ "$v" = "yes" ] && break
-  (( i % 5 == 0 )) && echo "[ntp] waiting... ${i}/30"
-  sleep 2
-done
+      wait_for_apt
+      apt-get install -y --no-install-recommends systemd-timesyncd ca-certificates
+    fi
 
-wait_for_apt; apt-get install -y --no-install-recommends nftables
+    systemctl unmask systemd-timesyncd.service 2>/dev/null || true
+    timedatectl set-ntp true 2>/dev/null || true
+    systemctl enable --now systemd-timesyncd 2>/dev/null || true
+    systemctl restart systemd-timesyncd 2>/dev/null || true
+  fi
+
+  for i in $(seq 1 30); do
+    v="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+    [ "$v" = "yes" ] && { echo "[ntp] synchronized"; return 0; }
+    (( i % 5 == 0 )) && echo "[ntp] waiting... ${i}/30"
+    sleep 2
+  done
+
+  echo "[ntp] warning: not synchronized yet (continue anyway)"
+  return 0
+}
+
+apply_sysctl_tuning() {
+  install -d -m 0755 /etc/sysctl.d
+
+  cat >/etc/sysctl.d/99-sysctl.conf <<'EOF'
+# ===== TCP (BBR) =====
+net.core.default_qdisc = fq
+net.ipv4.tcp_congestion_control = bbr
+net.ipv4.tcp_slow_start_after_idle = 0
+net.ipv4.tcp_max_syn_backlog = 4096
+net.core.somaxconn = 4096
+net.core.netdev_max_backlog = 16384
+
+# ===== Conntrack / QUIC / UDP =====
+net.netfilter.nf_conntrack_max = 262144
+net.netfilter.nf_conntrack_udp_timeout = 30
+net.netfilter.nf_conntrack_udp_timeout_stream = 60
+
+# ===== Socket Buffers =====
+net.core.rmem_max = 26214400
+net.core.wmem_max = 26214400
+net.core.rmem_default = 4194304
+net.core.wmem_default = 4194304
+EOF
+
+  sysctl --system >/dev/null || true
+}
+
+need_root
+sync_time_sane
+
+wait_for_apt
+apt-get install -y --no-install-recommends nftables
+
 SSH_PORT="$(get_ssh_port)"
 
 cat >/etc/nftables.conf <<EOF
@@ -61,7 +116,7 @@ table inet filter {
     size 65535
     gc-interval 5m
   }
-  
+
   set tcp_allow {
     type inet_service
     flags interval
@@ -111,6 +166,7 @@ nft -f  /etc/nftables.conf
 systemctl enable --now nftables
 
 install -d -m 0755 /etc/ssh/sshd_config.d
+
 cat >/etc/ssh/sshd_config.d/99-no-password.conf <<'EOF'
 PubkeyAuthentication yes
 PasswordAuthentication no
@@ -123,33 +179,6 @@ if sshd -t 2>/dev/null; then
 else
   rm -f /etc/ssh/sshd_config.d/99-no-password.conf
 fi
-
-apply_sysctl_tuning() {
-  install -d -m 0755 /etc/sysctl.d
-
-  cat >/etc/sysctl.d/99-sysctl.conf <<'EOF'
-# ===== TCP (BBR) =====
-net.core.default_qdisc = fq
-net.ipv4.tcp_congestion_control = bbr
-net.ipv4.tcp_slow_start_after_idle = 0
-net.ipv4.tcp_max_syn_backlog = 4096
-net.core.somaxconn = 4096
-net.core.netdev_max_backlog = 16384
-
-# ===== Conntrack / QUIC / UDP =====
-net.netfilter.nf_conntrack_max = 262144
-net.netfilter.nf_conntrack_udp_timeout = 30
-net.netfilter.nf_conntrack_udp_timeout_stream = 60
-
-# ===== Socket Buffers =====
-net.core.rmem_max = 26214400
-net.core.wmem_max = 26214400
-net.core.rmem_default = 4194304
-net.core.wmem_default = 4194304
-EOF
-
-  sysctl --system >/dev/null || true
-}
 
 apply_sysctl_tuning
 
