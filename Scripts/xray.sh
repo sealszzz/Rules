@@ -3,8 +3,6 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-: "${XRAY_PORT:=443}"
-: "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"
 : "${XRAY_TARGET:=127.0.0.1:9999}"
 : "${XRAY_DEST:=127.0.0.1:9999}"
@@ -97,26 +95,41 @@ parse_reality_keys() {
   XRAY_PUB="$pub"
 }
 
+gen_vlessenc_native() {
+  local out line
+  out="$("$XRAY_BIN" vlessenc 2>/dev/null | tr -d '\r')" || out=""
+  line="$(printf '%s\n' "$out" | awk 'NF{print; exit}')"
+
+  if [ -z "$line" ] || ! printf '%s' "$line" | grep -q '\.native\.'; then
+    echo "[FATAL] xray vlessenc failed or not native/raw output" >&2
+    printf '%s\n' "$out" >&2
+    exit 1
+  fi
+
+  printf '%s\n' "$line"
+}
+
 if [ ! -f "$XRAY_CONF_FILE" ]; then
   XRAY_UUID="$(uuidgen)"
   XRAY_SHORTID="$(openssl rand -hex 8)"
   parse_reality_keys
+  XRAY_VLESSENC="$(gen_vlessenc_native)"
 
   cat >"$XRAY_CONF_FILE" <<EOF
 {
   "inbounds": [
     {
-      "listen": "${XRAY_LISTEN}",
-      "port": ${XRAY_PORT},
+      "listen": "[::]",
+      "port": 4443,
       "protocol": "vless",
       "settings": {
-        "decryption": "none",
         "clients": [
           {
             "id": "${XRAY_UUID}",
             "flow": "xtls-rprx-vision"
           }
         ],
+        "decryption": "none",
         "fallbacks": [
           {
             "dest": "${XRAY_DEST}",
@@ -140,6 +153,25 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
             "${XRAY_SHORTID}"
           ]
         }
+      }
+    },
+    {
+      "listen": "[::]",
+      "port": 5443,
+      "protocol": "vless",
+      "settings": {
+        "clients": [
+          {
+            "id": "${XRAY_UUID}",
+            "flow": "xtls-rprx-vision"
+          }
+        ],
+        "decryption": "${XRAY_VLESSENC}",
+        "encryption": "${XRAY_VLESSENC}"
+      },
+      "streamSettings": {
+        "network": "tcp",
+        "security": "none"
       }
     }
   ],
