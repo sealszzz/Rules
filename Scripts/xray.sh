@@ -93,8 +93,6 @@ parse_reality_keys() {
   XRAY_PUB="$pub"
 }
 
-# Only use: xray vlessenc
-# Parse the first matching pair of decryption/encryption with ".native."
 gen_vlessenc_native_pair() {
   local out pair dec enc
   out="$("$XRAY_BIN" vlessenc 2>/dev/null | tr -d '\r')" || out=""
