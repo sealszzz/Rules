@@ -99,12 +99,18 @@ gen_vlessenc_native_pair() {
 
   pair="$(printf '%s\n' "$out" | awk '
     /"decryption":/ && /\.native\./ && dec=="" {
-      match($0, /"decryption":[[:space:]]*"([^"]+)"/, m); dec=m[1];
+      line=$0
+      sub(/.*"decryption":[[:space:]]*"/, "", line)
+      sub(/".*/, "", line)
+      dec=line
       next
     }
     /"encryption":/ && /\.native\./ && dec!="" && enc=="" {
-      match($0, /"encryption":[[:space:]]*"([^"]+)"/, m); enc=m[1];
-      print dec "\n" enc;
+      line=$0
+      sub(/.*"encryption":[[:space:]]*"/, "", line)
+      sub(/".*/, "", line)
+      enc=line
+      print dec "\n" enc
       exit
     }
   ')"
