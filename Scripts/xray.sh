@@ -157,7 +157,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         ]
       },
       "streamSettings": {
-        "network": "tcp",
+        "network": "raw",
         "security": "reality",
         "realitySettings": {
           "show": false,
@@ -189,7 +189,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "encryption": "${XRAY_VLESSENC}"
       },
       "streamSettings": {
-        "network": "tcp",
+        "network": "raw",
         "security": "none"
       }
     }
