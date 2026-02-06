@@ -16,7 +16,6 @@ XRAY_CONF_FILE="${XRAY_CONF_DIR}/config.json"
 XRAY_BIN="/usr/local/bin/xray"
 XRAY_SERVICE="/etc/systemd/system/xray.service"
 XRAY_SERVICE_NAME="xray"
-XRAY_ASSET_DIR="/usr/local/share/xray"
 
 apt-get update
 apt-get install -y --no-install-recommends \
@@ -28,7 +27,6 @@ id -u "$XRAY_USER" >/dev/null 2>&1 || \
 
 install -d -o "$XRAY_USER" -g "$XRAY_GROUP" -m 750 "$XRAY_STATE_DIR"
 install -d -o root        -g "$XRAY_GROUP" -m 750 "$XRAY_CONF_DIR"
-install -d -o root        -g root         -m 755 "$XRAY_ASSET_DIR"
 
 get_latest_tag() {
   if [ -n "${XRAY_TAG:-}" ]; then
@@ -95,25 +93,42 @@ parse_reality_keys() {
   XRAY_PUB="$pub"
 }
 
-gen_vlessenc_native() {
-  local out line
+# Only use: xray vlessenc
+# Parse the first matching pair of decryption/encryption with ".native."
+gen_vlessenc_native_pair() {
+  local out pair dec enc
   out="$("$XRAY_BIN" vlessenc 2>/dev/null | tr -d '\r')" || out=""
-  line="$(printf '%s\n' "$out" | awk 'NF{print; exit}')"
 
-  if [ -z "$line" ] || ! printf '%s' "$line" | grep -q '\.native\.'; then
-    echo "[FATAL] xray vlessenc failed or not native/raw output" >&2
+  pair="$(printf '%s\n' "$out" | awk '
+    /"decryption":/ && /\.native\./ && dec=="" {
+      match($0, /"decryption":[[:space:]]*"([^"]+)"/, m); dec=m[1];
+      next
+    }
+    /"encryption":/ && /\.native\./ && dec!="" && enc=="" {
+      match($0, /"encryption":[[:space:]]*"([^"]+)"/, m); enc=m[1];
+      print dec "\n" enc;
+      exit
+    }
+  ')"
+
+  dec="$(printf '%s\n' "$pair" | sed -n '1p')"
+  enc="$(printf '%s\n' "$pair" | sed -n '2p')"
+
+  if [ -z "$dec" ] || [ -z "$enc" ]; then
+    echo "[FATAL] xray vlessenc output parse failed" >&2
     printf '%s\n' "$out" >&2
     exit 1
   fi
 
-  printf '%s\n' "$line"
+  XRAY_VLESSDEC="$dec"
+  XRAY_VLESSENC="$enc"
 }
 
 if [ ! -f "$XRAY_CONF_FILE" ]; then
   XRAY_UUID="$(uuidgen)"
   XRAY_SHORTID="$(openssl rand -hex 8)"
   parse_reality_keys
-  XRAY_VLESSENC="$(gen_vlessenc_native)"
+  gen_vlessenc_native_pair
 
   cat >"$XRAY_CONF_FILE" <<EOF
 {
@@ -166,7 +181,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
             "flow": "xtls-rprx-vision"
           }
         ],
-        "decryption": "${XRAY_VLESSENC}",
+        "decryption": "${XRAY_VLESSDEC}",
         "encryption": "${XRAY_VLESSENC}"
       },
       "streamSettings": {
@@ -201,7 +216,6 @@ Wants=network-online.target
 [Service]
 User=${XRAY_USER}
 Group=${XRAY_GROUP}
-Environment=XRAY_LOCATION_ASSET=${XRAY_ASSET_DIR}
 Type=simple
 UMask=0077
 WorkingDirectory=${XRAY_STATE_DIR}
