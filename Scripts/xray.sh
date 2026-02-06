@@ -3,7 +3,6 @@ set -euo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-: "${XRAY_LISTEN:=[::]}"
 : "${XRAY_SNI:=www.cloudflare.com}"
 : "${XRAY_TARGET:=127.0.0.1:9999}"
 : "${XRAY_USER:=xray}"
