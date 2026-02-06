@@ -181,7 +181,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
       "settings": {
         "clients": [
           {
-            "flow": "xtls-rprx-vision",
+            //"flow": "xtls-rprx-vision",
             "id": "${XRAY_UUID}"
           }
         ],
