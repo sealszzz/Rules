@@ -144,8 +144,8 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
       "settings": {
         "clients": [
           {
-            "id": "${XRAY_UUID}",
-            "flow": "xtls-rprx-vision"
+            "flow": "xtls-rprx-vision",
+            "id": "${XRAY_UUID}"
           }
         ],
         "decryption": "none",
@@ -181,8 +181,8 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
       "settings": {
         "clients": [
           {
-            "id": "${XRAY_UUID}",
-            "flow": "xtls-rprx-vision"
+            "flow": "xtls-rprx-vision",
+            "id": "${XRAY_UUID}"
           }
         ],
         "decryption": "${XRAY_VLESSDEC}",
