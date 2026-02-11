@@ -15,9 +15,6 @@ set -euo pipefail
 : "${REUSE_PASS:=}"
 : "${REUSE_UUID:=}"
 : "${REUSE_SNI:=example.com}"
-: "${NAIVE_USER:=naive}"
-: "${HY2_USER:=hysteria2}"
-
 : "${SB_SUFFIX:=-glibc}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -143,6 +140,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "listen_port": 4443,
       "users": [
         {
+          "username": "anytls",
           "password": "${REUSE_PASS}"
         }
       ],
@@ -160,7 +158,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "network": "tcp",
       "users": [
         {
-          "username": "${NAIVE_USER}",
+          "username": "naive",
           "password": "${REUSE_PASS}"
         }
       ],
@@ -204,7 +202,7 @@ if [ ! -f "${SB_CONF}" ]; then
       },
       "users": [
         {
-          "name": "${HY2_USER}",
+          "name": "hysteria2",
           "password": "${REUSE_PASS}"
         }
       ],
