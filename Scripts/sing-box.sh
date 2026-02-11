@@ -26,31 +26,33 @@ log(){ echo "[*] $*"; }
 die(){ echo "FATAL: $*" >&2; exit 1; }
 
 apt-get update >/dev/null
-apt-get install -y --no-install-recommends \
-  curl \
-  ca-certificates \
-  tar \
-  openssl \
-  uuid-runtime \
-  jq >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar openssl uuid-runtime jq >/dev/null
 
 detect_arch() {
   case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
-    amd64|x86_64) echo "amd64" ;;
-    arm64|aarch64) echo "arm64" ;;
-    *) die "unsupported arch: $(uname -m)" ;;
+    amd64|x86_64)
+      echo "amd64"
+      ;;
+    arm64|aarch64)
+      echo "arm64"
+      ;;
+    *)
+      die "unsupported arch: $(uname -m)"
+      ;;
   esac
 }
 
 get_latest_tag_302() {
   local final
-  final="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-    "https://github.com/${SB_REPO}/releases/latest")"
+  final="$(
+    curl -fsSIL -o /dev/null -w '%{url_effective}' \
+      "https://github.com/${SB_REPO}/releases/latest"
+  )"
   echo "${final##*/}"
 }
 
-gen_hex16(){ openssl rand -hex 16; }
-gen_uuid(){ command -v uuidgen >/dev/null 2>&1 && uuidgen || cat /proc/sys/kernel/random/uuid; }
+gen_hex16() { openssl rand -hex 16; }
+gen_uuid()  { command -v uuidgen >/dev/null 2>&1 && uuidgen || cat /proc/sys/kernel/random/uuid; }
 
 ARCH="$(detect_arch)"
 TAG=""
@@ -81,7 +83,8 @@ if [ "${SB_PRERELEASE}" = "1" ]; then
       | .browser_download_url
     ' | head -n1
   )"
-  [ -n "${ASSET_URL}" ] && [ "${ASSET_URL}" != "null" ] || die "asset not found in prerelease: ${ASSET_NAME}"
+  [ -n "${ASSET_URL}" ] && [ "${ASSET_URL}" != "null" ] \
+    || die "asset not found in prerelease: ${ASSET_NAME}"
 else
   TAG="$(get_latest_tag_302)" || die "cannot resolve latest stable tag via 302"
   VERSION="${TAG#v}"
@@ -94,7 +97,8 @@ trap 'rm -rf "${TMP_DIR}"' EXIT
 
 log "Download: ${ASSET_URL}"
 curl -fL --retry 3 --retry-delay 1 \
-  -o "${TMP_DIR}/${ASSET_NAME}" "${ASSET_URL}"
+  -o "${TMP_DIR}/${ASSET_NAME}" \
+  "${ASSET_URL}"
 
 log "Extract..."
 tar -xzf "${TMP_DIR}/${ASSET_NAME}" -C "${TMP_DIR}"
@@ -144,8 +148,7 @@ if [ ! -f "${SB_CONF}" ]; then
       ],
       "tls": {
         "enabled": true,
-        "certificate_path": "${CERT}"
-        ,
+        "certificate_path": "${CERT}",
         "key_path": "${KEY}"
       }
     },
@@ -157,17 +160,14 @@ if [ ! -f "${SB_CONF}" ]; then
       "network": "tcp",
       "users": [
         {
-          "username": "${NAIVE_USER}"
-          ,
+          "username": "${NAIVE_USER}",
           "password": "${REUSE_PASS}"
         }
       ],
       "tls": {
         "enabled": true,
-        "server_name": "${REUSE_SNI}"
-        ,
-        "certificate_path": "${CERT}"
-        ,
+        "server_name": "${REUSE_SNI}",
+        "certificate_path": "${CERT}",
         "key_path": "${KEY}"
       }
     },
@@ -178,17 +178,14 @@ if [ ! -f "${SB_CONF}" ]; then
       "listen_port": 4443,
       "users": [
         {
-          "uuid": "${REUSE_UUID}"
-          ,
+          "uuid": "${REUSE_UUID}",
           "password": "${REUSE_PASS}"
         }
       ],
       "tls": {
         "enabled": true,
-        "certificate_path": "${CERT}"
-        ,
-        "key_path": "${KEY}"
-        ,
+        "certificate_path": "${CERT}",
+        "key_path": "${KEY}",
         "alpn": [
           "h3"
         ]
@@ -207,16 +204,14 @@ if [ ! -f "${SB_CONF}" ]; then
       },
       "users": [
         {
-          "name": "${HY2_USER}"
-          ,
+          "name": "${HY2_USER}",
           "password": "${REUSE_PASS}"
         }
       ],
       "ignore_client_bandwidth": true,
       "tls": {
         "enabled": true,
-        "certificate_path": "${CERT}"
-        ,
+        "certificate_path": "${CERT}",
         "key_path": "${KEY}"
       }
     }
