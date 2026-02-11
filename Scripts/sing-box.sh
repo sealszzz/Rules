@@ -140,7 +140,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "listen_port": 4443,
       "users": [
         {
-          "username": "anytls",
+          "name": "anytls",
           "password": "${REUSE_PASS}"
         }
       ],
