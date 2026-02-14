@@ -93,9 +93,8 @@ cat >"$TOBARU_CONF" <<'EOF'
 - address: "[::]:443"
   transport: udp
   target:
-    addresses:
-      - 127.0.0.1:9009
-    allowlist: 0.0.0.0/0
+    - location: 127.0.0.1:9009
+      allowlist: 0.0.0.0/0
 EOF
 fi
 
