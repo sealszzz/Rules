@@ -59,7 +59,9 @@ cat >"$TOBARU_CONF" <<'EOF'
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: none
+        sni_hostnames:
+          - none
+          - "*"
         
     - location: 127.0.0.1:9001
       allowlist: 0.0.0.0/0
@@ -83,7 +85,7 @@ cat >"$TOBARU_CONF" <<'EOF'
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: any
+        sni_hostnames: *.example.com
 
     - location: 127.0.0.1:9009
       allowlist: 0.0.0.0/0
@@ -92,7 +94,7 @@ cat >"$TOBARU_CONF" <<'EOF'
   transport: udp
   target:
     addresses:
-      - 127.0.0.1:9003
+      - 127.0.0.1:9009
     allowlist: 0.0.0.0/0
 EOF
 fi
