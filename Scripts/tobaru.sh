@@ -67,25 +67,25 @@ cat >"$TOBARU_CONF" <<'EOF'
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: example.com
+        sni_hostnames: "example.com"
 
     - location: 127.0.0.1:9002
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: www.example.com
+        sni_hostnames: "www.example.com"
 
     - location: 127.0.0.1:9003
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: global.example.com
+        sni_hostnames: "global.example.com"
 
     - location: 127.0.0.1:9999
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
-        sni_hostnames: *.example.com
+        sni_hostnames: "*.example.com"
 
     - location: 127.0.0.1:9009
       allowlist: 0.0.0.0/0
