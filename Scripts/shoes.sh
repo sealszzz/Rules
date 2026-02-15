@@ -206,6 +206,9 @@ Type=simple
 UMask=0077
 WorkingDirectory=${SHOES_STATE_DIR}
 ExecStart=${SHOES_BIN} ${SHOES_CONF_FILE}
+[Service]
+Environment="RUST_LOG=info"
+# Environment="RUST_LOG=warn,shoes=debug,quinn=error"
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
