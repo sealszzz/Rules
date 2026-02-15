@@ -155,7 +155,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
           fallback: "/var/www/html"
 
-- address: "[::]:7443"
+- address: "[::]:8443"
   protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
