@@ -140,6 +140,23 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
 
 - address: "[::]:7443"
   protocol:
+    type: tls
+    tls_targets:
+      "www.cloudflare.com":
+        cert: "${CERT}"
+        key: "${KEY}"
+        alpn_protocols: ["h2"]
+        protocol:
+          type: naiveproxy
+          users:
+            - name: naive
+              password: "${PASS}"
+          padding: true
+          udp_enabled: true
+          fallback: "/var/www/html"
+
+- address: "[::]:7443"
+  protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
     password: "${SS_PASS}"
