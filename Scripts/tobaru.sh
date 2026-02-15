@@ -61,7 +61,7 @@ cat >"$TOBARU_CONF" <<'EOF'
         mode: passthrough
         sni_hostnames:
           - none
-          - "*"
+          - any
 
     - location: 127.0.0.1:9001
       allowlist: 0.0.0.0/0
