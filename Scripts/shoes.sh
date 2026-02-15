@@ -155,7 +155,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
       "www.cloudflare.com":
         cert: "${CERT}"
         key: "${KEY}"
-        alpn_protocols: ["h2"]
+        alpn_protocols: ["h2", "http/1.1"]
         protocol:
           type: naiveproxy
           users:
