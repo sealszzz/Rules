@@ -15,6 +15,7 @@ SHOES_CONF_FILE="${SHOES_CONF_DIR}/config.yaml"
 SHOES_BIN="/usr/local/bin/shoes"
 SHOES_SERVICE_NAME="shoes"
 SHOES_SERVICE="/etc/systemd/system/${SHOES_SERVICE_NAME}.service"
+SHOES_REPO="sealszzz/shoes"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -32,19 +33,22 @@ install -d -o root -g "$SHOES_GROUP" -m 750 "$SHOES_CONF_DIR"
 
 get_shoes_tag() {
   local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/cfal/shoes/releases/latest)" || return 1
+  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${SHOES_REPO}/releases/latest")" || return 1
   printf '%s\n' "${u##*/}"
 }
 
 install_shoes_release() {
   local ASSET BASE tmpd bin
+  SHOES_TAG="${SHOES_TAG:-}"
+  [ -n "$SHOES_TAG" ] || SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
+  [ -n "$SHOES_TAG" ] || { echo "FATAL: cannot detect shoes tag" >&2; exit 1; }
   case "$(uname -m)" in
-    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
-    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu.tar.gz" ;;
+    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu-${SHOES_TAG}.tar.gz"  ;;
+    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu-${SHOES_TAG}.tar.gz" ;;
     *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
   esac
 
-  BASE="https://github.com/cfal/shoes/releases/latest/download"
+  BASE="https://github.com/${SHOES_REPO}/releases/download/${SHOES_TAG}"
   tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' RETURN
 
   curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
@@ -58,7 +62,6 @@ install_shoes_release() {
   trap - RETURN
 }
 
-SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
 install_shoes_release
 
 command -v "$SHOES_BIN" >/dev/null 2>&1 || { echo "FATAL: ${SHOES_BIN} not found" >&2; exit 1; }
@@ -103,16 +106,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
             - name: anytls
               password: "${PASS}"
           udp_enabled: true
-          padding_scheme:
-            - "stop=9"
-            - "1=30-30"
-            - "2=100-400"
-            - "3=400-500,c,500-1000,c,500-1000,c,500-1000,c,500-1000"
-            - "4=9-9,500-1000"
-            - "5=500-1000"
-            - "6=500-1000"
-            - "7=500-1000"
-            - "8=500-1000"
           fallback: "127.0.0.1:80"
 
 - address: "[::]:5443"
@@ -149,23 +142,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
         fallback: "127.0.0.1:9999"
 
 - address: "[::]:7443"
-  protocol:
-    type: tls
-    tls_targets:
-      "www.cloudflare.com":
-        cert: "${CERT}"
-        key: "${KEY}"
-        alpn_protocols: ["h2", "http/1.1"]
-        protocol:
-          type: naiveproxy
-          users:
-            - name: naive
-              password: "${PASS}"
-          padding: true
-          udp_enabled: true
-          fallback: "/var/www/html"
-
-- address: "[::]:8443"
   protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
@@ -216,8 +192,7 @@ Type=simple
 UMask=0077
 WorkingDirectory=${SHOES_STATE_DIR}
 ExecStart=${SHOES_BIN} ${SHOES_CONF_FILE}
-Environment="RUST_LOG=info"
-# Environment="RUST_LOG=warn,shoes=debug,quinn=error"
+Environment="RUST_LOG=warn"
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
