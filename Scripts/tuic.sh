@@ -40,8 +40,8 @@ echo "[*] Query latest TUIC release (no-API)…"
 tag="$(get_latest_tag)" || { echo "Failed to resolve latest tag"; exit 1; }
 
 case "$(uname -m)" in
-  x86_64|amd64)  ARK="x86_64-linux"  ;;
-  aarch64|arm64) ARK="aarch64-linux" ;;
+  x86_64|amd64)  ARK="x86_64-unknown-linux-gnu"  ;;
+  aarch64|arm64) ARK="aarch64-unknown-linux-gnu" ;;
   *) echo "Unsupported arch: $(uname -m) (x86_64/aarch64 only)" >&2; exit 1 ;;
 esac
 
