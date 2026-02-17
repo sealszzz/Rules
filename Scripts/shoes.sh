@@ -111,6 +111,23 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
 - address: "[::]:5443"
   protocol:
     type: tls
+    tls_targets:
+      "www.cloudflare.com":
+        cert: "${CERT}"
+        key: "${KEY}"
+        alpn_protocols: ["h2", "http/1.1"]
+        protocol:
+          type: naiveproxy
+          users:
+            - username: naive
+              password: "${PASS}"
+          padding: true
+          udp_enabled: true
+          fallback: "/var/www/html"
+
+- address: "[::]:6443"
+  protocol:
+    type: tls
     reality_targets:
       "www.cloudflare.com":
         private_key: "${REALITY_PRI}"
@@ -124,7 +141,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
         fallback: "127.0.0.1:9999"
 
-- address: "[::]:6443"
+- address: "[::]:7443"
   protocol:
     type: tls
     reality_targets:
@@ -141,7 +158,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
         fallback: "127.0.0.1:9999"
 
-- address: "[::]:7443"
+- address: "[::]:8443"
   protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
