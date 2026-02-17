@@ -47,6 +47,15 @@ if [ ! -f "$CADDY_CONF" ]; then
 cat >"$CADDY_CONF" <<'EOF'
 {
   "admin": { "disabled": true },
+  "logging": {
+    "logs": {
+      "default": {
+        "level": "WARN",
+        "writer": { "output": "stderr" },
+        "encoder": { "format": "console" }
+      }
+    }
+  },
   "apps": {
     "layer4": {
       "servers": {
