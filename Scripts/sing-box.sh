@@ -161,6 +161,7 @@ if [ ! -f "${SB_CONF}" ]; then
           "password": "${REUSE_PASS}"
         }
       ],
+      "quic_congestion_control": "bbr",
       "tls": {
         "enabled": true,
         "certificate_path": "${CERT}",
