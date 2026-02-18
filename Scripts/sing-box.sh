@@ -153,7 +153,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "type": "naive",
       "tag": "naive-in",
       "listen": "::",
-      "listen_port": 5443,
+      "listen_port": 443,
       //"network": "tcp",
       "users": [
         {
