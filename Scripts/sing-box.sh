@@ -14,7 +14,6 @@ set -euo pipefail
 
 : "${REUSE_PASS:=}"
 : "${REUSE_UUID:=}"
-: "${REUSE_SNI:=example.com}"
 : "${SB_SUFFIX:=-glibc}"
 
 export DEBIAN_FRONTEND=noninteractive
@@ -155,7 +154,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "tag": "naive-in",
       "listen": "::",
       "listen_port": 5443,
-      "network": "tcp",
+      //"network": "tcp",
       "users": [
         {
           "username": "naive",
@@ -164,7 +163,6 @@ if [ ! -f "${SB_CONF}" ]; then
       ],
       "tls": {
         "enabled": true,
-        "server_name": "${REUSE_SNI}",
         "certificate_path": "${CERT}",
         "key_path": "${KEY}"
       }
