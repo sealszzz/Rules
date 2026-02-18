@@ -165,7 +165,8 @@ if [ ! -f "${SB_CONF}" ]; then
       "tls": {
         "enabled": true,
         "certificate_path": "${CERT}",
-        "key_path": "${KEY}"
+        "key_path": "${KEY}",
+        "alpn": ["h3", "h2", "http/1.1"]
       }
     },
     {
@@ -183,9 +184,7 @@ if [ ! -f "${SB_CONF}" ]; then
         "enabled": true,
         "certificate_path": "${CERT}",
         "key_path": "${KEY}",
-        "alpn": [
-          "h3"
-        ]
+        "alpn": ["h3"]
       },
       "congestion_control": "bbr",
       "zero_rtt_handshake": false
