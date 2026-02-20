@@ -165,7 +165,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     password: "${SS_PASS}"
     udp_enabled: true
 
-- address: "[::]9007"
+- address: "[::]9006"
   transport: quic
   quic_settings:
     cert: "${CERT}"
@@ -178,7 +178,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     zero_rtt_handshake: false
     udp_enabled: true
 
-- address: "[::]:9009"
+- address: "[::]:9007"
   transport: quic
   quic_settings:
     cert: "${CERT}"
