@@ -74,6 +74,9 @@ net.ipv4.tcp_max_syn_backlog = 4096
 net.core.somaxconn = 4096
 net.core.netdev_max_backlog = 16384
 
+# ===== TCP: Path MTU blackhole protection =====
+net.ipv4.tcp_mtu_probing = 1
+
 # ===== Conntrack / QUIC / UDP =====
 net.netfilter.nf_conntrack_max = 262144
 net.netfilter.nf_conntrack_udp_timeout = 30
