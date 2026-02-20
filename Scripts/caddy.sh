@@ -3,11 +3,11 @@ set -euo pipefail
 
 : "${CADDY_USER:=caddy}"
 : "${CADDY_GROUP:=caddy}"
-: "${CADDY_BIN:=/usr/local/bin/caddy-l4}"
+: "${CADDY_BIN:=/usr/local/bin/caddy}"
 : "${CADDY_CONF:=/etc/caddy/caddy.json}"
-: "${CADDY_SERVICE:=/etc/systemd/system/caddy-l4.service}"
+: "${CADDY_SERVICE:=/etc/systemd/system/caddy.service}"
 : "${CADDY_REPO:=sealszzz/Caddy}"
-: "${SERVICE_NAME:=caddy-l4}"
+: "${SERVICE_NAME:=caddy}"
 
 export DEBIAN_FRONTEND=noninteractive
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
@@ -25,7 +25,7 @@ LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com
 TAG="${LATEST_URL##*/}"
 [ -n "$TAG" ] || { echo "FATAL: failed to get tag"; exit 1; }
 
-ASSET="caddy-l4-linux-${ARCH}-${TAG}.tar.gz"
+ASSET="caddy-linux-${ARCH}-${TAG}.tar.gz"
 URL="https://github.com/${CADDY_REPO}/releases/download/${TAG}/${ASSET}"
 
 TMP="$(mktemp -d)"
@@ -34,8 +34,8 @@ trap 'rm -rf "$TMP"' EXIT
 curl -fL --retry 3 --retry-delay 1 -o "$TMP/$ASSET" "$URL"
 tar -xzf "$TMP/$ASSET" -C "$TMP"
 
-[ -f "$TMP/caddy-l4-linux-${ARCH}" ] || { echo "FATAL: missing binary in tar"; exit 1; }
-install -m 0755 "$TMP/caddy-l4-linux-${ARCH}" "$CADDY_BIN"
+[ -f "$TMP/caddy-linux-${ARCH}" ] || { echo "FATAL: missing binary in tar"; exit 1; }
+install -m 0755 "$TMP/caddy-linux-${ARCH}" "$CADDY_BIN"
 
 getent group "$CADDY_GROUP" >/dev/null || groupadd --system "$CADDY_GROUP"
 id -u "$CADDY_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$CADDY_GROUP" --shell /usr/sbin/nologin "$CADDY_USER"
@@ -261,9 +261,9 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
-echo "caddy-l4 installed: $TAG"
+echo "caddy installed: $TAG"
 echo
-echo "=== caddy-l4 binary version ==="
+echo "=== caddy binary version ==="
 if ! "${CADDY_BIN}" version 2>/dev/null; then
   "${CADDY_BIN}" --version 2>/dev/null || true
 fi
