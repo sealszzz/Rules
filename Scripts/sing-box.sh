@@ -15,6 +15,7 @@ set -euo pipefail
 : "${REUSE_PASS:=}"
 : "${REUSE_UUID:=}"
 : "${SB_SUFFIX:=-glibc}"
+: "${NAIVE_USER:=}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -125,6 +126,9 @@ if [ ! -f "${SB_CONF}" ]; then
 
   [ -n "${REUSE_PASS}" ] || REUSE_PASS="$(gen_hex16)"
   [ -n "${REUSE_UUID}" ] || REUSE_UUID="$(gen_uuid)"
+  if [ -z "${NAIVE_USER}" ]; then
+    NAIVE_USER="naive$(openssl rand -hex 3)"
+  fi
 
   cat > "${SB_CONF}" <<EOF
 {
@@ -140,7 +144,7 @@ if [ ! -f "${SB_CONF}" ]; then
       //"network": "tcp",
       "users": [
         {
-          "username": "naive",
+          "username": "${NAIVE_USER}",
           "password": "${REUSE_PASS}"
         }
       ],
