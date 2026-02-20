@@ -6,6 +6,7 @@ set -euo pipefail
 : "${PASS:=}"
 : "${UUID:=}"
 : "${SS_PASS:=}"
+: "${NAIVE_USER:=}"
 
 SHOES_USER="shoes"
 SHOES_GROUP="shoes"
@@ -88,6 +89,9 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
   [ -n "$PASS" ] || PASS="$(openssl rand -hex 16)"
   [ -n "$UUID" ] || UUID="$(uuidgen)"
   [ -n "$SS_PASS" ] || SS_PASS="$(gen_ss2022_pass)"
+  if [ -z "${NAIVE_USER}" ]; then
+    NAIVE_USER="naive$(openssl rand -hex 3)"
+  fi
 
   mapfile -t R < <(gen_reality)
   REALITY_PRI="${R[0]}"; REALITY_PUB="${R[1]}"; REALITY_SID="${R[2]}"
@@ -135,7 +139,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
         protocol:
           type: naiveproxy
           users:
-            - username: naive
+            - username: "${NAIVE_USER}"
               password: "${PASS}"
           padding: true
           udp_enabled: true
@@ -153,7 +157,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
         protocol:
           type: naiveproxy
           users:
-            - username: naive
+            - username: "${NAIVE_USER}"
               password: "${PASS}"
           udp_enabled: true
         fallback: "127.0.0.1:9999"
