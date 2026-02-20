@@ -139,11 +139,9 @@ if [ ! -f "${SB_CONF}" ]; then
     "servers": [
       {
         "tag": "system-dns",
-        "type": "local",
-        "detour": "direct"
+        "type": "local"
       }
-    ],
-    "strategy": "prefer_ipv4"
+    ]
   },
   "inbounds": [
     {
@@ -229,7 +227,11 @@ if [ ! -f "${SB_CONF}" ]; then
   "outbounds": [
     {
       "type": "direct",
-      "tag": "direct"
+      "tag": "direct",
+      "domain_resolver": {
+        "server": "system-dns",
+        "strategy": "prefer_ipv4"
+      }
     }
   ]
 }
