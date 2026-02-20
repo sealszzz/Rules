@@ -133,23 +133,6 @@ if [ ! -f "${SB_CONF}" ]; then
   },
   "inbounds": [
     {
-      "type": "anytls",
-      "tag": "anytls-in",
-      "listen": "::",
-      "listen_port": 4443,
-      "users": [
-        {
-          "name": "anytls",
-          "password": "${REUSE_PASS}"
-        }
-      ],
-      "tls": {
-        "enabled": true,
-        "certificate_path": "${CERT}",
-        "key_path": "${KEY}"
-      }
-    },
-    {
       "type": "naive",
       "tag": "naive-in",
       "listen": "::",
@@ -167,6 +150,23 @@ if [ ! -f "${SB_CONF}" ]; then
         "certificate_path": "${CERT}",
         "key_path": "${KEY}",
         "alpn": ["h3", "h2", "http/1.1"]
+      }
+    },
+    {
+      "type": "anytls",
+      "tag": "anytls-in",
+      "listen": "::",
+      "listen_port": 4443,
+      "users": [
+        {
+          "name": "anytls",
+          "password": "${REUSE_PASS}"
+        }
+      ],
+      "tls": {
+        "enabled": true,
+        "certificate_path": "${CERT}",
+        "key_path": "${KEY}"
       }
     },
     {
