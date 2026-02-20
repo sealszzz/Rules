@@ -300,8 +300,9 @@ chmod 0640 "$CADDYFILE_NAIVE"
 
 cat >"$CADDY_SERVICE" <<EOF
 [Unit]
-Description=Caddy layer4 TCP+UDP 443 SNI proxy
-After=network.target
+Description=Caddy
+After=network.target network-online.target
+Requires=network-online.target
 
 [Service]
 User=${CADDY_USER}
@@ -312,13 +313,16 @@ Environment=HOME=/var/lib/caddy
 Environment=XDG_CONFIG_HOME=/var/lib/caddy/.config
 
 ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
+ExecReload=${CADDY_BIN} reload --config ${CADDY_CONF}
+TimeoutStopSec=5s
+
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
-LimitNOFILE=262144
 
+LimitNOFILE=262144
 Restart=always
-RestartSec=2s
+RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
