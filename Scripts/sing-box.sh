@@ -135,13 +135,22 @@ if [ ! -f "${SB_CONF}" ]; then
   "log": {
     "level": "warn"
   },
+  "dns": {
+    "servers": [
+      {
+        "tag": "system-dns",
+        "type": "local",
+        "detour": "direct"
+      }
+    ],
+    "strategy": "prefer_ipv4"
+  },
   "inbounds": [
     {
       "type": "naive",
       "tag": "naive-in",
       "listen": "::",
       "listen_port": 443,
-      //"network": "tcp",
       "users": [
         {
           "username": "${NAIVE_USER}",
@@ -218,7 +227,8 @@ if [ ! -f "${SB_CONF}" ]; then
   ],
   "outbounds": [
     {
-      "type": "direct"
+      "type": "direct",
+      "tag": "direct"
     }
   ]
 }
