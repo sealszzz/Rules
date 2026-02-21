@@ -2,7 +2,6 @@
 set -euo pipefail
 
 : "${TT_LOG_LEVEL:=info}" # info debug trace
-: "${TT_PORT:=8443}"
 : "${TT_HOSTNAME:=www.example.com}"
 : "${TT_ALLOWED_SNI:=www.example.com}"
 
@@ -42,14 +41,14 @@ install -d -o root -g "$TT_GROUP" -m 750 "$TT_CONF_DIR"
 get_tt_tag() {
   local u
   u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' \
-      https://github.com/TrustTunnel/TrustTunnel/releases/latest)" || return 1
+      https://github.com/sealszzz/trusttunnel/releases/latest)" || return 1
   printf '%s\n' "${u##*/}"
 }
 
 pick_arch() {
   case "$(uname -m)" in
-    x86_64|amd64)  echo "x86_64" ;;
-    aarch64|arm64) echo "aarch64" ;;
+    x86_64|amd64)  echo "x86_64-unknown-linux-gnu" ;;
+    aarch64|arm64) echo "aarch64-unknown-linux-gnu" ;;
     *) echo "unsupported arch: $(uname -m)"; exit 1 ;;
   esac
 }
@@ -61,8 +60,8 @@ install_tt_release_minimal() {
   [ -n "$tag" ] || { echo "FATAL: cannot resolve latest tag"; exit 1; }
 
   arch="$(pick_arch)"
-  asset="trusttunnel-${tag}-linux-${arch}.tar.gz"
-  base="https://github.com/TrustTunnel/TrustTunnel/releases/download/${tag}"
+  asset="trusttunnel_endpoint-${tag}-${arch}.tar.gz"
+  base="https://github.com/sealszzz/trusttunnel/releases/download/${tag}"
 
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
@@ -72,9 +71,10 @@ install_tt_release_minimal() {
   mkdir -p "$unpackd"
   tar -xzf "$tmpd/pkg.tgz" -C "$unpackd"
 
-  ep="$(find "$unpackd" -type f -name trusttunnel_endpoint -perm -u+x | head -n1 || true)"
-  [ -n "$ep" ] || { echo "FATAL: trusttunnel_endpoint not found in archive"; exit 1; }
-
+  ep="$(find "$unpackd" -type f | head -n1 || true)"
+  [ -n "$ep" ] || { echo "FATAL: binary not found in archive"; exit 1; }
+  
+  chmod +x "$ep"
   install -m 0755 "$ep" "$TT_BIN"
 
   trap - RETURN
@@ -91,7 +91,6 @@ gen_user_pass() {
 
 TAG="$(install_tt_release_minimal)"
 
-# credentials.toml
 if [ ! -f "$TT_CREDS" ]; then
   mapfile -t UP < <(gen_user_pass)
   TT_USERNAME="${UP[0]}"
@@ -111,10 +110,9 @@ EOF
   echo "  password: ${TT_PASSWORD}"
 fi
 
-# vpn.toml
 if [ ! -f "$TT_VPN" ]; then
   cat >"$TT_VPN" <<EOF
-listen_address = "[::]:${TT_PORT}"
+listen_address = "[::]:8443"
 ipv6_available = false
 allow_private_network_connections = false
 speedtest_enable = false
@@ -139,7 +137,6 @@ EOF
   chmod 640 "$TT_VPN"
 fi
 
-# hosts.toml
 if [ ! -f "$TT_HOSTS" ]; then
   cat >"$TT_HOSTS" <<EOF
 [[main_hosts]]
@@ -162,7 +159,7 @@ if [ ! -f "$TT_SVC" ]; then
   cat >"$TT_SVC" <<EOF
 [Unit]
 Description=TrustTunnel endpoint
-Documentation=https://github.com/TrustTunnel/TrustTunnel
+Documentation=https://github.com/sealszzz/trusttunnel
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
