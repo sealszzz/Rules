@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TT_PORT:=443}"
-: "${TT_HOSTNAME:=example.com}"
+: "${TT_PORT:=8443}"
+: "${TT_HOSTNAME:=www.example.com}"
 : "${TT_ALLOWED_SNI:=www.example.com}"
 
 : "${CERT:=/etc/tls/cert.pem}"
@@ -17,6 +17,7 @@ TT_CONF_DIR="/etc/trusttunnel"
 
 TT_VPN="${TT_CONF_DIR}/vpn.toml"
 TT_HOSTS="${TT_CONF_DIR}/hosts.toml"
+TT_CREDS="${TT_CONF_DIR}/credentials.toml"
 
 TT_SVC_NAME="trusttunnel"
 TT_SVC="/etc/systemd/system/${TT_SVC_NAME}.service"
@@ -89,102 +90,55 @@ gen_user_pass() {
 
 TAG="$(install_tt_release_minimal)"
 
-if [ ! -f "$TT_VPN" ]; then
+# credentials.toml
+if [ ! -f "$TT_CREDS" ]; then
   mapfile -t UP < <(gen_user_pass)
   TT_USERNAME="${UP[0]}"
   TT_PASSWORD="${UP[1]}"
 
-  cat >"$TT_VPN" <<EOF
-listen_address = "[::]:${TT_PORT}"
-ipv6_available = false
-allow_private_network_connections = false
-tls_handshake_timeout_secs = 10
-client_listener_timeout_secs = 600
-connection_establishment_timeout_secs = 30
-tcp_connections_timeout_secs = 604800
-udp_connections_timeout_secs = 300
-speedtest_enable = false
-
+  cat >"$TT_CREDS" <<EOF
 [[client]]
 username = "${TT_USERNAME}"
 password = "${TT_PASSWORD}"
-
-# Rules are evaluated in order, first matching rule's action is applied.
-# If no rules match, the connection is allowed by default.
-
-# Deny connections from specific IP range
-# [[rule]]
-# cidr = "192.168.1.0/24"
-# action = "deny"
-
-# Allow connections with specific TLS client random prefix
-# [[rule]]
-# client_random_prefix = "aabbcc"
-# action = "allow"
-
-# Deny connections matching both IP and client random with mask
-# [[rule]]
-# cidr = "10.0.0.0/8"
-# client_random_prefix = "a0b0/f0f0"
-# action = "deny"
-
-[listen_protocols]
-
-[listen_protocols.http1]
-upload_buffer_size = 32768
-
-[listen_protocols.http2]
-initial_connection_window_size = 8388608
-initial_stream_window_size = 131072
-max_concurrent_streams = 1000
-max_frame_size = 16384
-header_table_size = 65536
-
-[listen_protocols.quic]
-recv_udp_payload_size = 1350
-send_udp_payload_size = 1350
-initial_max_data = 104857600
-initial_max_stream_data_bidi_local = 1048576
-initial_max_stream_data_bidi_remote = 1048576
-initial_max_stream_data_uni = 1048576
-initial_max_streams_bidi = 4096
-initial_max_streams_uni = 4096
-max_connection_window = 25165824
-max_stream_window = 16777216
-disable_active_migration = true
-enable_early_data = true
-message_queue_capacity = 4096
-
-# Forward protocol (optional, defaults to direct)
-[forward_protocol]
-direct = {}
-
-# Reverse proxy settings (optional)
-# [reverse_proxy]
-# server_address = "127.0.0.1:8080"
-# path_mask = "/api"
-# h3_backward_compatibility = false
-
-# ICMP settings (optional, requires superuser)
-# [icmp]
-# interface_name = "eth0"
-# request_timeout_secs = 3
-# recv_message_queue_capacity = 256
-
-# Metrics settings (optional)
-# [metrics]
-# address = "127.0.0.1:1987"
-# request_timeout_secs = 3
 EOF
 
-  chown root:"$TT_GROUP" "$TT_VPN"
-  chmod 640 "$TT_VPN"
+  chown root:"$TT_GROUP" "$TT_CREDS"
+  chmod 640 "$TT_CREDS"
 
-  echo "Generated credentials (inline in ${TT_VPN}):"
+  echo "Generated credentials (${TT_CREDS}):"
   echo "  username: ${TT_USERNAME}"
   echo "  password: ${TT_PASSWORD}"
 fi
 
+# vpn.toml
+if [ ! -f "$TT_VPN" ]; then
+  cat >"$TT_VPN" <<EOF
+listen_address = "[::]:${TT_PORT}"
+ipv6_available = false
+allow_private_network_connections = false
+speedtest_enable = false
+
+credentials_file = "${TT_CREDS}"
+
+[listen_protocols]
+[listen_protocols.http1]
+[listen_protocols.http2]
+[listen_protocols.quic]
+
+[forward_protocol]
+direct = {}
+
+[reverse_proxy]
+server_address = "127.0.0.1:9999"
+path_mask = "/"
+h3_backward_compatibility = false
+EOF
+
+  chown root:"$TT_GROUP" "$TT_VPN"
+  chmod 640 "$TT_VPN"
+fi
+
+# hosts.toml
 if [ ! -f "$TT_HOSTS" ]; then
   cat >"$TT_HOSTS" <<EOF
 [[main_hosts]]
@@ -193,23 +147,10 @@ cert_chain_path = "${CERT}"
 private_key_path = "${KEY}"
 allowed_sni = ["${TT_ALLOWED_SNI}"]
 
-ping_hosts = []
-# [[ping_hosts]]
-# hostname = "ping.vpn.example.com"
-# cert_chain_path = "certs/cert.pem"
-# private_key_path = "certs/key.pem"
-
-speedtest_hosts = []
-# [[speedtest_hosts]]
-# hostname = "speed.vpn.example.com"
-# cert_chain_path = "certs/cert.pem"
-# private_key_path = "certs/key.pem"
-
-reverse_proxy_hosts = []
-# [[reverse_proxy_hosts]]
-# hostname = "api.example.com"
-# cert_chain_path = "certs/cert.pem"
-# private_key_path = "certs/key.pem"
+[[reverse_proxy_hosts]]
+hostname = "localhost"
+cert_chain_path = "${CERT}"
+private_key_path = "${KEY}"
 EOF
 
   chown root:"$TT_GROUP" "$TT_HOSTS"
