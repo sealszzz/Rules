@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${TT_LOG_LEVEL:=info}" # info debug trace
 : "${TT_PORT:=8443}"
 : "${TT_HOSTNAME:=www.example.com}"
 : "${TT_ALLOWED_SNI:=www.example.com}"
@@ -171,7 +172,7 @@ Group=${TT_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=${TT_STATE_DIR}
-ExecStart=${TT_BIN} ${TT_VPN} ${TT_HOSTS}
+ExecStart=${TT_BIN} ${TT_VPN} ${TT_HOSTS} -l ${TT_LOG_LEVEL}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
