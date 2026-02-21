@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# 完整卸载脚本（不清理依赖，不做备份）
-# 覆盖：caddy / xray / sing-box / tuic / juicity / shoes / shadowquic / snell / hysteria / anytls / tobaru
-# 说明：不再兼容任何 *-server / anytls-go / anytls-rust 等旧命名；只按“当前安装脚本”的命名卸载
 set -euo pipefail
 
 need_root() {
@@ -41,10 +38,8 @@ remove_unit_artifacts() {
     "/etc/systemd/system/${base}.service.d"
     "/etc/systemd/system/${base}@.service"
     "/etc/systemd/system/${base}@.service.d"
-
     "/lib/systemd/system/${base}.service"
     "/lib/systemd/system/${base}@.service"
-
     "/usr/lib/systemd/system/${base}.service"
     "/usr/lib/systemd/system/${base}@.service"
   )
@@ -77,7 +72,6 @@ remove_user_group() {
 
 pause() { echo; read -rp "按回车返回主菜单..." _; }
 
-# ---------------- 各组件卸载 ----------------
 uninstall_caddy() {
   echo ">>> 卸载 Caddy ..."
   for base in "caddy" "caddy-l4"; do
@@ -214,8 +208,20 @@ uninstall_tobaru() {
   echo "[OK] Tobaru 卸载完成。"
 }
 
+uninstall_trusttunnel() {
+  echo ">>> 卸载 TrustTunnel ..."
+  stop_disable_service "trusttunnel"
+  remove_unit_artifacts "trusttunnel"
+  remove_paths \
+    /usr/local/bin/trusttunnel \
+    /etc/trusttunnel /var/lib/trusttunnel /var/log/trusttunnel \
+    /etc/logrotate.d/trusttunnel
+  remove_user_group "trusttunnel" || true
+  echo "[OK] TrustTunnel 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -227,10 +233,10 @@ uninstall_all() {
   uninstall_hysteria
   uninstall_anytls
   uninstall_tobaru
+  uninstall_trusttunnel
   echo "[OK] 所有组件已卸载。"
 }
 
-# ---------------- 选择式菜单：0 执行卸载；00 卸载所有 ----------------
 declare -A SEL=(
   [caddy]=0
   [xray]=0
@@ -243,6 +249,7 @@ declare -A SEL=(
   [hysteria]=0
   [anytls]=0
   [tobaru]=0
+  [trusttunnel]=0
 )
 
 toggle() {
@@ -253,21 +260,22 @@ toggle() {
 run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
-        caddy)      uninstall_caddy ;;
-        xray)       uninstall_xray ;;
-        singbox)    uninstall_singbox ;;
-        tuic)       uninstall_tuic ;;
-        juicity)    uninstall_juicity ;;
-        shoes)      uninstall_shoes ;;
-        shadowquic) uninstall_shadowquic ;;
-        snell)      uninstall_snell ;;
-        hysteria)   uninstall_hysteria ;;
-        anytls)     uninstall_anytls ;;
-        tobaru)     uninstall_tobaru ;;
+        caddy)       uninstall_caddy ;;
+        xray)        uninstall_xray ;;
+        singbox)     uninstall_singbox ;;
+        tuic)        uninstall_tuic ;;
+        juicity)     uninstall_juicity ;;
+        shoes)       uninstall_shoes ;;
+        shadowquic)  uninstall_shadowquic ;;
+        snell)       uninstall_snell ;;
+        hysteria)    uninstall_hysteria ;;
+        anytls)      uninstall_anytls ;;
+        tobaru)      uninstall_tobaru ;;
+        trusttunnel) uninstall_trusttunnel ;;
       esac
       echo
     fi
@@ -289,17 +297,18 @@ main_menu() {
   00 卸载所有
   q  退出
 
- 1) [$([ "${SEL[caddy]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Caddy (含 caddy-l4)
- 2) [$([ "${SEL[xray]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Xray
- 3) [$([ "${SEL[singbox]}"    -eq 1 ] && echo x || echo ' ')] 卸载 sing-box
- 4) [$([ "${SEL[tuic]}"       -eq 1 ] && echo x || echo ' ')] 卸载 TUIC
- 5) [$([ "${SEL[juicity]}"    -eq 1 ] && echo x || echo ' ')] 卸载 Juicity
- 6) [$([ "${SEL[shoes]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Shoes
- 7) [$([ "${SEL[shadowquic]}" -eq 1 ] && echo x || echo ' ')] 卸载 ShadowQUIC
- 8) [$([ "${SEL[snell]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Snell
- 9) [$([ "${SEL[hysteria]}"   -eq 1 ] && echo x || echo ' ')] 卸载 Hysteria2
-10) [$([ "${SEL[anytls]}"     -eq 1 ] && echo x || echo ' ')] 卸载 AnyTLS
-11) [$([ "${SEL[tobaru]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
+ 1) [$([ "${SEL[caddy]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Caddy (含 caddy-l4)
+ 2) [$([ "${SEL[xray]}"        -eq 1 ] && echo x || echo ' ')] 卸载 Xray
+ 3) [$([ "${SEL[singbox]}"     -eq 1 ] && echo x || echo ' ')] 卸载 sing-box
+ 4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC
+ 5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity
+ 6) [$([ "${SEL[shoes]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Shoes
+ 7) [$([ "${SEL[shadowquic]}"  -eq 1 ] && echo x || echo ' ')] 卸载 ShadowQUIC
+ 8) [$([ "${SEL[snell]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Snell
+ 9) [$([ "${SEL[hysteria]}"    -eq 1 ] && echo x || echo ' ')] 卸载 Hysteria2
+10) [$([ "${SEL[anytls]}"      -eq 1 ] && echo x || echo ' ')] 卸载 AnyTLS
+11) [$([ "${SEL[tobaru]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
+12) [$([ "${SEL[trusttunnel]}" -eq 1 ] && echo x || echo ' ')] 卸载 TrustTunnel
 ==================================================
 MENU
 
@@ -324,6 +333,7 @@ MENU
         9)  toggle hysteria ;;
         10) toggle anytls ;;
         11) toggle tobaru ;;
+        12) toggle trusttunnel ;;
         00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
