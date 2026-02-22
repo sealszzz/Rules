@@ -7,6 +7,7 @@ set -euo pipefail
 : "${UUID:=}"
 : "${SS_PASS:=}"
 : "${NAIVE_USER:=}"
+: "${NAIVE_WEBROOT:=/var/www/html}"
 
 SHOES_USER="shoes"
 SHOES_GROUP="shoes"
@@ -31,6 +32,17 @@ id -u "$SHOES_USER" >/dev/null 2>&1 || useradd --system -g "$SHOES_GROUP" -M -d 
 
 install -d -o "$SHOES_USER" -g "$SHOES_GROUP" -m 750 "$SHOES_STATE_DIR"
 install -d -o root -g "$SHOES_GROUP" -m 750 "$SHOES_CONF_DIR"
+
+install -d -o root -g root -m 0755 "$NAIVE_WEBROOT"
+find "$NAIVE_WEBROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
+cat >"$NAIVE_WEBROOT/index.html" <<'EOF'
+<!doctype html>
+<meta charset="utf-8">
+<title>Welcome</title>
+<script>
+  location.replace("/");
+</script>
+EOF
 
 get_shoes_tag() {
   local u
@@ -143,7 +155,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
               password: "${PASS}"
           padding: true
           udp_enabled: true
-          fallback: "/var/www/html"
+          fallback: "${NAIVE_WEBROOT}"
 
 - address: "[::]:9004"
   protocol:
@@ -169,7 +181,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     password: "${SS_PASS}"
     udp_enabled: true
 
-- address: "[::]9006"
+- address: "[::]9008"
   transport: quic
   quic_settings:
     cert: "${CERT}"
@@ -182,7 +194,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     zero_rtt_handshake: false
     udp_enabled: true
 
-- address: "[::]:9007"
+- address: "[::]:9009"
   transport: quic
   quic_settings:
     cert: "${CERT}"
