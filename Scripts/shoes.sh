@@ -130,7 +130,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     reality_targets:
       "www.cloudflare.com":
         private_key: "${REALITY_PRI}"
-        #public_key: "${REALITY_PUB}"
         short_ids: ["${REALITY_SID}"]
         dest: "localhost:9999"
         vision: true
@@ -163,7 +162,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     reality_targets:
       "www.cloudflare.com":
         private_key: "${REALITY_PRI}"
-        #public_key: "${REALITY_PUB}"
         short_ids: ["${REALITY_SID}"]
         dest: "localhost:9999"
         protocol:
@@ -174,14 +172,14 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
         fallback: "127.0.0.1:9999"
 
-- address: "[::]9009"
+- address: "[::]:9009"
   protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
     password: "${SS_PASS}"
     udp_enabled: true
 
-- address: "[::]9008"
+- address: "[::]:9008"
   transport: quic
   quic_settings:
     cert: "${CERT}"
@@ -225,7 +223,7 @@ Type=simple
 UMask=0077
 WorkingDirectory=${SHOES_STATE_DIR}
 ExecStart=${SHOES_BIN} ${SHOES_CONF_FILE}
-Environment="RUST_LOG=warn"
+Environment="RUST_LOG=warn,shoes=debug"
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
