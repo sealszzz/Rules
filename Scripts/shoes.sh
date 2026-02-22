@@ -130,6 +130,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     reality_targets:
       "www.cloudflare.com":
         private_key: "${REALITY_PRI}"
+        #public_key: "${REALITY_PUB}"
         short_ids: ["${REALITY_SID}"]
         dest: "localhost:9999"
         vision: true
@@ -162,6 +163,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     reality_targets:
       "www.cloudflare.com":
         private_key: "${REALITY_PRI}"
+        #public_key: "${REALITY_PUB}"
         short_ids: ["${REALITY_SID}"]
         dest: "localhost:9999"
         protocol:
