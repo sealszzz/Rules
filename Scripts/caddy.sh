@@ -311,9 +311,7 @@ Group=${CADDY_GROUP}
 StateDirectory=caddy
 Environment=HOME=/var/lib/caddy
 Environment=XDG_CONFIG_HOME=/var/lib/caddy/.config
-
 ExecStart=${CADDY_BIN} run --config ${CADDY_CONF}
-ExecReload=${CADDY_BIN} reload --config ${CADDY_CONF}
 TimeoutStopSec=5s
 
 AmbientCapabilities=CAP_NET_BIND_SERVICE
