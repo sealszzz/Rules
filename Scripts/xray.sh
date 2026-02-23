@@ -9,6 +9,7 @@ export DEBIAN_FRONTEND=noninteractive
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
 : "${XRAY_TAG:=}"
+: "${XRAY_LOG_LEVEL:=warning}" # debug | info | warning | error | none
 
 XRAY_STATE_DIR="/var/lib/xray"
 XRAY_CONF_DIR="/etc/xray"
@@ -136,6 +137,9 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
 
   cat >"$XRAY_CONF_FILE" <<EOF
 {
+  "log": {
+    "loglevel": "${XRAY_LOG_LEVEL}"
+  },
   "inbounds": [
     {
       "listen": "[::]",
@@ -243,3 +247,6 @@ if systemctl is-enabled "$XRAY_SERVICE_NAME" >/dev/null 2>&1; then
 else
   systemctl enable --now "$XRAY_SERVICE_NAME"
 fi
+
+echo "[*] Xray binary version:"
+"$XRAY_BIN" version
