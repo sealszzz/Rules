@@ -113,6 +113,7 @@ User=${TOBARU_USER}
 Group=${TOBARU_GROUP}
 Type=simple
 ExecStart=${TOBARU_BIN} ${TOBARU_CONF}
+Environment="RUST_LOG=warn,shoes=info"
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
