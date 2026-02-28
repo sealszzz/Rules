@@ -7,7 +7,7 @@ set -euo pipefail
 : "${SB_CONF:=/etc/sing-box/config.json}"
 : "${SB_SERVICE:=/etc/systemd/system/sing-box.service}"
 : "${SB_REPO:=SagerNet/sing-box}"
-: "${SB_PRERELEASE:=1}"
+: "${SB_PRERELEASE:=0}"
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
