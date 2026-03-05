@@ -80,8 +80,7 @@ if [ ! -f "$SN_CONFIG" ]; then
 [snell-server]
 listen = ::0:${SN_PORT}
 psk = ${PSK}
-ipv6 = true
-ip-version = prefer-v4
+ipv6 = false
 EOF
 
   chown root:"$SN_GROUP" "$SN_CONFIG"
