@@ -21,7 +21,6 @@ apt-get update >/dev/null
 apt-get install -y --no-install-recommends \
   curl ca-certificates unzip iproute2 openssl >/dev/null
 
-# ---- user / dir ----
 getent group "$SN_GROUP" >/dev/null || groupadd --system "$SN_GROUP"
 id -u "$SN_USER" >/dev/null 2>&1 || \
   useradd --system -g "$SN_GROUP" -M -d "$SN_STATE_DIR" -s /usr/sbin/nologin "$SN_USER"
@@ -29,22 +28,30 @@ id -u "$SN_USER" >/dev/null 2>&1 || \
 install -d -o "$SN_USER" -g "$SN_GROUP" -m 750 "$SN_STATE_DIR"
 install -d -o root -g "$SN_GROUP" -m 750 "$SN_CONF_DIR"
 
-# ---- resolve latest version ----
-get_latest_version() {
-  local html ver
-  html="$(curl -fsSL "https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell")" || return 1
-  ver="$(
-    printf '%s\n' "$html" \
-      | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+' \
-      | sed -E 's/^snell-server-//' \
-      | sort -V \
-      | tail -n1
-  )"
-  [ -n "$ver" ] || return 1
-  printf '%s\n' "$ver"
-}
+html="$(curl -fsSL "https://kb.nssurge.com/surge-knowledge-base/zh/release-notes/snell")" || { echo "FATAL: cannot fetch release page" >&2; exit 1; }
 
-SN_VER="$(get_latest_version)" || { echo "FATAL: cannot resolve latest Snell version" >&2; exit 1; }
+AVAILABLE_VERSIONS="$(
+  printf '%s\n' "$html" \
+    | grep -oE 'snell-server-v[0-9]+\.[0-9]+\.[0-9]+' \
+    | sed -E 's/^snell-server-//' \
+    | sort -V \
+    | uniq \
+    | awk -F. '{ major=$1; latest[major]=$0 } END { for (m in latest) print latest[m] }' \
+    | sort -V
+)"
+
+[ -n "$AVAILABLE_VERSIONS" ] || { echo "FATAL: cannot parse versions" >&2; exit 1; }
+
+echo ""
+PS3="请输入你要安装的版本对应的数字: "
+select SN_VER in $AVAILABLE_VERSIONS; do
+  if [ -n "$SN_VER" ]; then
+    echo "==> 已选择: $SN_VER"
+    break
+  else
+    echo "输入无效，请重新输入对应的数字。"
+  fi
+done
 
 case "$(uname -m)" in
   x86_64|amd64)  SN_ARCH="linux-amd64" ;;
@@ -55,7 +62,6 @@ esac
 SN_ASSET="snell-server-${SN_VER}-${SN_ARCH}.zip"
 SN_URL="https://dl.nssurge.com/snell/${SN_ASSET}"
 
-# ---- download & install (server only, rename to snell) ----
 tmpd="$(mktemp -d)"
 trap 'rm -rf "$tmpd"' EXIT
 
@@ -67,13 +73,12 @@ SN_SRC="$(find "$tmpd" -type f -name 'snell-server' -perm -u+x 2>/dev/null | hea
 
 install -m 0755 "$SN_SRC" "$SN_BIN"
 
-# ---- first-time config ----
 if [ ! -f "$SN_CONFIG" ]; then
   PSK="$(openssl rand -hex 16)"
 
   cat >"$SN_CONFIG" <<EOF
 [snell-server]
-listen = [::]:${SN_PORT}
+listen = ::0:${SN_PORT}
 psk = ${PSK}
 ipv6 = false
 EOF
@@ -85,7 +90,6 @@ EOF
   echo "Snell PSK:  ${PSK}"
 fi
 
-# ---- systemd unit ----
 if [ ! -f "$SERVICE_FILE" ]; then
   cat >"$SERVICE_FILE" <<EOF
 [Unit]
