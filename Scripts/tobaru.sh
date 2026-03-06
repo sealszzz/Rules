@@ -55,7 +55,7 @@ cat >"$TOBARU_CONF" <<'EOF'
 - address: "[::]:443"
   transport: tcp
   targets:
-    - location: 127.0.0.1:1
+    - location: 0.0.0.0:1
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
@@ -63,37 +63,37 @@ cat >"$TOBARU_CONF" <<'EOF'
           - none
           - any
 
-    - location: 127.0.0.1:9001
+    - location: 0.0.0.0:9001
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
         sni_hostnames: "example.com"
 
-    - location: 127.0.0.1:9002
+    - location: 0.0.0.0:9002
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
         sni_hostnames: "www.example.com"
 
-    - location: 127.0.0.1:9003
+    - location: 0.0.0.0:9003
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
         sni_hostnames: "global.example.com"
 
-    - location: 127.0.0.1:9999
+    - location: 0.0.0.0:9999
       allowlist: 0.0.0.0/0
       server_tls:
         mode: passthrough
         sni_hostnames: "*.example.com"
 
-    - location: 127.0.0.1:9009
+    - location: 0.0.0.0:9009
       allowlist: 0.0.0.0/0
 
 - address: "[::]:443"
   transport: udp
   target:
-    - location: 127.0.0.1:9009
+    - location: 0.0.0.0:9009
       allowlist: 0.0.0.0/0
 EOF
 fi
