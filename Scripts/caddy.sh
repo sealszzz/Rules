@@ -83,7 +83,7 @@ cat >"$CADDY_CONF" <<'EOF'
       "servers": {
         "tcp443": {
           "listen": [":443"],
-          "matching_timeout": "500ms",
+          "matching_timeout": "800ms",
           "routes": [
             {
               "match": [
@@ -101,7 +101,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["tcp/127.0.0.1:9001"] }
+                            { "dial": ["tcp/[::1]:9001"] }
                           ]
                         }
                       ]
@@ -114,7 +114,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["tcp/127.0.0.1:9002"] }
+                            { "dial": ["tcp/[::1]:9002"] }
                           ]
                         }
                       ]
@@ -127,7 +127,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["tcp/127.0.0.1:9999"] }
+                            { "dial": ["tcp/[::1]:9999"] }
                           ]
                         }
                       ]
@@ -153,7 +153,7 @@ cat >"$CADDY_CONF" <<'EOF'
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["tcp/127.0.0.1:9009"] }
+                    { "dial": ["tcp/[::1]:9009"] }
                   ]
                 }
               ]
@@ -163,7 +163,7 @@ cat >"$CADDY_CONF" <<'EOF'
 
         "udp443": {
           "listen": ["udp/:443"],
-          "matching_timeout": "500ms",
+          "matching_timeout": "800ms",
           "routes": [
             {
               "match": [
@@ -181,7 +181,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["udp/127.0.0.1:9001"] }
+                            { "dial": ["udp/[::1]:9001"] }
                           ]
                         }
                       ]
@@ -194,7 +194,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["udp/127.0.0.1:9002"] }
+                            { "dial": ["udp/[::1]:9002"] }
                           ]
                         }
                       ]
@@ -207,7 +207,7 @@ cat >"$CADDY_CONF" <<'EOF'
                         {
                           "handler": "proxy",
                           "upstreams": [
-                            { "dial": ["udp/127.0.0.1:9999"] }
+                            { "dial": ["udp/[::1]:9999"] }
                           ]
                         }
                       ]
@@ -233,7 +233,7 @@ cat >"$CADDY_CONF" <<'EOF'
                 {
                   "handler": "proxy",
                   "upstreams": [
-                    { "dial": ["udp/127.0.0.1:9009"] }
+                    { "dial": ["udp/[::1]:9009"] }
                   ]
                 }
               ]
