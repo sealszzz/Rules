@@ -133,13 +133,7 @@ cat >"$CADDY_CONF" <<'EOF'
                       ]
                     },
                     {
-                      "handle": [
-                        {
-                          "handler": "throttle",
-                          "read_bytes_per_second": 8,
-                          "read_burst_size": 8
-                        }
-                      ]
+					  "handle": [ { "handler": "close" } ]
                     }
                   ]
                 }
