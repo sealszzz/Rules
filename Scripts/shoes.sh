@@ -109,7 +109,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
   REALITY_PRI="${R[0]}"; REALITY_PUB="${R[1]}"; REALITY_SID="${R[2]}"
 
   cat >"$SHOES_CONF_FILE" <<EOF
-- address: "[::1]:9001"
+- address: "[::]:9001"
   protocol:
     type: tls
     tls_targets:
@@ -124,7 +124,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
           fallback: "127.0.0.1:80"
 
-- address: "[::1]:9002"
+- address: "[::]:9002"
   protocol:
     type: tls
     reality_targets:
@@ -140,7 +140,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
         fallback: "127.0.0.1:9999"
 
-- address: "[::1]:9003"
+- address: "[::]:9003"
   protocol:
     type: tls
     tls_targets:
@@ -157,7 +157,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
           fallback: "${NAIVE_WEBROOT}"
 
-- address: "[::1]:9004"
+- address: "[::]:9004"
   protocol:
     type: tls
     reality_targets:
@@ -174,14 +174,22 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
           udp_enabled: true
         fallback: "[::1]:9999"
 
-- address: "[::1]:9009"
+- address: "[::]:9007"
   protocol:
     type: shadowsocks
     cipher: 2022-blake3-aes-128-gcm
     password: "${SS_PASS}"
     udp_enabled: true
 
-- address: "[::1]:9008"
+- address: "[::]:9009"
+  transport: tcp
+  protocol:
+    type: snell
+    cipher: aes-128-gcm
+    password: "${PASS}"
+    udp_enabled: true
+
+- address: "[::]:9008"
   transport: quic
   quic_settings:
     cert: "${CERT}"
@@ -194,7 +202,7 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     zero_rtt_handshake: false
     udp_enabled: true
 
-- address: "[::1]:9009"
+- address: "[::]:9009"
   transport: quic
   quic_settings:
     cert: "${CERT}"
