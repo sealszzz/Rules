@@ -220,8 +220,20 @@ uninstall_trusttunnel() {
   echo "[OK] TrustTunnel 卸载完成。"
 }
 
+uninstall_ssrust() {
+  echo ">>> 卸载 ssrust ..."
+  stop_disable_service "ssrust"
+  remove_unit_artifacts "ssrust"
+  remove_paths \
+    /usr/local/bin/ssserver \
+    /etc/ssrust /var/lib/ssrust /var/log/ssrust \
+    /etc/logrotate.d/ssrust
+  remove_user_group "ssrust" "ssrust" || true
+  echo "[OK] ssrust 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel / ssrust"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -234,6 +246,7 @@ uninstall_all() {
   uninstall_anytls
   uninstall_tobaru
   uninstall_trusttunnel
+  uninstall_ssrust
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -250,6 +263,7 @@ declare -A SEL=(
   [anytls]=0
   [tobaru]=0
   [trusttunnel]=0
+  [ssrust]=0
 )
 
 toggle() {
@@ -260,7 +274,7 @@ toggle() {
 run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel ssrust; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
@@ -276,6 +290,7 @@ run_selected() {
         anytls)      uninstall_anytls ;;
         tobaru)      uninstall_tobaru ;;
         trusttunnel) uninstall_trusttunnel ;;
+        ssrust)      uninstall_ssrust ;;
       esac
       echo
     fi
@@ -309,6 +324,7 @@ main_menu() {
 10) [$([ "${SEL[anytls]}"      -eq 1 ] && echo x || echo ' ')] 卸载 AnyTLS
 11) [$([ "${SEL[tobaru]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
 12) [$([ "${SEL[trusttunnel]}" -eq 1 ] && echo x || echo ' ')] 卸载 TrustTunnel
+13) [$([ "${SEL[ssrust]}"      -eq 1 ] && echo x || echo ' ')] 卸载 ssrust
 ==================================================
 MENU
 
@@ -334,6 +350,7 @@ MENU
         10) toggle anytls ;;
         11) toggle tobaru ;;
         12) toggle trusttunnel ;;
+        13) toggle ssrust ;;
         00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
