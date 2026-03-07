@@ -182,7 +182,6 @@ if [ ! -f "$SHOES_CONF_FILE" ]; then
     udp_enabled: true
 
 - address: "[::]:9009"
-  transport: tcp
   protocol:
     type: snell
     cipher: aes-128-gcm
