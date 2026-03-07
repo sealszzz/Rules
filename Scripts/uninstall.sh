@@ -232,8 +232,20 @@ uninstall_ssrust() {
   echo "[OK] ssrust 卸载完成。"
 }
 
+uninstall_mihomo() {
+  echo ">>> 卸载 mihomo ..."
+  stop_disable_service "mihomo"
+  remove_unit_artifacts "mihomo"
+  remove_paths \
+    /usr/local/bin/mihomo \
+    /etc/mihomo /var/lib/mihomo /var/log/mihomo \
+    /etc/logrotate.d/mihomo
+  remove_user_group "mihomo" "mihomo" || true
+  echo "[OK] mihomo 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel / ssrust"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel / ssrust / mihomo"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -247,6 +259,7 @@ uninstall_all() {
   uninstall_tobaru
   uninstall_trusttunnel
   uninstall_ssrust
+  uninstall_mihomo
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -264,6 +277,7 @@ declare -A SEL=(
   [tobaru]=0
   [trusttunnel]=0
   [ssrust]=0
+  [mihomo]=0
 )
 
 toggle() {
@@ -274,7 +288,7 @@ toggle() {
 run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel ssrust; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel ssrust mihomo; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
@@ -291,6 +305,7 @@ run_selected() {
         tobaru)      uninstall_tobaru ;;
         trusttunnel) uninstall_trusttunnel ;;
         ssrust)      uninstall_ssrust ;;
+        mihomo)      uninstall_mihomo ;;
       esac
       echo
     fi
@@ -325,6 +340,7 @@ main_menu() {
 11) [$([ "${SEL[tobaru]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
 12) [$([ "${SEL[trusttunnel]}" -eq 1 ] && echo x || echo ' ')] 卸载 TrustTunnel
 13) [$([ "${SEL[ssrust]}"      -eq 1 ] && echo x || echo ' ')] 卸载 ssrust
+14) [$([ "${SEL[mihomo]}"      -eq 1 ] && echo x || echo ' ')] 卸载 mihomo
 ==================================================
 MENU
 
@@ -351,6 +367,7 @@ MENU
         11) toggle tobaru ;;
         12) toggle trusttunnel ;;
         13) toggle ssrust ;;
+        14) toggle mihomo ;;
         00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
