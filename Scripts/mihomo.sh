@@ -246,7 +246,6 @@ Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/mihomo
 Environment="SAFE_PATHS=/etc/tls:/etc/mihomo:/var/lib/mihomo"
-ExecStartPre=${MH_BIN} -t -d /var/lib/mihomo -f ${MH_CONF}
 ExecStart=${MH_BIN} -d /var/lib/mihomo -f ${MH_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
