@@ -151,7 +151,7 @@ if [ ! -f "${MH_CONF}" ]; then
   [ -n "${REALITY_PUBLIC_KEY}" ]  || die "reality public key empty"
 
   cat > "${MH_CONF}" <<EOF
-log-level: warn
+log-level: warning
 mode: direct
 ipv6: true
 
@@ -245,7 +245,9 @@ Group=${MH_GROUP}
 Type=simple
 UMask=0077
 WorkingDirectory=/var/lib/mihomo
-ExecStart=${MH_BIN} -d /etc/mihomo
+Environment="SAFE_PATHS=/etc/tls:/etc/mihomo:/var/lib/mihomo"
+ExecStartPre=${MH_BIN} -t -d /var/lib/mihomo -f ${MH_CONF}
+ExecStart=${MH_BIN} -d /var/lib/mihomo -f ${MH_CONF}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
