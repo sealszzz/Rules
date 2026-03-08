@@ -12,9 +12,11 @@ set -euo pipefail
 : "${ANYTLS_IDLE_CHECK_INTERVAL:=30}"
 : "${ANYTLS_IDLE_TIMEOUT:=120}"
 : "${ANYTLS_MIN_IDLE_SESSION:=1}"
-: "${ANYTLS_FALLBACK:=}"
+: "${ANYTLS_FALLBACK:=127.0.0.1:80}"
 
 export DEBIAN_FRONTEND=noninteractive
+
+SERVICE_FILE="/etc/systemd/system/anytls.service"
 
 apt-get update -yq
 apt-get install -yq --no-install-recommends curl ca-certificates tar openssl
@@ -40,6 +42,8 @@ case "$ARCH" in
 esac
 
 TMP_DIR="$(mktemp -d)"
+trap 'rm -rf "$TMP_DIR"' EXIT
+
 curl -fL --retry 3 --retry-delay 1 -o "$TMP_DIR/pkg.tgz" "https://github.com/sealszzz/anytls/releases/download/${TAG}/${ASSET}"
 mkdir -p "$TMP_DIR/unpack"
 tar -xzf "$TMP_DIR/pkg.tgz" -C "$TMP_DIR/unpack"
@@ -48,10 +52,9 @@ SERVER_BIN="$(find "$TMP_DIR/unpack" -type f -name anytls-server | head -n1 || t
 [ -n "$SERVER_BIN" ] || { echo "FATAL: anytls-server not found"; exit 1; }
 
 install -m 0755 "$SERVER_BIN" /usr/local/bin/anytls
-rm -rf "$TMP_DIR"
 
 FIRST_INSTALL=0
-if [ ! -f /etc/systemd/system/anytls.service ]; then
+if [ ! -f "$SERVICE_FILE" ]; then
   FIRST_INSTALL=1
   [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
 
@@ -73,7 +76,7 @@ if [ ! -f /etc/systemd/system/anytls.service ]; then
     EXEC_START="${EXEC_START} -f ${ANYTLS_FALLBACK}"
   fi
 
-  cat >/etc/systemd/system/anytls.service <<EOF
+  cat >"$SERVICE_FILE" <<EOF
 [Unit]
 Description=AnyTLS Server (anytls-rs)
 Documentation=https://github.com/sealszzz/anytls
@@ -97,7 +100,7 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 /etc/systemd/system/anytls.service
+  chmod 644 "$SERVICE_FILE"
 fi
 
 systemctl daemon-reload
@@ -109,5 +112,6 @@ echo "anytls bin: ${BIN_VER:-unknown}"
 if [ "$FIRST_INSTALL" -eq 1 ]; then
   echo "anytls password: ${A_PASS}"
 else
-  echo "anytls password: (unchanged; check ExecStart in /etc/systemd/system/anytls.service)"
+  echo "anytls password: (unchanged)"
 fi
+echo "anytls fallback: ${ANYTLS_FALLBACK:-disabled}"
