@@ -12,6 +12,7 @@ set -euo pipefail
 : "${ANYTLS_IDLE_CHECK_INTERVAL:=30}"
 : "${ANYTLS_IDLE_TIMEOUT:=120}"
 : "${ANYTLS_MIN_IDLE_SESSION:=1}"
+: "${ANYTLS_FALLBACK:=}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -26,19 +27,20 @@ id -u anytls >/dev/null 2>&1 || useradd --system -g anytls -M -d /var/lib/anytls
 
 install -d -o anytls -g anytls -m 750 /var/lib/anytls
 
-TAG="$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/jxo-me/anytls-rs/releases/latest | grep -o '[^/]*$')"
+TAG="$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/sealszzz/anytls/releases/latest | grep -o '[^/]*$')"
 [ -n "$TAG" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
 
 VER="${TAG#v}"
 ARCH="$(uname -m)"
+
 case "$ARCH" in
-  x86_64|amd64)  ASSET="anytls-linux-x86_64-${VER}.tar.gz" ;;
-  aarch64|arm64) ASSET="anytls-linux-aarch64-${VER}.tar.gz" ;;
+  x86_64|amd64)  ASSET="anytls-server-x86_64-unknown-linux-gnu-v${VER}.tar.gz" ;;
+  aarch64|arm64) ASSET="anytls-server-aarch64-unknown-linux-gnu-v${VER}.tar.gz" ;;
   *) echo "FATAL: unsupported arch $ARCH"; exit 1 ;;
 esac
 
 TMP_DIR="$(mktemp -d)"
-curl -fL --retry 3 --retry-delay 1 -o "$TMP_DIR/pkg.tgz" "https://github.com/jxo-me/anytls-rs/releases/download/${TAG}/${ASSET}"
+curl -fL --retry 3 --retry-delay 1 -o "$TMP_DIR/pkg.tgz" "https://github.com/sealszzz/anytls/releases/download/${TAG}/${ASSET}"
 mkdir -p "$TMP_DIR/unpack"
 tar -xzf "$TMP_DIR/pkg.tgz" -C "$TMP_DIR/unpack"
 
@@ -67,10 +69,14 @@ if [ ! -f /etc/systemd/system/anytls.service ]; then
     EXEC_START="${EXEC_START} --expiry-warning-days ${ANYTLS_EXPIRY_WARNING_DAYS}"
   fi
 
+  if [ -n "${ANYTLS_FALLBACK}" ]; then
+    EXEC_START="${EXEC_START} -f ${ANYTLS_FALLBACK}"
+  fi
+
   cat >/etc/systemd/system/anytls.service <<EOF
 [Unit]
 Description=AnyTLS Server (anytls-rs)
-Documentation=https://github.com/jxo-me/anytls-rs
+Documentation=https://github.com/sealszzz/anytls
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
