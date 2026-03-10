@@ -185,15 +185,29 @@ uninstall_hysteria() {
 }
 
 uninstall_anytls() {
-  echo ">>> 卸载 AnyTLS ..."
-  stop_disable_service "anytls"
-  remove_unit_artifacts "anytls"
+  echo ">>> 卸载 AnyTLS / anytls-go / anytls-rs ..."
+
+  for base in anytls anytls-go anytls-rs; do
+    stop_disable_service "$base"
+    remove_unit_artifacts "$base"
+  done
+
   remove_paths \
     /usr/local/bin/anytls \
+    /usr/local/bin/anytls-go \
+    /usr/local/bin/anytls-rs \
     /etc/anytls /var/lib/anytls /var/log/anytls \
-    /etc/logrotate.d/anytls
+    /etc/anytls-go /var/lib/anytls-go /var/log/anytls-go \
+    /etc/anytls-rs /var/lib/anytls-rs /var/log/anytls-rs \
+    /etc/logrotate.d/anytls \
+    /etc/logrotate.d/anytls-go \
+    /etc/logrotate.d/anytls-rs
+
   remove_user_group "anytls" || true
-  echo "[OK] AnyTLS 卸载完成。"
+  remove_user_group "anytls-go" "anytls-go" || true
+  remove_user_group "anytls-rs" "anytls-rs" || true
+
+  echo "[OK] AnyTLS / anytls-go / anytls-rs 卸载完成。"
 }
 
 uninstall_tobaru() {
