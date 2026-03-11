@@ -142,8 +142,8 @@ cat >"$XRAY_CONF_FILE" <<EOF
   },
   "inbounds": [
     {
-      "listen": "[::]",
-      "port": 4443,
+      "listen": "::",
+      "port": 9002,
       "protocol": "vless",
       "settings": {
         "clients": [
@@ -184,8 +184,8 @@ cat >"$XRAY_CONF_FILE" <<EOF
       }
     },
     {
-      "listen": "[::]",
-      "port": 5443,
+      "listen": "::",
+      "port": 9008,
       "protocol": "vless",
       "settings": {
         "clients": [
