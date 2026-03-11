@@ -4,8 +4,8 @@ set -euo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 : "${XRAY_SNI:=www.cloudflare.com}"
-: "${XRAY_TARGET:=127.0.0.1:9999}"
-: "${XRAY_DEST:=127.0.0.1:9999}"
+: "${XRAY_TARGET:=:9999}"
+: "${XRAY_DEST:=:9999}"
 : "${XRAY_USER:=xray}"
 : "${XRAY_GROUP:=xray}"
 : "${XRAY_TAG:=}"
@@ -135,7 +135,7 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
   parse_reality_keys
   gen_vlessenc_native_pair
 
-  cat >"$XRAY_CONF_FILE" <<EOF
+cat >"$XRAY_CONF_FILE" <<EOF
 {
   "log": {
     "loglevel": "${XRAY_LOG_LEVEL}"
@@ -156,17 +156,22 @@ if [ ! -f "$XRAY_CONF_FILE" ]; then
         "fallbacks": [
           {
             "dest": "${XRAY_DEST}",
-            "xver": 0
+            "xver": 2
           }
         ]
       },
       "streamSettings": {
         "network": "raw",
         "security": "reality",
+        /*
+        "sockopt": {
+          "acceptProxyProtocol": true
+        },
+        */
         "realitySettings": {
           "show": false,
           "target": "${XRAY_TARGET}",
-          "xver": 0,
+          "xver": 2,
           "serverNames": [
             "${XRAY_SNI}"
           ],
