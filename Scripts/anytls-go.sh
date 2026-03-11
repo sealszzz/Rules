@@ -5,7 +5,7 @@ set -euo pipefail
 : "${KEY:=/etc/tls/key.pem}"
 : "${PASS:=}"
 : "${LISTEN:=:9001}"
-: "${FALLBACK_ADDR:=127.0.0.1:80}"
+: "${FALLBACK_ADDR:=:80}"
 : "${LOG_LEVEL:=info}"
 : "${PREFER_MODE:=ipv4}"
 
@@ -94,6 +94,7 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
   "fallback": {
     "address": "${FALLBACK_ADDR}"
   },
+  "proxy_protocol": true,
   "outbound": {
     "prefer_mode": "${PREFER_MODE}"
   }
