@@ -1,95 +1,132 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${ANYTLS_PORT:=8443}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${A_PASS:=}"
-: "${ANYTLS_LOG_LEVEL:=info}"
-: "${ANYTLS_WATCH_CERT:=1}"
-: "${ANYTLS_SHOW_CERT_INFO:=0}"
-: "${ANYTLS_EXPIRY_WARNING_DAYS:=30}"
-: "${ANYTLS_IDLE_CHECK_INTERVAL:=30}"
-: "${ANYTLS_IDLE_TIMEOUT:=120}"
-: "${ANYTLS_MIN_IDLE_SESSION:=1}"
-: "${ANYTLS_FALLBACK:=127.0.0.1:80}"
+: "${PASS:=}"
+: "${LISTEN:=:443}"
+: "${FALLBACK_ADDR:=[::1]:80}"
+: "${LOG_LEVEL:=info}"
+: "${IP_PREFERENCE:=ipv4}"
+
+ANYTLS_USER="anytls-rs"
+ANYTLS_GROUP="anytls-rs"
+ANYTLS_STATE_DIR="/var/lib/anytls-rs"
+ANYTLS_CONF_DIR="/etc/anytls-rs"
+ANYTLS_CONF_FILE="${ANYTLS_CONF_DIR}/config.json"
+ANYTLS_BIN="/usr/local/bin/anytls-rs"
+ANYTLS_SERVICE_NAME="anytls-rs"
+ANYTLS_SERVICE="/etc/systemd/system/${ANYTLS_SERVICE_NAME}.service"
+ANYTLS_REPO="sealszzz/Rules"
 
 export DEBIAN_FRONTEND=noninteractive
 
-SERVICE_FILE="/etc/systemd/system/anytls.service"
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl iproute2 jq
 
-apt-get update -yq
-apt-get install -yq --no-install-recommends curl ca-certificates tar openssl
+[ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
+[ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
 
-[ -r "$CERT" ] || { echo "FATAL: missing $CERT"; exit 1; }
-[ -r "$KEY"  ] || { echo "FATAL: missing $KEY";  exit 1; }
+getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
+id -u "$ANYTLS_USER" >/dev/null 2>&1 || useradd --system -g "$ANYTLS_GROUP" -M -d "$ANYTLS_STATE_DIR" -s /usr/sbin/nologin "$ANYTLS_USER"
 
-getent group anytls >/dev/null || groupadd --system anytls
-id -u anytls >/dev/null 2>&1 || useradd --system -g anytls -M -d /var/lib/anytls -s /usr/sbin/nologin anytls
+install -d -o "$ANYTLS_USER" -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_STATE_DIR"
+install -d -o root -g "$ANYTLS_GROUP" -m 750 "$ANYTLS_CONF_DIR"
 
-install -d -o anytls -g anytls -m 750 /var/lib/anytls
+get_anytls_tag() {
+  local u
+  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${ANYTLS_REPO}/releases/latest")" || return 1
+  printf '%s\n' "${u##*/}"
+}
 
-TAG="$(curl -fsSIL -o /dev/null -w '%{url_effective}' https://github.com/sealszzz/anytls/releases/latest | grep -o '[^/]*$')"
-[ -n "$TAG" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
+install_anytls_release() {
+  local ASSET BASE tmpd bin
+  ANYTLS_TAG="${ANYTLS_TAG:-}"
+  [ -n "$ANYTLS_TAG" ] || ANYTLS_TAG="$(get_anytls_tag 2>/dev/null || true)"
+  [ -n "$ANYTLS_TAG" ] || { echo "FATAL: cannot detect anytls-rs tag" >&2; exit 1; }
 
-VER="${TAG#v}"
-ARCH="$(uname -m)"
+  case "$(uname -m)" in
+    x86_64|amd64)  ASSET="anytls-rs-linux-x86_64-${ANYTLS_TAG}.tar.gz" ;;
+    aarch64|arm64) ASSET="anytls-rs-linux-aarch64-${ANYTLS_TAG}.tar.gz" ;;
+    *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
+  esac
 
-case "$ARCH" in
-  x86_64|amd64)  ASSET="anytls-server-x86_64-unknown-linux-gnu-v${VER}.tar.gz" ;;
-  aarch64|arm64) ASSET="anytls-server-aarch64-unknown-linux-gnu-v${VER}.tar.gz" ;;
-  *) echo "FATAL: unsupported arch $ARCH"; exit 1 ;;
-esac
+  BASE="https://github.com/${ANYTLS_REPO}/releases/download/${ANYTLS_TAG}"
+  tmpd="$(mktemp -d)"
+  trap 'rm -rf "$tmpd"' RETURN
 
-TMP_DIR="$(mktemp -d)"
-trap 'rm -rf "$TMP_DIR"' EXIT
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
+  mkdir -p "$tmpd/unpack"
+  tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
-curl -fL --retry 3 --retry-delay 1 -o "$TMP_DIR/pkg.tgz" "https://github.com/sealszzz/anytls/releases/download/${TAG}/${ASSET}"
-mkdir -p "$TMP_DIR/unpack"
-tar -xzf "$TMP_DIR/pkg.tgz" -C "$TMP_DIR/unpack"
+  bin="$(find "$tmpd/unpack" -type f -name anytls-rs -perm -u+x | head -n1 || true)"
+  [ -n "$bin" ] || { echo "FATAL: anytls-rs binary not found" >&2; exit 1; }
 
-SERVER_BIN="$(find "$TMP_DIR/unpack" -type f -name anytls-server | head -n1 || true)"
-[ -n "$SERVER_BIN" ] || { echo "FATAL: anytls-server not found"; exit 1; }
+  install -m 0755 "$bin" "$ANYTLS_BIN"
+  trap - RETURN
+}
 
-install -m 0755 "$SERVER_BIN" /usr/local/bin/anytls
+install_anytls_release
 
-FIRST_INSTALL=0
-if [ ! -f "$SERVICE_FILE" ]; then
-  FIRST_INSTALL=1
-  [ -n "$A_PASS" ] || A_PASS="$(openssl rand -hex 16)"
+command -v "$ANYTLS_BIN" >/dev/null 2>&1 || { echo "FATAL: ${ANYTLS_BIN} not found" >&2; exit 1; }
 
-  EXEC_START="/usr/local/bin/anytls -l [::]:${ANYTLS_PORT} -p ${A_PASS} --cert ${CERT} --key ${KEY} -L ${ANYTLS_LOG_LEVEL} -I ${ANYTLS_IDLE_CHECK_INTERVAL} -T ${ANYTLS_IDLE_TIMEOUT} -M ${ANYTLS_MIN_IDLE_SESSION}"
+gen_pass() {
+  openssl rand -hex 16
+}
 
-  if [ "${ANYTLS_WATCH_CERT}" = "1" ]; then
-    EXEC_START="${EXEC_START} --watch-cert"
-  fi
+if [ ! -f "$ANYTLS_CONF_FILE" ]; then
+  [ -n "$PASS" ] || PASS="$(gen_pass)"
 
-  if [ "${ANYTLS_SHOW_CERT_INFO}" = "1" ]; then
-    EXEC_START="${EXEC_START} --show-cert-info"
-  fi
+  cat >"$ANYTLS_CONF_FILE" <<EOF
+{
+  "log": {
+    "level": "${LOG_LEVEL}"
+  },
+  "listen": "${LISTEN}",
+  "users": {
+    "anytls": "${PASS}"
+  },
+  "tls": {
+    "certificate": "${CERT}",
+    "private_key": "${KEY}"
+  },
+  "padding": "",
+  "fallback": {
+    "address": "${FALLBACK_ADDR}"
+  },
+  "proxy_protocol": true,
+  "outbound": {
+    "ip_preference": "${IP_PREFERENCE}"
+  },
+  "tcp": {
+    "keepalive_sec": 30,
+    "send_buffer": 524288,
+    "recv_buffer": 524288
+  }
+}
+EOF
 
-  if [ -n "${ANYTLS_EXPIRY_WARNING_DAYS}" ]; then
-    EXEC_START="${EXEC_START} --expiry-warning-days ${ANYTLS_EXPIRY_WARNING_DAYS}"
-  fi
+  jq empty "$ANYTLS_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$ANYTLS_CONF_FILE" >&2; exit 1; }
 
-  if [ -n "${ANYTLS_FALLBACK}" ]; then
-    EXEC_START="${EXEC_START} -f ${ANYTLS_FALLBACK}"
-  fi
+  chown root:"$ANYTLS_GROUP" "$ANYTLS_CONF_FILE"
+  chmod 640 "$ANYTLS_CONF_FILE"
+fi
 
-  cat >"$SERVICE_FILE" <<EOF
+if [ ! -f "$ANYTLS_SERVICE" ]; then
+  cat >"$ANYTLS_SERVICE" <<EOF
 [Unit]
-Description=AnyTLS Server (anytls-rs)
-Documentation=https://github.com/sealszzz/anytls
+Description=AnyTLS Rust Server
+Documentation=https://github.com/sealszzz/Rules/releases
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
-User=anytls
-Group=anytls
+User=${ANYTLS_USER}
+Group=${ANYTLS_GROUP}
 Type=simple
 UMask=0077
-WorkingDirectory=/var/lib/anytls
-ExecStart=${EXEC_START}
+WorkingDirectory=${ANYTLS_STATE_DIR}
+ExecStart=${ANYTLS_BIN} ${ANYTLS_CONF_FILE}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -100,18 +137,24 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 "$SERVICE_FILE"
+  chmod 644 "$ANYTLS_SERVICE"
 fi
 
 systemctl daemon-reload
-systemctl enable --now anytls >/dev/null 2>&1 || systemctl restart anytls
-
-BIN_VER="$(/usr/local/bin/anytls -V 2>/dev/null || /usr/local/bin/anytls --version 2>/dev/null || true)"
-echo "anytls tag: ${TAG}"
-echo "anytls bin: ${BIN_VER:-unknown}"
-if [ "$FIRST_INSTALL" -eq 1 ]; then
-  echo "anytls password: ${A_PASS}"
+if systemctl is-enabled --quiet "$ANYTLS_SERVICE_NAME"; then
+  systemctl restart "$ANYTLS_SERVICE_NAME"
 else
-  echo "anytls password: (unchanged)"
+  systemctl enable --now "$ANYTLS_SERVICE_NAME"
 fi
-echo "anytls fallback: ${ANYTLS_FALLBACK:-disabled}"
+
+BIN_VER="$("$ANYTLS_BIN" --version 2>/dev/null || true)"
+
+SHOW_PASS="${PASS:-}"
+if [ -z "$SHOW_PASS" ] && [ -f "$ANYTLS_CONF_FILE" ]; then
+  SHOW_PASS="$(jq -r '.users.anytls // empty' "$ANYTLS_CONF_FILE" 2>/dev/null || true)"
+fi
+
+echo "anytls-rs tag: ${ANYTLS_TAG:-unknown}"
+echo "anytls-rs bin: ${BIN_VER:-unknown}"
+echo "config file: ${ANYTLS_CONF_FILE}"
+echo "password: ${SHOW_PASS:-unknown}"
