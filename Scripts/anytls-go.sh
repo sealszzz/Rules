@@ -4,10 +4,10 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 : "${PASS:=}"
-: "${LISTEN:=:9001}"
-: "${FALLBACK_ADDR:=:80}"
+: "${LISTEN:=:443}"
+: "${FALLBACK_ADDR:=[::1]:80}"
 : "${LOG_LEVEL:=info}"
-: "${PREFER_MODE:=ipv4}"
+: "${IP_PREFERENCE:=ipv4}"
 
 ANYTLS_USER="anytls-go"
 ANYTLS_GROUP="anytls-go"
@@ -94,9 +94,14 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
   "fallback": {
     "address": "${FALLBACK_ADDR}"
   },
-  "proxy_protocol": true,
+  "proxy_protocol": false,
   "outbound": {
-    "prefer_mode": "${PREFER_MODE}"
+    "ip_preference": "${IP_PREFERENCE}"
+  },
+  "tcp": {
+    "keepalive_sec": 30,
+    "send_buffer": 524288,
+    "recv_buffer": 524288
   }
 }
 EOF
