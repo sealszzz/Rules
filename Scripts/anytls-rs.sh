@@ -46,8 +46,8 @@ install_anytls_release() {
   [ -n "$ANYTLS_TAG" ] || { echo "FATAL: cannot detect anytls-rs tag" >&2; exit 1; }
 
   case "$(uname -m)" in
-    x86_64|amd64)  ASSET="anytls-rs-linux-x86_64-${ANYTLS_TAG}.tar.gz" ;;
-    aarch64|arm64) ASSET="anytls-rs-linux-aarch64-${ANYTLS_TAG}.tar.gz" ;;
+    x86_64|amd64)  ASSET="anytls-rs-linux-amd64-${ANYTLS_TAG}.tar.gz" ;;
+    aarch64|arm64) ASSET="anytls-rs-linux-arm64-${ANYTLS_TAG}.tar.gz" ;;
     *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
   esac
 
@@ -94,7 +94,7 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
   "fallback": {
     "address": "${FALLBACK_ADDR}"
   },
-  "proxy_protocol": true,
+  "proxy_protocol": false,
   "outbound": {
     "ip_preference": "${IP_PREFERENCE}"
   },
