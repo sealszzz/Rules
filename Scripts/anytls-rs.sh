@@ -4,7 +4,7 @@ set -euo pipefail
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
 : "${PASS:=}"
-: "${LISTEN:=:443}"
+: "${LISTEN:=[::]:443}"
 : "${FALLBACK_ADDR:=[::1]:80}"
 : "${LOG_LEVEL:=info}"
 : "${IP_PREFERENCE:=ipv4}"
