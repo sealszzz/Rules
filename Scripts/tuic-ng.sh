@@ -149,7 +149,7 @@ else
   systemctl enable --now "$TUIC_NG_SERVICE_NAME"
 fi
 
-BIN_VER="$("$TUIC_NG_BIN" --version 2>/dev/null || true)"
+BIN_VER="$("$TUIC_NG_BIN" --version 2>/dev/null | head -n1 || true)"
 
 SHOW_UUID="${UUID:-}"
 SHOW_PASS="${PASS:-}"
