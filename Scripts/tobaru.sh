@@ -9,12 +9,17 @@ set -euo pipefail
 : "${TOBARU_SERVICE:=/etc/systemd/system/tobaru.service}"
 : "${TOBARU_REPO:=sealszzz/Rules}"
 : "${SERVICE_NAME:=tobaru}"
+: "${TOBARU_LOG_DIR:=/var/log/tobaru}"
 
 export DEBIAN_FRONTEND=noninteractive
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update -qq
-apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
+apt-get install -y --no-install-recommends \
+  curl \
+  ca-certificates \
+  tar \
+  libcap2-bin >/dev/null
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64) ASSET_ARCH="linux-amd64" ;;
@@ -43,12 +48,14 @@ else
 fi
 [ -n "${FOUND_BIN:-}" ] || { echo "FATAL: missing tobaru binary in tar"; exit 1; }
 
-install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
-
 getent group "$TOBARU_GROUP" >/dev/null || groupadd --system "$TOBARU_GROUP"
 id -u "$TOBARU_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$TOBARU_GROUP" --shell /usr/sbin/nologin "$TOBARU_USER"
 
+install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
+setcap 'cap_net_bind_service=+ep' "$TOBARU_BIN" || true
+
 install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
+install -d -o "$TOBARU_USER" -g "$TOBARU_GROUP" -m 0755 "$TOBARU_LOG_DIR"
 
 if [ ! -f "$TOBARU_CONF" ]; then
 cat >"$TOBARU_CONF" <<'EOF'
@@ -126,10 +133,12 @@ chmod 0644 "$TOBARU_SERVICE"
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
+systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
 echo
 echo "tobaru installed: $TAG"
 echo "Binary : $TOBARU_BIN"
 echo "Config : $TOBARU_CONF"
+echo "Logs   : $TOBARU_LOG_DIR"
 echo "Status : systemctl status $SERVICE_NAME --no-pager"
