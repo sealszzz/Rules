@@ -18,8 +18,7 @@ apt-get update -qq
 apt-get install -y --no-install-recommends \
   curl \
   ca-certificates \
-  tar \
-  libcap2-bin >/dev/null
+  tar >/dev/null
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64) ASSET_ARCH="linux-amd64" ;;
@@ -52,7 +51,6 @@ getent group "$TOBARU_GROUP" >/dev/null || groupadd --system "$TOBARU_GROUP"
 id -u "$TOBARU_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$TOBARU_GROUP" --shell /usr/sbin/nologin "$TOBARU_USER"
 
 install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
-setcap 'cap_net_bind_service=+ep' "$TOBARU_BIN" || true
 
 install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
 install -d -o "$TOBARU_USER" -g "$TOBARU_GROUP" -m 0755 "$TOBARU_LOG_DIR"
