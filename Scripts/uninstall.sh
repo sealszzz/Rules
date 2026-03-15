@@ -113,15 +113,21 @@ uninstall_singbox() {
 }
 
 uninstall_tuic() {
-  echo ">>> 卸载 TUIC ..."
-  stop_disable_service "tuic"
-  remove_unit_artifacts "tuic"
+  echo ">>> 卸载 TUIC / tuic-ng ..."
+  for base in tuic tuic-ng; do
+    stop_disable_service "$base"
+    remove_unit_artifacts "$base"
+  done
   remove_paths \
     /usr/local/bin/tuic \
+    /usr/local/bin/tuic-ng \
     /etc/tuic /var/lib/tuic /var/log/tuic \
-    /etc/logrotate.d/tuic
+    /etc/tuic-ng /var/lib/tuic-ng /var/log/tuic-ng \
+    /etc/logrotate.d/tuic \
+    /etc/logrotate.d/tuic-ng
   remove_user_group "tuic" || true
-  echo "[OK] TUIC 卸载完成。"
+  remove_user_group "tuic-ng" "tuic-ng" || true
+  echo "[OK] TUIC / tuic-ng 卸载完成。"
 }
 
 uninstall_juicity() {
@@ -344,7 +350,7 @@ main_menu() {
  1) [$([ "${SEL[caddy]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Caddy (含 caddy-l4)
  2) [$([ "${SEL[xray]}"        -eq 1 ] && echo x || echo ' ')] 卸载 Xray
  3) [$([ "${SEL[singbox]}"     -eq 1 ] && echo x || echo ' ')] 卸载 sing-box
- 4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC
+ 4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC (含 tuic-ng)
  5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity
  6) [$([ "${SEL[shoes]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Shoes
  7) [$([ "${SEL[shadowquic]}"  -eq 1 ] && echo x || echo ' ')] 卸载 ShadowQUIC
@@ -363,7 +369,6 @@ MENU
     line="${line:-}"
     [ -z "$line" ] && continue
 
-    # shellcheck disable=SC2206
     tokens=($line)
 
     for t in "${tokens[@]}"; do
