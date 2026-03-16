@@ -6,18 +6,17 @@ set -euo pipefail
 : "${UUID:=}"
 : "${PASS:=}"
 : "${LISTEN_PORT:=443}"
-: "${WORKER_COUNT:=4}"
-: "${QUIC_IDLE_TIMEOUT_SEC:=30}"
-: "${SERVER_CONNECTION_ID_LEN:=16}"
+: "${ZERO_RTT:=true}"
+: "${PROXY_PROTOCOL:=true}"
 : "${LOG_LEVEL:=info}"
-: "${IP_PREFERENCE:=prefer_v4}"
+: "${IP_PREFERENCE:=ipv4}"
 : "${CONGESTION_CONTROL:=bbr}"
 
 TUIC_NG_USER="tuic-ng"
 TUIC_NG_GROUP="tuic-ng"
 TUIC_NG_STATE_DIR="/var/lib/tuic-ng"
 TUIC_NG_CONF_DIR="/etc/tuic-ng"
-TUIC_NG_CONF_FILE="${TUIC_NG_CONF_DIR}/server.json"
+TUIC_NG_CONF_FILE="${TUIC_NG_CONF_DIR}/config.json"
 TUIC_NG_BIN="/usr/local/bin/tuic-ng"
 TUIC_NG_SERVICE_NAME="tuic-ng"
 TUIC_NG_SERVICE="/etc/systemd/system/${TUIC_NG_SERVICE_NAME}.service"
@@ -26,7 +25,8 @@ TUIC_NG_REPO="sealszzz/Rules"
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl iproute2 jq uuid-runtime
+apt-get install -y --no-install-recommends \
+  curl ca-certificates tar xz-utils openssl iproute2 jq uuid-runtime
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
@@ -82,33 +82,45 @@ gen_uuid() {
   uuidgen
 }
 
+normalize_bool() {
+  case "${1,,}" in
+    1|true|yes|on)  printf 'true\n' ;;
+    0|false|no|off) printf 'false\n' ;;
+    *) echo "FATAL: invalid boolean: $1" >&2; exit 1 ;;
+  esac
+}
+
+ZERO_RTT_JSON="$(normalize_bool "$ZERO_RTT")"
+PROXY_PROTOCOL_JSON="$(normalize_bool "$PROXY_PROTOCOL")"
+
 if [ ! -f "$TUIC_NG_CONF_FILE" ]; then
   [ -n "$UUID" ] || UUID="$(gen_uuid)"
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
   cat >"$TUIC_NG_CONF_FILE" <<EOF
 {
-  "listen_port": ${LISTEN_PORT},
-  "worker_count": ${WORKER_COUNT},
-  "quic_idle_timeout_sec": ${QUIC_IDLE_TIMEOUT_SEC},
-  "server_connection_id_len": ${SERVER_CONNECTION_ID_LEN},
-  "cert_path": "${CERT}",
-  "key_path": "${KEY}",
-  "congestion_control": "${CONGESTION_CONTROL}",
-  "log_level": "${LOG_LEVEL}",
-  "outbound": {
-    "ip_preference": "${IP_PREFERENCE}"
-  },
+  "listen": "[::]:${LISTEN_PORT}",
+  "zero_rtt": ${ZERO_RTT_JSON},
+  "cert": "${CERT}",
+  "key": "${KEY}",
   "users": [
     {
       "uuid": "${UUID}",
       "password": "${PASS}"
     }
-  ]
+  ],
+  "congestion_control": "${CONGESTION_CONTROL}",
+  "proxy_protocol": ${PROXY_PROTOCOL_JSON},
+  "ip_preference": "${IP_PREFERENCE}",
+  "log_level": "${LOG_LEVEL}"
 }
 EOF
 
-  jq empty "$TUIC_NG_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$TUIC_NG_CONF_FILE" >&2; exit 1; }
+  jq empty "$TUIC_NG_CONF_FILE" >/dev/null 2>&1 || {
+    echo "FATAL: invalid json generated" >&2
+    cat "$TUIC_NG_CONF_FILE" >&2
+    exit 1
+  }
 
   chown root:"$TUIC_NG_GROUP" "$TUIC_NG_CONF_FILE"
   chmod 640 "$TUIC_NG_CONF_FILE"
