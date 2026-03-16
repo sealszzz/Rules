@@ -109,8 +109,10 @@ if [ ! -f "$TUIC_NG_CONF_FILE" ]; then
       "password": "${PASS}"
     }
   ],
+  "alpn": [
+    "h3"
+  ],
   "congestion_control": "${CONGESTION_CONTROL}",
-  "proxy_protocol": ${PROXY_PROTOCOL_JSON},
   "ip_preference": "${IP_PREFERENCE}",
   "log_level": "${LOG_LEVEL}"
 }
