@@ -3,11 +3,14 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${PASS:=}"
+: "${PASS:=cdaac67c6610f9d34a9fa8a5caaf56ff}"
 : "${LISTEN:=[::]:443}"
 : "${FALLBACK_ADDR:=[::1]:80}"
 : "${LOG_LEVEL:=info}"
 : "${IP_PREFERENCE:=ipv4}"
+: "${CONNECT_RACE_WIDTH:=2}"
+: "${HAPPY_EYEBALLS_DELAY_MS:=200}"
+: "${TCP_KEEPALIVE_SEC:=30}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -70,13 +73,7 @@ install_anytls_release
 
 command -v "$ANYTLS_BIN" >/dev/null 2>&1 || { echo "FATAL: ${ANYTLS_BIN} not found" >&2; exit 1; }
 
-gen_pass() {
-  openssl rand -hex 16
-}
-
 if [ ! -f "$ANYTLS_CONF_FILE" ]; then
-  [ -n "$PASS" ] || PASS="$(gen_pass)"
-
   cat >"$ANYTLS_CONF_FILE" <<EOF
 {
   "log": {
@@ -90,18 +87,18 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
     "certificate": "${CERT}",
     "private_key": "${KEY}"
   },
+  "tcp": {
+    "keepalive_sec": ${TCP_KEEPALIVE_SEC}
+  },
   "padding": "",
   "fallback": {
     "address": "${FALLBACK_ADDR}"
   },
   "proxy_protocol": false,
   "outbound": {
-    "ip_preference": "${IP_PREFERENCE}"
-  },
-  "tcp": {
-    "keepalive_sec": 30,
-    "send_buffer": 524288,
-    "recv_buffer": 524288
+    "ip_preference": "${IP_PREFERENCE}",
+    "connect_race_width": ${CONNECT_RACE_WIDTH},
+    "happy_eyeballs_delay_ms": ${HAPPY_EYEBALLS_DELAY_MS}
   }
 }
 EOF
