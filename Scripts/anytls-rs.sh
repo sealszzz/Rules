@@ -87,10 +87,9 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
     "certificate": "${CERT}",
     "private_key": "${KEY}"
   },
-  "tcp": {
-    "keepalive_sec": ${TCP_KEEPALIVE_SEC}
+  "padding": {
+    "scheme": ""
   },
-  "padding": "",
   "fallback": {
     "address": "${FALLBACK_ADDR}"
   },
@@ -99,6 +98,10 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
     "ip_preference": "${IP_PREFERENCE}",
     "connect_race_width": ${CONNECT_RACE_WIDTH},
     "happy_eyeballs_delay_ms": ${HAPPY_EYEBALLS_DELAY_MS}
+  },
+  "limits": {
+    "inbound_tcp_keepalive_secs": ${TCP_KEEPALIVE_SEC},
+    "outbound_tcp_keepalive_secs": ${TCP_KEEPALIVE_SEC}
   }
 }
 EOF
