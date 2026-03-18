@@ -1,9 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${PASS:=}"
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
+: "${PASS:=}"
+: "${LISTEN:=[::]:443}"
+: "${FALLBACK_ADDR:=[::1]:80}"
+: "${LOG_LEVEL:=info}"
+: "${IP_PREFERENCE:=ipv4}"
+: "${PADDING_SCHEME:=}"
+: "${TCP_KEEPALIVE_IDLE_SEC:=30}"
+: "${TCP_KEEPALIVE_INTERVAL_SEC:=30}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -99,9 +106,9 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
   cat >"$ANYTLS_CONF_FILE" <<EOF
 {
   "log": {
-    "level": "info"
+    "level": "${LOG_LEVEL}"
   },
-  "listen": "[::]:443",
+  "listen": "${LISTEN}",
   "users": {
     "anytls": "${PASS}"
   },
@@ -110,20 +117,20 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
     "private_key": "${KEY}"
   },
   "padding": {
-    "scheme": ""
+    "scheme": "${PADDING_SCHEME}"
   },
   "fallback": {
-    "address": "[::1]:80"
+    "address": "${FALLBACK_ADDR}"
   },
   "proxy_protocol": false,
   "outbound": {
-    "ip_preference": "ipv4",
+    "ip_preference": "${IP_PREFERENCE}",
     "connect_race_width": 2,
     "happy_eyeballs_delay_ms": 200
   },
   "tcp": {
-    "keepalive_idle_sec": 30,
-    "keepalive_interval_sec": 30
+    "keepalive_idle_sec": ${TCP_KEEPALIVE_IDLE_SEC},
+    "keepalive_interval_sec": ${TCP_KEEPALIVE_INTERVAL_SEC}
   }
 }
 EOF
