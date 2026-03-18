@@ -7,10 +7,8 @@ set -euo pipefail
 : "${LISTEN:=[::]:443}"
 : "${FALLBACK_ADDR:=[::1]:80}"
 : "${LOG_LEVEL:=info}"
-: "${IP_PREFERENCE:=ipv4}"
-: "${CONNECT_RACE_WIDTH:=2}"
-: "${HAPPY_EYEBALLS_DELAY_MS:=200}"
-: "${TCP_KEEPALIVE_SEC:=30}"
+: "${PADDING_SCHEME:=}"
+: "${PROXY_PROTOCOL:=false}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -29,6 +27,16 @@ apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils ope
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
+
+case "${PROXY_PROTOCOL}" in
+  true|false) ;;
+  *) echo "FATAL: PROXY_PROTOCOL must be true or false" >&2; exit 1 ;;
+esac
+
+case "${LOG_LEVEL}" in
+  trace|debug|info|warn|error) ;;
+  *) echo "FATAL: LOG_LEVEL must be one of trace/debug/info/warn/error" >&2; exit 1 ;;
+esac
 
 getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
 id -u "$ANYTLS_USER" >/dev/null 2>&1 || useradd --system -g "$ANYTLS_GROUP" -M -d "$ANYTLS_STATE_DIR" -s /usr/sbin/nologin "$ANYTLS_USER"
@@ -74,37 +82,35 @@ install_anytls_release
 command -v "$ANYTLS_BIN" >/dev/null 2>&1 || { echo "FATAL: ${ANYTLS_BIN} not found" >&2; exit 1; }
 
 if [ ! -f "$ANYTLS_CONF_FILE" ]; then
-  cat >"$ANYTLS_CONF_FILE" <<EOF
-{
-  "log": {
-    "level": "${LOG_LEVEL}"
-  },
-  "listen": "${LISTEN}",
-  "users": {
-    "anytls": "${PASS}"
-  },
-  "tls": {
-    "certificate": "${CERT}",
-    "private_key": "${KEY}"
-  },
-  "padding": {
-    "scheme": ""
-  },
-  "fallback": {
-    "address": "${FALLBACK_ADDR}"
-  },
-  "proxy_protocol": false,
-  "outbound": {
-    "ip_preference": "${IP_PREFERENCE}",
-    "connect_race_width": ${CONNECT_RACE_WIDTH},
-    "happy_eyeballs_delay_ms": ${HAPPY_EYEBALLS_DELAY_MS}
-  },
-  "limits": {
-    "inbound_tcp_keepalive_secs": ${TCP_KEEPALIVE_SEC},
-    "outbound_tcp_keepalive_secs": ${TCP_KEEPALIVE_SEC}
-  }
-}
-EOF
+  jq -n \
+    --arg log_level "$LOG_LEVEL" \
+    --arg listen "$LISTEN" \
+    --arg pass "$PASS" \
+    --arg cert "$CERT" \
+    --arg key "$KEY" \
+    --arg padding_scheme "$PADDING_SCHEME" \
+    --arg fallback_addr "$FALLBACK_ADDR" \
+    --argjson proxy_protocol "$PROXY_PROTOCOL" \
+    '{
+      log: {
+        level: $log_level
+      },
+      listen: $listen,
+      users: {
+        anytls: $pass
+      },
+      tls: {
+        certificate: $cert,
+        private_key: $key
+      },
+      padding: {
+        scheme: $padding_scheme
+      },
+      fallback: {
+        address: $fallback_addr
+      },
+      proxy_protocol: $proxy_protocol
+    }' >"$ANYTLS_CONF_FILE"
 
   jq empty "$ANYTLS_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$ANYTLS_CONF_FILE" >&2; exit 1; }
 
