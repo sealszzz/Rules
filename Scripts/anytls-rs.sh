@@ -9,6 +9,8 @@ set -euo pipefail
 : "${LOG_LEVEL:=info}"
 : "${IP_PREFERENCE:=ipv4}"
 : "${PADDING_SCHEME:=}"
+: "${TCP_KEEPALIVE_IDLE_SEC:=15}"
+: "${TCP_KEEPALIVE_INTERVAL_SEC:=15}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -37,6 +39,19 @@ case "${IP_PREFERENCE}" in
   ipv4|ipv6|system|auto|default|v4|v6|4|6) ;;
   *) echo "FATAL: IP_PREFERENCE must be one of ipv4/ipv6/system" >&2; exit 1 ;;
 esac
+
+case "${TCP_KEEPALIVE_IDLE_SEC}" in
+  ''|*[!0-9]*) echo "FATAL: TCP_KEEPALIVE_IDLE_SEC must be a non-negative integer" >&2; exit 1 ;;
+esac
+
+case "${TCP_KEEPALIVE_INTERVAL_SEC}" in
+  ''|*[!0-9]*) echo "FATAL: TCP_KEEPALIVE_INTERVAL_SEC must be a non-negative integer" >&2; exit 1 ;;
+esac
+
+if [ "${TCP_KEEPALIVE_IDLE_SEC}" -eq 0 ] && [ "${TCP_KEEPALIVE_INTERVAL_SEC}" -ne 0 ]; then
+  echo "FATAL: TCP_KEEPALIVE_INTERVAL_SEC must be 0 when TCP_KEEPALIVE_IDLE_SEC is 0" >&2
+  exit 1
+fi
 
 getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
 id -u "$ANYTLS_USER" >/dev/null 2>&1 || useradd --system -g "$ANYTLS_GROUP" -M -d "$ANYTLS_STATE_DIR" -s /usr/sbin/nologin "$ANYTLS_USER"
@@ -110,6 +125,10 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
   "proxy_protocol": false,
   "outbound": {
     "ip_preference": "${IP_PREFERENCE}"
+  },
+  "tcp": {
+    "keepalive_idle_sec": ${TCP_KEEPALIVE_IDLE_SEC},
+    "keepalive_interval_sec": ${TCP_KEEPALIVE_INTERVAL_SEC}
   }
 }
 EOF
