@@ -1,8 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
 : "${UUID:=}"
 : "${PASS:=}"
+: "${LISTEN_PORT:=443}"
+: "${ZERO_RTT:=true}"
+: "${PROXY_PROTOCOL:=true}"
+: "${LOG_LEVEL:=info}"
+: "${IP_PREFERENCE:=ipv4}"
+: "${CONGESTION_CONTROL:=bbr}"
 
 TUIC_NG_USER="tuic-ng"
 TUIC_NG_GROUP="tuic-ng"
@@ -82,16 +90,19 @@ normalize_bool() {
   esac
 }
 
+ZERO_RTT_JSON="$(normalize_bool "$ZERO_RTT")"
+PROXY_PROTOCOL_JSON="$(normalize_bool "$PROXY_PROTOCOL")"
+
 if [ ! -f "$TUIC_NG_CONF_FILE" ]; then
   [ -n "$UUID" ] || UUID="$(gen_uuid)"
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
   cat >"$TUIC_NG_CONF_FILE" <<EOF
 {
-  "listen": "[::]:443",
-  "zero_rtt_mode": "full",
-  "cert": "/etc/tls/cert.pem",
-  "key": "/etc/tls/key.pem",
+  "listen": "[::]:${LISTEN_PORT}",
+  "zero_rtt": ${ZERO_RTT_JSON},
+  "cert": "${CERT}",
+  "key": "${KEY}",
   "users": [
     {
       "uuid": "${UUID}",
@@ -101,9 +112,9 @@ if [ ! -f "$TUIC_NG_CONF_FILE" ]; then
   "alpn": [
     "h3"
   ],
-  "congestion_control": "bbr",
-  "ip_preference": "ipv4",
-  "log_level": "info",
+  "congestion_control": "${CONGESTION_CONTROL}",
+  "ip_preference": "${IP_PREFERENCE}",
+  "log_level": "${LOG_LEVEL}"
   "max_idle_secs": 200,
   "keepalive_secs": 20
 }
