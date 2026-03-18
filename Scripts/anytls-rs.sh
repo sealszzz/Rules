@@ -3,12 +3,12 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${PASS:=cdaac67c6610f9d34a9fa8a5caaf56ff}"
+: "${PASS:=}"
 : "${LISTEN:=[::]:443}"
 : "${FALLBACK_ADDR:=[::1]:80}"
 : "${LOG_LEVEL:=info}"
+: "${IP_PREFERENCE:=ipv4}"
 : "${PADDING_SCHEME:=}"
-: "${PROXY_PROTOCOL:=false}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -28,14 +28,14 @@ apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils ope
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
 
-case "${PROXY_PROTOCOL}" in
-  true|false) ;;
-  *) echo "FATAL: PROXY_PROTOCOL must be true or false" >&2; exit 1 ;;
-esac
-
 case "${LOG_LEVEL}" in
   trace|debug|info|warn|error) ;;
   *) echo "FATAL: LOG_LEVEL must be one of trace/debug/info/warn/error" >&2; exit 1 ;;
+esac
+
+case "${IP_PREFERENCE}" in
+  ipv4|ipv6|system|auto|default|v4|v6|4|6) ;;
+  *) echo "FATAL: IP_PREFERENCE must be one of ipv4/ipv6/system" >&2; exit 1 ;;
 esac
 
 getent group "$ANYTLS_GROUP" >/dev/null || groupadd --system "$ANYTLS_GROUP"
@@ -81,36 +81,38 @@ install_anytls_release
 
 command -v "$ANYTLS_BIN" >/dev/null 2>&1 || { echo "FATAL: ${ANYTLS_BIN} not found" >&2; exit 1; }
 
+gen_pass() {
+  openssl rand -hex 16
+}
+
 if [ ! -f "$ANYTLS_CONF_FILE" ]; then
-  jq -n \
-    --arg log_level "$LOG_LEVEL" \
-    --arg listen "$LISTEN" \
-    --arg pass "$PASS" \
-    --arg cert "$CERT" \
-    --arg key "$KEY" \
-    --arg padding_scheme "$PADDING_SCHEME" \
-    --arg fallback_addr "$FALLBACK_ADDR" \
-    --argjson proxy_protocol "$PROXY_PROTOCOL" \
-    '{
-      log: {
-        level: $log_level
-      },
-      listen: $listen,
-      users: {
-        anytls: $pass
-      },
-      tls: {
-        certificate: $cert,
-        private_key: $key
-      },
-      padding: {
-        scheme: $padding_scheme
-      },
-      fallback: {
-        address: $fallback_addr
-      },
-      proxy_protocol: $proxy_protocol
-    }' >"$ANYTLS_CONF_FILE"
+  [ -n "$PASS" ] || PASS="$(gen_pass)"
+
+  cat >"$ANYTLS_CONF_FILE" <<EOF
+{
+  "log": {
+    "level": "${LOG_LEVEL}"
+  },
+  "listen": "${LISTEN}",
+  "users": {
+    "anytls": "${PASS}"
+  },
+  "tls": {
+    "certificate": "${CERT}",
+    "private_key": "${KEY}"
+  },
+  "padding": {
+    "scheme": "${PADDING_SCHEME}"
+  },
+  "fallback": {
+    "address": "${FALLBACK_ADDR}"
+  },
+  "proxy_protocol": false,
+  "outbound": {
+    "ip_preference": "${IP_PREFERENCE}"
+  }
+}
+EOF
 
   jq empty "$ANYTLS_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$ANYTLS_CONF_FILE" >&2; exit 1; }
 
