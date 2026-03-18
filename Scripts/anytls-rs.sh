@@ -2,6 +2,8 @@
 set -euo pipefail
 
 : "${PASS:=}"
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
 
 ANYTLS_USER="anytls-rs"
 ANYTLS_GROUP="anytls-rs"
@@ -104,8 +106,8 @@ if [ ! -f "$ANYTLS_CONF_FILE" ]; then
     "anytls": "${PASS}"
   },
   "tls": {
-    "certificate": "/etc/tls/cert.pem",
-    "private_key": "/etc/tls/key.pem"
+    "certificate": "${CERT}",
+    "private_key": "${KEY}"
   },
   "padding": {
     "scheme": ""
