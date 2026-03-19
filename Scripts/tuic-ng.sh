@@ -7,7 +7,7 @@ set -euo pipefail
 : "${PASS:=}"
 : "${LISTEN_PORT:=443}"
 
-: "${ZERO_RTT_MODE:=off}"
+: "${ZERO_RTT_MODE:=auth}"
 : "${ALPN:=h3}"
 : "${CONGESTION_CONTROL:=bbr}"
 : "${IP_PREFERENCE:=v4v6}"
@@ -15,13 +15,13 @@ set -euo pipefail
 
 : "${MAX_IDLE_SECS:=200}"
 : "${KEEPALIVE_SECS:=20}"
-: "${TCP_CONNECT_TIMEOUT_SECS:=10}"
+: "${TCP_CONNECT_TIMEOUT_SECS:=8}"
 : "${DNS_CACHE_TTL_SECS:=60}"
 : "${AUTH_TIMEOUT_SECS:=5}"
 
-: "${MAX_HANDSHAKES:=32}"
-: "${MAX_CONNECTIONS:=128}"
-: "${MAX_UDP_ASSOCS_PER_SESSION:=8}"
+: "${MAX_HANDSHAKES:=64}"
+: "${MAX_CONNECTIONS:=256}"
+: "${MAX_UDP_ASSOCS_PER_SESSION:=16}"
 
 TUIC_NG_USER="tuic-ng"
 TUIC_NG_GROUP="tuic-ng"
