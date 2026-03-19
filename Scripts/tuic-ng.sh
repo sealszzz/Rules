@@ -6,11 +6,22 @@ set -euo pipefail
 : "${UUID:=}"
 : "${PASS:=}"
 : "${LISTEN_PORT:=443}"
-: "${ZERO_RTT:=true}"
-: "${PROXY_PROTOCOL:=true}"
-: "${LOG_LEVEL:=info}"
-: "${IP_PREFERENCE:=ipv4}"
+
+: "${ZERO_RTT_MODE:=off}"
+: "${ALPN:=h3}"
 : "${CONGESTION_CONTROL:=bbr}"
+: "${IP_PREFERENCE:=v4v6}"
+: "${LOG_LEVEL:=info}"
+
+: "${MAX_IDLE_SECS:=200}"
+: "${KEEPALIVE_SECS:=20}"
+: "${TCP_CONNECT_TIMEOUT_SECS:=10}"
+: "${DNS_CACHE_TTL_SECS:=60}"
+: "${AUTH_TIMEOUT_SECS:=5}"
+
+: "${MAX_HANDSHAKES:=32}"
+: "${MAX_CONNECTIONS:=128}"
+: "${MAX_UDP_ASSOCS_PER_SESSION:=8}"
 
 TUIC_NG_USER="tuic-ng"
 TUIC_NG_GROUP="tuic-ng"
@@ -24,12 +35,74 @@ TUIC_NG_REPO="sealszzz/Rules"
 
 export DEBIAN_FRONTEND=noninteractive
 
+need_root() {
+  if [ "${EUID:-$(id -u)}" -ne 0 ]; then
+    echo "请用 root 运行" >&2
+    exit 1
+  fi
+}
+
+normalize_zero_rtt_mode() {
+  case "$1" in
+    off|auth|full) printf '%s' "$1" ;;
+    *) echo "FATAL: invalid ZERO_RTT_MODE: $1 (use off/auth/full)" >&2; exit 1 ;;
+  esac
+}
+
+normalize_ip_preference() {
+  case "$1" in
+    v4v6|v6v4|system) printf '%s' "$1" ;;
+    *) echo "FATAL: invalid IP_PREFERENCE: $1 (use v4v6/v6v4/system)" >&2; exit 1 ;;
+  esac
+}
+
+normalize_log_level() {
+  case "$1" in
+    trace|debug|info|warn|error) printf '%s' "$1" ;;
+    *) echo "FATAL: invalid LOG_LEVEL: $1 (use trace/debug/info/warn/error)" >&2; exit 1 ;;
+  esac
+}
+
+normalize_cc() {
+  case "$1" in
+    bbr|cubic|new_reno) printf '%s' "$1" ;;
+    *) echo "FATAL: invalid CONGESTION_CONTROL: $1 (use bbr/cubic/new_reno)" >&2; exit 1 ;;
+  esac
+}
+
+normalize_u64_gt0() {
+  local name="$1" value="$2"
+  [[ "$value" =~ ^[0-9]+$ ]] || { echo "FATAL: ${name} must be an integer" >&2; exit 1; }
+  [ "$value" -gt 0 ] || { echo "FATAL: ${name} must be > 0" >&2; exit 1; }
+  printf '%s' "$value"
+}
+
+need_root
+
 apt-get update
 apt-get install -y --no-install-recommends \
-  curl ca-certificates tar xz-utils openssl iproute2 jq uuid-runtime
+  curl ca-certificates tar xz-utils openssl jq uuid-runtime
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
+
+ZERO_RTT_MODE="$(normalize_zero_rtt_mode "$ZERO_RTT_MODE")"
+IP_PREFERENCE="$(normalize_ip_preference "$IP_PREFERENCE")"
+LOG_LEVEL="$(normalize_log_level "$LOG_LEVEL")"
+CONGESTION_CONTROL="$(normalize_cc "$CONGESTION_CONTROL")"
+MAX_IDLE_SECS="$(normalize_u64_gt0 MAX_IDLE_SECS "$MAX_IDLE_SECS")"
+KEEPALIVE_SECS="$(normalize_u64_gt0 KEEPALIVE_SECS "$KEEPALIVE_SECS")"
+TCP_CONNECT_TIMEOUT_SECS="$(normalize_u64_gt0 TCP_CONNECT_TIMEOUT_SECS "$TCP_CONNECT_TIMEOUT_SECS")"
+DNS_CACHE_TTL_SECS="$(normalize_u64_gt0 DNS_CACHE_TTL_SECS "$DNS_CACHE_TTL_SECS")"
+AUTH_TIMEOUT_SECS="$(normalize_u64_gt0 AUTH_TIMEOUT_SECS "$AUTH_TIMEOUT_SECS")"
+MAX_HANDSHAKES="$(normalize_u64_gt0 MAX_HANDSHAKES "$MAX_HANDSHAKES")"
+MAX_CONNECTIONS="$(normalize_u64_gt0 MAX_CONNECTIONS "$MAX_CONNECTIONS")"
+MAX_UDP_ASSOCS_PER_SESSION="$(normalize_u64_gt0 MAX_UDP_ASSOCS_PER_SESSION "$MAX_UDP_ASSOCS_PER_SESSION")"
+
+if [ "$KEEPALIVE_SECS" -ge "$MAX_IDLE_SECS" ]; then
+  echo "FATAL: KEEPALIVE_SECS must be smaller than MAX_IDLE_SECS" >&2
+  exit 1
+fi
 
 getent group "$TUIC_NG_GROUP" >/dev/null || groupadd --system "$TUIC_NG_GROUP"
 id -u "$TUIC_NG_USER" >/dev/null 2>&1 || useradd --system -g "$TUIC_NG_GROUP" -M -d "$TUIC_NG_STATE_DIR" -s /usr/sbin/nologin "$TUIC_NG_USER"
@@ -44,22 +117,22 @@ get_tuic_ng_tag() {
 }
 
 install_tuic_ng_release() {
-  local ASSET BASE tmpd bin
+  local asset base tmpd bin
   TUIC_NG_TAG="${TUIC_NG_TAG:-}"
   [ -n "$TUIC_NG_TAG" ] || TUIC_NG_TAG="$(get_tuic_ng_tag 2>/dev/null || true)"
   [ -n "$TUIC_NG_TAG" ] || { echo "FATAL: cannot detect tuic-ng tag" >&2; exit 1; }
 
   case "$(uname -m)" in
-    x86_64|amd64)  ASSET="tuic-ng-linux-amd64-${TUIC_NG_TAG}.tar.gz" ;;
-    aarch64|arm64) ASSET="tuic-ng-linux-arm64-${TUIC_NG_TAG}.tar.gz" ;;
+    x86_64|amd64)  asset="tuic-ng-linux-amd64-${TUIC_NG_TAG}.tar.gz" ;;
+    aarch64|arm64) asset="tuic-ng-linux-arm64-${TUIC_NG_TAG}.tar.gz" ;;
     *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
   esac
 
-  BASE="https://github.com/${TUIC_NG_REPO}/releases/download/${TUIC_NG_TAG}"
+  base="https://github.com/${TUIC_NG_REPO}/releases/download/${TUIC_NG_TAG}"
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
 
-  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${base}/${asset}"
   mkdir -p "$tmpd/unpack"
   tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
@@ -71,7 +144,6 @@ install_tuic_ng_release() {
 }
 
 install_tuic_ng_release
-
 command -v "$TUIC_NG_BIN" >/dev/null 2>&1 || { echo "FATAL: ${TUIC_NG_BIN} not found" >&2; exit 1; }
 
 gen_pass() {
@@ -82,56 +154,62 @@ gen_uuid() {
   uuidgen
 }
 
-normalize_bool() {
-  case "${1,,}" in
-    1|true|yes|on)  printf 'true\n' ;;
-    0|false|no|off) printf 'false\n' ;;
-    *) echo "FATAL: invalid boolean: $1" >&2; exit 1 ;;
-  esac
-}
-
-ZERO_RTT_JSON="$(normalize_bool "$ZERO_RTT")"
-PROXY_PROTOCOL_JSON="$(normalize_bool "$PROXY_PROTOCOL")"
-
 if [ ! -f "$TUIC_NG_CONF_FILE" ]; then
   [ -n "$UUID" ] || UUID="$(gen_uuid)"
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
-  cat >"$TUIC_NG_CONF_FILE" <<EOF
-{
-  "listen": "[::]:${LISTEN_PORT}",
-  "zero_rtt": ${ZERO_RTT_JSON},
-  "cert": "${CERT}",
-  "key": "${KEY}",
-  "users": [
+  jq -n \
+    --arg listen "[::]:${LISTEN_PORT}" \
+    --arg zero_rtt_mode "$ZERO_RTT_MODE" \
+    --arg cert "$CERT" \
+    --arg key "$KEY" \
+    --arg uuid "$UUID" \
+    --arg password "$PASS" \
+    --arg alpn "$ALPN" \
+    --arg congestion_control "$CONGESTION_CONTROL" \
+    --arg ip_preference "$IP_PREFERENCE" \
+    --arg log_level "$LOG_LEVEL" \
+    --argjson max_idle_secs "$MAX_IDLE_SECS" \
+    --argjson keepalive_secs "$KEEPALIVE_SECS" \
+    --argjson tcp_connect_timeout_secs "$TCP_CONNECT_TIMEOUT_SECS" \
+    --argjson dns_cache_ttl_secs "$DNS_CACHE_TTL_SECS" \
+    --argjson auth_timeout_secs "$AUTH_TIMEOUT_SECS" \
+    --argjson max_handshakes "$MAX_HANDSHAKES" \
+    --argjson max_connections "$MAX_CONNECTIONS" \
+    --argjson max_udp_assocs_per_session "$MAX_UDP_ASSOCS_PER_SESSION" \
+    '
     {
-      "uuid": "${UUID}",
-      "password": "${PASS}"
+      listen: $listen,
+      zero_rtt_mode: $zero_rtt_mode,
+      cert: $cert,
+      key: $key,
+      users: [
+        {
+          uuid: $uuid,
+          password: $password
+        }
+      ],
+      alpn: [$alpn],
+      congestion_control: $congestion_control,
+      ip_preference: $ip_preference,
+      log_level: $log_level,
+      max_idle_secs: $max_idle_secs,
+      keepalive_secs: $keepalive_secs,
+      tcp_connect_timeout_secs: $tcp_connect_timeout_secs,
+      dns_cache_ttl_secs: $dns_cache_ttl_secs,
+      auth_timeout_secs: $auth_timeout_secs,
+      max_handshakes: $max_handshakes,
+      max_connections: $max_connections,
+      max_udp_assocs_per_session: $max_udp_assocs_per_session
     }
-  ],
-  "alpn": [
-    "h3"
-  ],
-  "congestion_control": "${CONGESTION_CONTROL}",
-  "ip_preference": "${IP_PREFERENCE}",
-  "log_level": "${LOG_LEVEL}"
-  "max_idle_secs": 200,
-  "keepalive_secs": 20
-}
-EOF
-
-  jq empty "$TUIC_NG_CONF_FILE" >/dev/null 2>&1 || {
-    echo "FATAL: invalid json generated" >&2
-    cat "$TUIC_NG_CONF_FILE" >&2
-    exit 1
-  }
+    ' > "$TUIC_NG_CONF_FILE"
 
   chown root:"$TUIC_NG_GROUP" "$TUIC_NG_CONF_FILE"
   chmod 640 "$TUIC_NG_CONF_FILE"
 fi
 
 if [ ! -f "$TUIC_NG_SERVICE" ]; then
-  cat >"$TUIC_NG_SERVICE" <<EOF
+  cat >"$TUIC_NG_SERVICE" <<EOF2
 [Unit]
 Description=TUIC-NG Server
 Documentation=https://github.com/sealszzz/Rules/releases
@@ -154,7 +232,7 @@ RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF2
   chmod 644 "$TUIC_NG_SERVICE"
 fi
 
@@ -165,7 +243,7 @@ else
   systemctl enable --now "$TUIC_NG_SERVICE_NAME"
 fi
 
-BIN_VER="$("$TUIC_NG_BIN" --version 2>/dev/null | head -n1 || true)"
+BIN_VER="$($TUIC_NG_BIN --version 2>/dev/null | head -n1 || true)"
 
 SHOW_UUID="${UUID:-}"
 SHOW_PASS="${PASS:-}"
