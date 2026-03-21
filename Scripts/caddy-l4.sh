@@ -16,7 +16,7 @@ export DEBIAN_FRONTEND=noninteractive
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update -qq
-apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar jq >/dev/null
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64) ARCH=amd64 ;;
@@ -24,26 +24,36 @@ case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   *) echo "FATAL: unsupported arch"; exit 1 ;;
 esac
 
-get_latest_tag() {
-  local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${APP_REPO}/releases/latest")" || return 1
-  printf '%s\n' "${u##*/}"
+get_release_json() {
+  if [ -n "${APP_TAG}" ]; then
+    curl -fsSL "https://api.github.com/repos/${APP_REPO}/releases/tags/${APP_TAG}"
+  else
+    curl -fsSL "https://api.github.com/repos/${APP_REPO}/releases/latest"
+  fi
 }
 
-[ -n "${APP_TAG}" ] || APP_TAG="$(get_latest_tag)"
-[ -n "${APP_TAG}" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
+REL_JSON="$(get_release_json)"
+APP_TAG="${APP_TAG:-$(printf '%s' "$REL_JSON" | jq -r '.tag_name // empty')}"
+[ -n "$APP_TAG" ] || { echo "FATAL: failed to resolve release tag"; exit 1; }
 
-ASSET="caddy-l4-linux-${ARCH}-${APP_TAG}.tar.gz"
-URL="https://github.com/${APP_REPO}/releases/download/${APP_TAG}/${ASSET}"
+ASSET_URL="$(printf '%s' "$REL_JSON" | jq -r --arg arch "$ARCH" --arg tag "$APP_TAG" '
+  .assets[]
+  | select(.name | test("^caddy-l4-linux-" + $arch + "-" + $tag + "-[A-Za-z0-9._-]+\\.tar\\.gz$"))
+  | .browser_download_url
+' | head -n1)"
+
+[ -n "$ASSET_URL" ] || { echo "FATAL: failed to find asset for ${ARCH} under tag ${APP_TAG}"; exit 1; }
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-curl -fL --retry 3 --retry-delay 1 -o "$TMP/$ASSET" "$URL"
-tar -xzf "$TMP/$ASSET" -C "$TMP"
+curl -fL --retry 3 --retry-delay 1 -o "$TMP/pkg.tgz" "$ASSET_URL"
+tar -xzf "$TMP/pkg.tgz" -C "$TMP"
 
-[ -f "$TMP/caddy-l4" ] || { echo "FATAL: missing caddy-l4 binary in tar"; exit 1; }
-install -m 0755 "$TMP/caddy-l4" "$APP_BIN"
+BIN_PATH="$(find "$TMP" -type f -name 'caddy-l4' -perm -u+x | head -n1 || true)"
+[ -n "$BIN_PATH" ] || { echo "FATAL: missing caddy-l4 binary in tar"; exit 1; }
+
+install -m 0755 "$BIN_PATH" "$APP_BIN"
 
 getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
 id -u "$APP_USER" >/dev/null 2>&1 || useradd \
@@ -221,3 +231,5 @@ echo "service: ${APP_SERVICE_NAME}"
 echo
 echo "=== caddy-l4 version ==="
 "$APP_BIN" version 2>/dev/null || "$APP_BIN" --version 2>/dev/null || true
+echo
+echo "NOTE: edit ${APP_CONF} and replace example.com placeholders before production use."
