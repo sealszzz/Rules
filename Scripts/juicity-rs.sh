@@ -1,0 +1,172 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
+: "${UUID:=}"
+: "${PASS:=}"
+: "${JUICITY_TAG:=}"
+
+APP_USER="juicity-rs"
+APP_GROUP="juicity-rs"
+APP_STATE_DIR="/var/lib/juicity-rs"
+APP_CONF_DIR="/etc/juicity-rs"
+APP_CONF_FILE="${APP_CONF_DIR}/config.json"
+APP_BIN="/usr/local/bin/juicity-rs"
+APP_SERVICE_NAME="juicity-rs"
+APP_SERVICE="/etc/systemd/system/${APP_SERVICE_NAME}.service"
+APP_REPO="sealszzz/Rules"
+APP_ASSET_BASENAME="juicity-rs"
+APP_BIN_NAME="juicity-rs"
+
+export DEBIAN_FRONTEND=noninteractive
+
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl jq
+
+[ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
+[ -r "$KEY"  ] || { echo "FATAL: missing $KEY" >&2; exit 1; }
+
+getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
+id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
+
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
+install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
+
+get_release_tag() {
+  local repo="$1"
+  local u
+  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest")" || return 1
+  printf '%s\n' "${u##*/}"
+}
+
+install_release_asset() {
+  local repo="$1"
+  local tag="$2"
+  local base_name="$3"
+  local bin_name="$4"
+  local tmpd asset base bin
+
+  case "$(uname -m)" in
+    x86_64|amd64)  asset="${base_name}-linux-amd64-${tag}.tar.gz" ;;
+    aarch64|arm64) asset="${base_name}-linux-arm64-${tag}.tar.gz" ;;
+    *) echo "FATAL: unsupported arch: $(uname -m)" >&2; exit 1 ;;
+  esac
+
+  base="https://github.com/${repo}/releases/download/${tag}"
+  tmpd="$(mktemp -d)"
+  trap 'rm -rf "$tmpd"' RETURN
+
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${base}/${asset}"
+  mkdir -p "$tmpd/unpack"
+  tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
+
+  bin="$(find "$tmpd/unpack" -type f -name "$bin_name" -perm -u+x | head -n1 || true)"
+  [ -n "$bin" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
+
+  install -m 0755 "$bin" "$APP_BIN"
+  trap - RETURN
+}
+
+gen_uuid() {
+  cat /proc/sys/kernel/random/uuid
+}
+
+gen_pass() {
+  openssl rand -hex 16
+}
+
+[ -n "$JUICITY_TAG" ] || JUICITY_TAG="$(get_release_tag "$APP_REPO" 2>/dev/null || true)"
+[ -n "$JUICITY_TAG" ] || { echo "FATAL: cannot detect juicity-rs tag" >&2; exit 1; }
+
+install_release_asset "$APP_REPO" "$JUICITY_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
+
+command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
+
+if [ ! -f "$APP_CONF_FILE" ]; then
+  [ -n "$UUID" ] || UUID="$(gen_uuid)"
+  [ -n "$PASS" ] || PASS="$(gen_pass)"
+
+  cat >"$APP_CONF_FILE" <<EOF
+{
+  "listen": "[::]:443",
+  "users": [
+    {
+      "uuid": "${UUID}",
+      "password": "${PASS}"
+    }
+  ],
+  "certificate": "${CERT}",
+  "private_key": "${KEY}",
+  "congestion_control": "bbr",
+  "ip_preference": "v4v6",
+  "log_level": "info",
+  "disable_outbound_udp443": true,
+  "max_idle_secs": 200,
+  "keepalive_secs": 20,
+  "tcp_connect_timeout_secs": 8,
+  "dns_cache_ttl_secs": 60,
+  "auth_timeout_secs": 5,
+  "max_handshakes": 64,
+  "max_connections": 256,
+  "udp_assoc_max_idle_secs": 210,
+  "quic_socket_recv_buffer": 2097152,
+  "quic_socket_send_buffer": 2097152,
+  "relay_udp_socket_recv_buffer": 131072,
+  "relay_udp_socket_send_buffer": 131072,
+  "quic_send_window": 2097152,
+  "quic_recv_window": 2097152,
+  "quic_stream_recv_window": 262144
+}
+EOF
+
+  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$APP_CONF_FILE" >&2; exit 1; }
+  chown root:"$APP_GROUP" "$APP_CONF_FILE"
+  chmod 640 "$APP_CONF_FILE"
+fi
+
+if [ ! -f "$APP_SERVICE" ]; then
+  cat >"$APP_SERVICE" <<EOF
+[Unit]
+Description=Juicity Rust Server
+Documentation=https://github.com/${APP_REPO}/releases
+After=network-online.target nss-lookup.target
+Wants=network-online.target
+
+[Service]
+User=${APP_USER}
+Group=${APP_GROUP}
+Type=simple
+UMask=0077
+WorkingDirectory=${APP_STATE_DIR}
+ExecStart=${APP_BIN} ${APP_CONF_FILE}
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+LimitNOFILE=262144
+Restart=on-failure
+RestartSec=3s
+
+[Install]
+WantedBy=multi-user.target
+EOF
+  chmod 644 "$APP_SERVICE"
+fi
+
+systemctl daemon-reload
+if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
+  systemctl restart "$APP_SERVICE_NAME"
+else
+  systemctl enable --now "$APP_SERVICE_NAME"
+fi
+
+BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+SHOW_UUID="$(jq -r '.users[0].uuid // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+
+echo "app: juicity-rs"
+echo "tag: ${JUICITY_TAG:-unknown}"
+echo "bin: ${BIN_VER:-unknown}"
+echo "config: ${APP_CONF_FILE}"
+echo "uuid: ${SHOW_UUID:-unknown}"
+echo "password: ${SHOW_PASS:-unknown}"
