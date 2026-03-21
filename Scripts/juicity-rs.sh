@@ -96,8 +96,8 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "password": "${PASS}"
     }
   ],
-  "certificate": "${CERT}",
-  "private_key": "${KEY}",
+  "cert": "${CERT}",
+  "key": "${KEY}",
   "congestion_control": "bbr",
   "ip_preference": "v4v6",
   "log_level": "info",
