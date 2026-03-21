@@ -3,6 +3,7 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
+: "${USERNAME:=anytls}"
 : "${PASS:=}"
 : "${ANYTLS_TAG:=}"
 
@@ -83,33 +84,34 @@ if [ ! -f "$APP_CONF_FILE" ]; then
 
   cat >"$APP_CONF_FILE" <<EOF
 {
-  "log": {
-    "level": "info"
-  },
   "listen": "[::]:443",
-  "users": {
-    "anytls": "${PASS}"
-  },
-  "tls": {
-    "certificate": "${CERT}",
-    "private_key": "${KEY}"
-  },
-  "padding": {
-    "scheme": ""
-  },
-  "fallback": {
-    "address": "[::1]:80"
-  },
+  "users": [
+    {
+      "username": "${USERNAME}",
+      "password": "${PASS}"
+    }
+  ],
+  "cert": "${CERT}",
+  "key": "${KEY}",
+  "log_level": "info",
+  "padding_scheme": "",
+  "fallback": "[::1]:80",
   "proxy_protocol": false,
-  "outbound": {
-    "ip_preference": "v4v6",
-    "connect_race_width": 2,
-    "happy_eyeballs_delay_ms": 200
-  },
-  "tcp": {
-    "keepalive_idle_sec": 30,
-    "keepalive_interval_sec": 30
-  }
+  "ip_preference": "v4v6",
+  "connect_race_width": 2,
+  "happy_eyeballs_delay_ms": 200,
+  "tcp_keepalive_idle_secs": 15,
+  "tcp_keepalive_interval_secs": 15,
+  "tcp_socket_send_buffer": 131072,
+  "tcp_socket_recv_buffer": 131072,
+  "max_connections": 512,
+  "sniff_timeout_ms": 3000,
+  "proxy_protocol_timeout_ms": 3000,
+  "tls_handshake_timeout_ms": 10000,
+  "auth_timeout_ms": 5000,
+  "stream_target_timeout_ms": 3000,
+  "outbound_connect_timeout_ms": 10000,
+  "uot_downlink_drain_ms": 200
 }
 EOF
 
@@ -154,14 +156,14 @@ else
 fi
 
 BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
-
 SHOW_PASS="${PASS:-}"
 if [ -z "$SHOW_PASS" ] && [ -f "$APP_CONF_FILE" ]; then
-  SHOW_PASS="$(jq -r '.users.anytls // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 fi
 
 echo "app: anytls-rs"
 echo "tag: ${ANYTLS_TAG:-unknown}"
 echo "bin: ${BIN_VER:-unknown}"
 echo "config: ${APP_CONF_FILE}"
+echo "username: ${USERNAME}"
 echo "password: ${SHOW_PASS:-unknown}"
