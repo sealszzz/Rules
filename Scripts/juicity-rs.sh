@@ -90,6 +90,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   cat >"$APP_CONF_FILE" <<EOF
 {
   "listen": "[::]:443",
+  "zero_rtt_mode": "auth",
   "users": [
     {
       "uuid": "${UUID}",
