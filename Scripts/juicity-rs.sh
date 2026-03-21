@@ -102,7 +102,6 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "congestion_control": "bbr",
   "ip_preference": "v4v6",
   "log_level": "info",
-  "disable_outbound_udp443": true,
   "max_idle_secs": 200,
   "keepalive_secs": 20,
   "tcp_connect_timeout_secs": 8,
