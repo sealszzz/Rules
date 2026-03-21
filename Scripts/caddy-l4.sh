@@ -36,13 +36,22 @@ REL_JSON="$(get_release_json)"
 APP_TAG="${APP_TAG:-$(printf '%s' "$REL_JSON" | jq -r '.tag_name // empty')}"
 [ -n "$APP_TAG" ] || { echo "FATAL: failed to resolve release tag"; exit 1; }
 
-ASSET_URL="$(printf '%s' "$REL_JSON" | jq -r --arg arch "$ARCH" --arg tag "$APP_TAG" '
-  .assets[]
-  | select(.name | test("^caddy-l4-linux-" + $arch + "-" + $tag + "-[A-Za-z0-9._-]+\\.tar\\.gz$"))
-  | .browser_download_url
-' | head -n1)"
+ASSET_JSON="$(printf '%s' "$REL_JSON" | jq -c --arg arch "$ARCH" --arg tag "$APP_TAG" '
+  [
+    .assets[]
+    | select(.name | test("^caddy-l4-linux-" + $arch + "-" + $tag + "-[A-Za-z0-9._-]+\\.tar\\.gz$"))
+  ]
+  | sort_by(.updated_at // .created_at // "")
+  | reverse
+  | .[0] // {}
+')"
+
+ASSET_URL="$(printf '%s' "$ASSET_JSON" | jq -r '.browser_download_url // empty')"
+ASSET_NAME="$(printf '%s' "$ASSET_JSON" | jq -r '.name // empty')"
 
 [ -n "$ASSET_URL" ] || { echo "FATAL: failed to find asset for ${ARCH} under tag ${APP_TAG}"; exit 1; }
+
+echo "using asset: ${ASSET_NAME}"
 
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
@@ -225,6 +234,7 @@ else
 fi
 
 echo "caddy-l4 installed: ${APP_TAG}"
+echo "asset: ${ASSET_NAME}"
 echo "binary: ${APP_BIN}"
 echo "config: ${APP_CONF}"
 echo "service: ${APP_SERVICE_NAME}"
