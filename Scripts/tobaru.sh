@@ -5,24 +5,20 @@ set -euo pipefail
 : "${TOBARU_GROUP:=tobaru}"
 : "${TOBARU_BIN:=/usr/local/bin/tobaru}"
 : "${TOBARU_CONF_DIR:=/etc/tobaru}"
-: "${TOBARU_CONF:=/etc/tobaru/config.toml}"
+: "${TOBARU_CONF:=/etc/tobaru/tobaru.yml}"
 : "${TOBARU_SERVICE:=/etc/systemd/system/tobaru.service}"
-: "${TOBARU_REPO:=sealszzz/Rules}"
+: "${TOBARU_REPO:=cfal/tobaru}"
 : "${SERVICE_NAME:=tobaru}"
-: "${TOBARU_LOG_DIR:=/var/log/tobaru}"
 
 export DEBIAN_FRONTEND=noninteractive
 [ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
 
 apt-get update -qq
-apt-get install -y --no-install-recommends \
-  curl \
-  ca-certificates \
-  tar >/dev/null
+apt-get install -y --no-install-recommends curl ca-certificates tar >/dev/null
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
-  amd64|x86_64) ASSET_ARCH="linux-amd64" ;;
-  arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
+  amd64|x86_64) ASSET="tobaru-x86_64-unknown-linux-gnu.tar.gz" ;;
+  arm64|aarch64) ASSET="tobaru-aarch64-unknown-linux-gnu.tar.gz" ;;
   *) echo "FATAL: unsupported arch"; exit 1 ;;
 esac
 
@@ -30,7 +26,6 @@ LATEST_URL="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com
 TAG="${LATEST_URL##*/}"
 [ -n "$TAG" ] || { echo "FATAL: failed to get latest tag"; exit 1; }
 
-ASSET="tobaru-${ASSET_ARCH}-${TAG}.tar.gz"
 URL="https://github.com/${TOBARU_REPO}/releases/download/${TAG}/${ASSET}"
 
 TMP="$(mktemp -d)"
@@ -47,56 +42,58 @@ else
 fi
 [ -n "${FOUND_BIN:-}" ] || { echo "FATAL: missing tobaru binary in tar"; exit 1; }
 
+install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
+
 getent group "$TOBARU_GROUP" >/dev/null || groupadd --system "$TOBARU_GROUP"
 id -u "$TOBARU_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$TOBARU_GROUP" --shell /usr/sbin/nologin "$TOBARU_USER"
 
-install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
-
 install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
-install -d -o "$TOBARU_USER" -g "$TOBARU_GROUP" -m 0755 "$TOBARU_LOG_DIR"
 
 if [ ! -f "$TOBARU_CONF" ]; then
 cat >"$TOBARU_CONF" <<'EOF'
-[system]
-worker_threads = 4
-tcp_peek_timeout_ms = 500
-max_udp_sessions_per_worker = 25000
-udp_session_idle_timeout_sec = 60
-udp_prune_interval_sec = 10
+- address: "[::]:443"
+  transport: tcp
+  targets:
+    - location: 0.0.0.0:1
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames:
+          - none
+          - any
 
-[logging]
-level = "info"
+    - location: 0.0.0.0:9001
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: "example.com"
 
-[logging.flow]
-enabled = true
-level = "info"
+    - location: 0.0.0.0:9002
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: "www.example.com"
 
-[logging.stats]
-enabled = true
-level = "warn"
+    - location: 0.0.0.0:9003
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: "global.example.com"
 
-[server]
-listen = "[::]:443"
+    - location: 0.0.0.0:9999
+      allowlist: 0.0.0.0/0
+      server_tls:
+        mode: passthrough
+        sni_hostnames: "*.example.com"
 
-[tcp]
-http_honeypot = "redirect308"
-ssh_backend = "blackhole"
-tcp_fallback = "[::1]:9009"
+    - location: 0.0.0.0:9009
+      allowlist: 0.0.0.0/0
 
-[tcp.tls_routes]
-"example.com" = "[::1]:9001"
-"www.example.com" = "[::1]:9002"
-"*.example.com" = "[::1]:9999"
-tls_fallback = "blackhole"
-
-[udp]
-udp_fallback = "[::1]:9009"
-
-[udp.quic_routes]
-"example.com" = "[::1]:9001"
-"www.example.com" = "[::1]:9002"
-"*.example.com" = "[::1]:9999"
-quic_fallback = "blackhole"
+- address: "[::]:443"
+  transport: udp
+  target:
+    - location: 0.0.0.0:9009
+      allowlist: 0.0.0.0/0
 EOF
 fi
 
@@ -106,7 +103,7 @@ chmod 0640 "$TOBARU_CONF" || true
 
 cat >"$TOBARU_SERVICE" <<EOF
 [Unit]
-Description=tobaru TLS/QUIC router
+Description=tobaru TLS SNI passthrough router
 After=network-online.target
 Wants=network-online.target
 
@@ -114,8 +111,8 @@ Wants=network-online.target
 User=${TOBARU_USER}
 Group=${TOBARU_GROUP}
 Type=simple
-WorkingDirectory=${TOBARU_CONF_DIR}
-ExecStart=${TOBARU_BIN}
+ExecStart=${TOBARU_BIN} ${TOBARU_CONF}
+Environment="RUST_LOG=warn,tobaru=info"
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -131,12 +128,10 @@ chmod 0644 "$TOBARU_SERVICE"
 
 systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-systemctl reset-failed "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
 echo
 echo "tobaru installed: $TAG"
 echo "Binary : $TOBARU_BIN"
 echo "Config : $TOBARU_CONF"
-echo "Logs   : $TOBARU_LOG_DIR"
 echo "Status : systemctl status $SERVICE_NAME --no-pager"
