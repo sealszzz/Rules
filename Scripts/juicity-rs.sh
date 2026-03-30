@@ -33,11 +33,23 @@ id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$AP
 install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
 install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 
-get_release_tag() {
+case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
+  amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
+  arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
+  *) echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2; exit 1 ;;
+esac
+
+find_release_tag_for_asset() {
   local repo="$1"
-  local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${repo}/releases/latest")" || return 1
-  printf '%s\n' "${u##*/}"
+  local prefix="$2"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases?per_page=50"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
+    | .[0].tag_name // empty
+  '
 }
 
 install_release_asset() {
@@ -45,23 +57,24 @@ install_release_asset() {
   local tag="$2"
   local base_name="$3"
   local bin_name="$4"
-  local tmpd asset base bin
+  local asset url tmpd bin
 
-  case "$(uname -m)" in
-    x86_64|amd64)  asset="${base_name}-linux-amd64-${tag}.tar.gz" ;;
-    aarch64|arm64) asset="${base_name}-linux-arm64-${tag}.tar.gz" ;;
-    *) echo "FATAL: unsupported arch: $(uname -m)" >&2; exit 1 ;;
-  esac
+  asset="${base_name}-${ASSET_ARCH}-${tag}.tar.gz"
+  url="https://github.com/${repo}/releases/download/${tag}/${asset}"
 
-  base="https://github.com/${repo}/releases/download/${tag}"
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
 
-  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${base}/${asset}"
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "$url"
   mkdir -p "$tmpd/unpack"
   tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
-  bin="$(find "$tmpd/unpack" -type f -name "$bin_name" -perm -u+x | head -n1 || true)"
+  if [ -f "$tmpd/unpack/$bin_name" ]; then
+    bin="$tmpd/unpack/$bin_name"
+  else
+    bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
+  fi
+
   [ -n "$bin" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
 
   install -m 0755 "$bin" "$APP_BIN"
@@ -76,8 +89,11 @@ gen_pass() {
   openssl rand -hex 16
 }
 
-[ -n "$JUICITY_TAG" ] || JUICITY_TAG="$(get_release_tag "$APP_REPO" 2>/dev/null || true)"
-[ -n "$JUICITY_TAG" ] || { echo "FATAL: cannot detect juicity-rs tag" >&2; exit 1; }
+if [ -z "$JUICITY_TAG" ]; then
+  JUICITY_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
+fi
+
+[ -n "$JUICITY_TAG" ] || { echo "FATAL: failed to find a juicity-rs release for ${ASSET_ARCH}" >&2; exit 1; }
 
 install_release_asset "$APP_REPO" "$JUICITY_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
