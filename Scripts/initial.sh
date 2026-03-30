@@ -6,10 +6,49 @@ need_root() {
   [ "${EUID:-$(id -u)}" -eq 0 ] || { echo "run as root"; exit 1; }
 }
 
+is_container() {
+  systemd-detect-virt --container >/dev/null 2>&1
+}
+
 wait_for_apt() {
   while fuser /var/lib/dpkg/lock-frontend /var/lib/apt/lists/lock /var/cache/apt/archives/lock >/dev/null 2>&1; do
     sleep 1
   done
+}
+
+install_pkgs() {
+  wait_for_apt
+  apt-get update
+  wait_for_apt
+  apt-get install -y --no-install-recommends chrony ca-certificates
+}
+
+configure_timedated_prefer_chrony() {
+  command -v systemctl >/dev/null 2>&1 || return 0
+  install -d -m 0755 /etc/systemd/system/systemd-timedated.service.d
+  cat >/etc/systemd/system/systemd-timedated.service.d/override.conf <<'EOF'
+[Service]
+Environment=SYSTEMD_TIMEDATED_NTP_SERVICES=chrony.service:systemd-timesyncd.service
+EOF
+  systemctl daemon-reload
+  systemctl try-restart systemd-timedated.service 2>/dev/null || true
+}
+
+wait_for_chrony() {
+  local i
+  for i in $(seq 1 15); do
+    if chronyc tracking 2>/dev/null | grep -q '^Leap status[[:space:]]*:[[:space:]]*Normal$'; then
+      echo "[ntp] synchronized"
+      return 0
+    fi
+    sleep 2
+  done
+
+  echo "[ntp] chrony failed to synchronize in time"
+  chronyc tracking || true
+  chronyc sources -v || true
+  timedatectl status || true
+  exit 1
 }
 
 sync_time_utc() {
@@ -17,32 +56,28 @@ sync_time_utc() {
   command -v systemctl >/dev/null 2>&1 || return 0
 
   echo "[time] timezone -> Etc/UTC"
-  timedatectl set-timezone Etc/UTC || true
-  timedatectl set-local-rtc 0 || true
+  timedatectl set-timezone Etc/UTC 2>/dev/null || true
 
-  if ! systemctl is-active --quiet systemd-timesyncd 2>/dev/null; then
-    wait_for_apt
-    apt-get update
-    wait_for_apt
-    apt-get install -y --no-install-recommends systemd-timesyncd
+  if ! is_container; then
+    if [ "$(timedatectl show -p LocalRTC --value 2>/dev/null || echo no)" = "yes" ]; then
+      timedatectl set-local-rtc 0 2>/dev/null || true
+    fi
   fi
 
-  systemctl unmask systemd-timesyncd.service || true
-  timedatectl set-ntp true || true
+  install_pkgs
+  configure_timedated_prefer_chrony
 
-  for i in $(seq 1 15); do
-    if [ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)" = "yes" ]; then
-      echo "[ntp] synchronized"
-      return 0
-    fi
-    sleep 1
-  done
+  systemctl disable --now systemd-timesyncd.service ntp.service ntpd.service openntpd.service 2>/dev/null || true
+  systemctl enable --now chrony.service
+  systemctl restart chrony.service
 
-  echo "[ntp] warning: not yet synchronized"
+  timedatectl set-ntp true 2>/dev/null || true
+  wait_for_chrony
 }
 
 apply_sysctl_tuning() {
   install -d -m 0755 /etc/sysctl.d
+  modprobe nf_conntrack 2>/dev/null || true
 
   cat >/etc/sysctl.d/99-sysctl.conf <<'EOF'
 # ===== TCP (BBR) =====
@@ -71,12 +106,19 @@ EOF
   sysctl --system >/dev/null || true
 }
 
+maybe_reboot() {
+  if is_container; then
+    return 0
+  fi
+  sleep 5
+  reboot
+}
+
 main() {
   need_root
   sync_time_utc
   apply_sysctl_tuning
-  sleep 5
-  reboot
+  maybe_reboot
 }
 
 main "$@"
