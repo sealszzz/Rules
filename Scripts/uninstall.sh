@@ -73,18 +73,32 @@ remove_user_group() {
 pause() { echo; read -rp "按回车返回主菜单..." _; }
 
 uninstall_caddy() {
-  echo ">>> 卸载 Caddy ..."
+  echo ">>> 卸载 Caddy / caddy-l4 ..."
   for base in "caddy" "caddy-l4"; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
+
   remove_paths \
-    /usr/local/bin/caddy /usr/local/bin/caddy-l4 \
-    /etc/caddy /var/lib/caddy /var/log/caddy \
-    /usr/local/share/caddy /usr/share/caddy \
-    /etc/logrotate.d/caddy /etc/logrotate.d/caddy-l4
+    /usr/local/bin/caddy \
+    /usr/local/bin/caddy-l4 \
+    /etc/caddy \
+    /etc/caddy-l4 \
+    /var/lib/caddy \
+    /var/lib/caddy-l4 \
+    /var/log/caddy \
+    /var/log/caddy-l4 \
+    /usr/local/share/caddy \
+    /usr/local/share/caddy-l4 \
+    /usr/share/caddy \
+    /usr/share/caddy-l4 \
+    /etc/logrotate.d/caddy \
+    /etc/logrotate.d/caddy-l4
+
   remove_user_group "caddy" || true
-  echo "[OK] Caddy 卸载完成。"
+  remove_user_group "caddy-l4" "caddy-l4" || true
+
+  echo "[OK] Caddy / caddy-l4 卸载完成。"
 }
 
 uninstall_xray() {
