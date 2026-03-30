@@ -76,15 +76,30 @@ sync_time_utc() {
 }
 
 get_ssh_port() {
-  if command -v sshd >/dev/null 2>&1; then
-    local p
-    p="$(sshd -T 2>/dev/null | awk '/^port /{print $2; exit}')" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
-  fi
+  local p f
+  shopt -s nullglob
 
-  local g
-  g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 8888
+  for f in /etc/ssh/sshd_config.d/*.conf; do
+    p="$(awk '
+      /^[[:space:]]*[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+([[:space:]]|$)/ {
+        print $2
+        exit
+      }
+    ' "$f" 2>/dev/null)" || true
+    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; shopt -u nullglob; return; }
+  done
+
+  shopt -u nullglob
+
+  p="$(awk '
+    /^[[:space:]]*[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+([[:space:]]|$)/ {
+      print $2
+      exit
+    }
+  ' /etc/ssh/sshd_config 2>/dev/null)" || true
+  [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
+
+  echo 8888
 }
 
 configure_ssh() {
