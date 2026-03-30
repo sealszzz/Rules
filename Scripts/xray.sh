@@ -81,8 +81,31 @@ parse_reality_keys() {
   local out priv pub
   out="$("$XRAY_BIN" x25519 2>/dev/null | tr -d '\r')" || out=""
 
-  priv="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *private ?key *$/ {print $2; exit}')"
-  pub="$(printf '%s\n' "$out" | awk -F': *' 'tolower($1) ~ /^ *password *$/    {print $2; exit}')"
+  priv="$(
+    printf '%s\n' "$out" | awk -F': *' '
+      {
+        k=tolower($1)
+        gsub(/[[:space:]]+/, "", k)
+        if (k ~ /^privatekey$/) {
+          print $2
+          exit
+        }
+      }
+    '
+  )"
+
+  pub="$(
+    printf '%s\n' "$out" | awk -F': *' '
+      {
+        k=tolower($1)
+        gsub(/[[:space:]]+/, "", k)
+        if (k ~ /^password$/ || k ~ /^password\(publickey\)$/ || k ~ /^publickey$/) {
+          print $2
+          exit
+        }
+      }
+    '
+  )"
 
   if [ -z "$priv" ] || [ -z "$pub" ]; then
     echo "[FATAL] cannot parse xray x25519 output" >&2
