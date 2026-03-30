@@ -156,5 +156,3 @@ echo "tobaru installed: $TOBARU_TAG"
 echo "Binary : $TOBARU_BIN"
 echo "Config  : $TOBARU_CONF"
 systemctl --no-pager --full status "$SERVICE_NAME" || true
-
-reboot
