@@ -16,11 +16,33 @@ wait_for_apt() {
   done
 }
 
-install_pkgs() {
+bootstrap_system() {
   wait_for_apt
   apt-get update
+
   wait_for_apt
-  apt-get install -y --no-install-recommends chrony ca-certificates
+  apt-get -yq full-upgrade
+
+  wait_for_apt
+  apt-get -yq install --no-install-recommends \
+    ca-certificates gnupg openssl \
+    curl git jq \
+    iproute2 iputils-ping nftables \
+    tar xz-utils zstd unzip \
+    rsync lsof psmisc \
+    tmux vim cloud-init qemu-guest-agent
+
+  if command -v systemctl >/dev/null 2>&1 && ! is_container; then
+    systemctl enable --now qemu-guest-agent 2>/dev/null || true
+  fi
+
+  wait_for_apt
+  apt-get -yq install --no-install-recommends chrony
+
+  wait_for_apt
+  apt-get -yq autoremove --purge
+
+  apt-get -yq clean
 }
 
 configure_timedated_prefer_chrony() {
@@ -64,7 +86,6 @@ sync_time_utc() {
     fi
   fi
 
-  install_pkgs
   configure_timedated_prefer_chrony
 
   systemctl disable --now systemd-timesyncd.service ntp.service ntpd.service openntpd.service 2>/dev/null || true
@@ -184,6 +205,7 @@ maybe_reboot() {
 
 main() {
   need_root
+  bootstrap_system
   sync_time_utc
   configure_ssh
   apply_sysctl_tuning
