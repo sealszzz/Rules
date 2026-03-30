@@ -53,6 +53,7 @@ install_nftables_pkg() {
 valid_ipv4() {
   local ip="$1"
   [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+
   local IFS=.
   local a b c d
   read -r a b c d <<<"$ip"
@@ -65,7 +66,7 @@ valid_ipv4() {
 
 get_saved_target_ip() {
   if [ -f "$TARGET_STATE" ]; then
-    tr -d '[:space:]' < "$TARGET_STATE"
+    tr -d '[:space:]' <"$TARGET_STATE"
   fi
 }
 
@@ -109,17 +110,54 @@ write_normal_conf() {
 flush ruleset
 
 table inet filter {
+  set blacklist4 {
+    type ipv4_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
+
+  set blacklist6 {
+    type ipv6_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
+
+  set tcp_allow {
+    type inet_service
+    flags interval
+    elements = { 80, 443, ${ssh_port} }
+  }
+
+  set udp_allow {
+    type inet_service
+    flags interval
+    elements = { 443 }
+  }
+
   chain input {
     type filter hook input priority filter; policy drop;
 
+    ip  saddr @blacklist4 counter drop
+    ip6 saddr @blacklist6 counter drop
+
     ct state { established, related } accept
+
     iif lo accept
 
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    tcp dport { 80, 443, ${ssh_port} } accept
-    udp dport 443 accept
+    meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
+    meta nfproto ipv6 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
+
+    tcp dport @tcp_allow accept
+    udp dport @udp_allow accept
   }
 
   chain forward {
@@ -155,17 +193,54 @@ table ip nat {
 }
 
 table inet filter {
+  set blacklist4 {
+    type ipv4_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
+
+  set blacklist6 {
+    type ipv6_addr
+    flags dynamic, timeout
+    timeout 7d
+    size 65535
+    gc-interval 5m
+  }
+
+  set tcp_allow {
+    type inet_service
+    flags interval
+    elements = { 80, 443, ${ssh_port} }
+  }
+
+  set udp_allow {
+    type inet_service
+    flags interval
+    elements = { 443 }
+  }
+
   chain input {
     type filter hook input priority filter; policy drop;
 
+    ip  saddr @blacklist4 counter drop
+    ip6 saddr @blacklist6 counter drop
+
     ct state { established, related } accept
+
     iif lo accept
 
     ip protocol icmp accept
     ip6 nexthdr ipv6-icmp accept
 
-    tcp dport { 80, 443, ${ssh_port} } accept
-    udp dport 443 accept
+    meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
+    meta nfproto ipv6 tcp flags syn tcp dport != @tcp_allow ct state new \
+      ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
+
+    tcp dport @tcp_allow accept
+    udp dport @udp_allow accept
   }
 
   chain forward {
@@ -196,7 +271,7 @@ apply_normal_rules() {
   sysctl -w net.ipv4.ip_forward=0 >/dev/null
   systemctl enable --now nftables >/dev/null 2>&1 || true
 
-  echo "[OK] 已切换到正常模式。"
+  echo "[OK] 已应用正常模式。"
   echo "SSH 端口: $ssh_port"
 }
 
@@ -267,11 +342,10 @@ main_menu() {
 当前模式: $(current_mode)
 SSH 端口: $(get_ssh_port)
 
- 1) 安装/重装正常 nftables
- 2) 切换到 443 转发模式（现场输入目标 IPv4）
- 3) 切回正常模式
- 4) 查看当前规则
- 5) 查看当前状态
+ 1) 应用正常模式
+ 2) 切换转发模式（输入目标 IPv4）
+ 3) 查看当前规则
+ 4) 查看当前状态
  0) 退出
 ======================================================
 MENU
@@ -289,14 +363,10 @@ MENU
         pause
         ;;
       3)
-        apply_normal_rules
-        pause
-        ;;
-      4)
         show_rules
         pause
         ;;
-      5)
+      4)
         show_status
         pause
         ;;
