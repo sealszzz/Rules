@@ -187,7 +187,7 @@ main() {
   sync_time_utc
   configure_ssh
   apply_sysctl_tuning
-  maybe_reboot
+  # maybe_reboot
 }
 
 main "$@"
