@@ -75,39 +75,11 @@ sync_time_utc() {
   wait_for_chrony || echo "[ntp] continue without synchronization"
 }
 
-get_ssh_port() {
-  local p f
-  shopt -s nullglob
-
-  for f in /etc/ssh/sshd_config.d/*.conf; do
-    p="$(awk '
-      /^[[:space:]]*[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+([[:space:]]|$)/ {
-        print $2
-        exit
-      }
-    ' "$f" 2>/dev/null)" || true
-    [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; shopt -u nullglob; return; }
-  done
-
-  shopt -u nullglob
-
-  p="$(awk '
-    /^[[:space:]]*[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+([[:space:]]|$)/ {
-      print $2
-      exit
-    }
-  ' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$p" =~ ^[0-9]+$ ]] && { echo "$p"; return; }
-
-  echo 8888
-}
-
 configure_ssh() {
   command -v sshd >/dev/null 2>&1 || return 0
   command -v systemctl >/dev/null 2>&1 || return 0
 
-  local port file include_line added_include tmp_old
-  port="$(get_ssh_port)"
+  local file include_line added_include tmp_old
   file=/etc/ssh/sshd_config.d/99-custom.conf
   include_line='Include /etc/ssh/sshd_config.d/*.conf'
   added_include=0
@@ -120,8 +92,8 @@ configure_ssh() {
     cp -a "$file" "$tmp_old"
   fi
 
-  cat >"$file" <<EOF
-Port $port
+  cat >"$file" <<'EOF'
+Port 8888
 PubkeyAuthentication yes
 PasswordAuthentication no
 KbdInteractiveAuthentication no
