@@ -48,7 +48,7 @@ wait_for_chrony() {
   chronyc tracking || true
   chronyc sources -v || true
   timedatectl status || true
-  exit 1
+  return 1
 }
 
 sync_time_utc() {
@@ -72,7 +72,7 @@ sync_time_utc() {
   systemctl restart chrony.service
 
   timedatectl set-ntp true 2>/dev/null || true
-  wait_for_chrony
+  wait_for_chrony || echo "[ntp] continue without synchronization"
 }
 
 get_ssh_port() {
