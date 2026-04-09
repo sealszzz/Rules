@@ -8,32 +8,57 @@ need_root() {
   fi
 }
 
-exists_cmd(){ command -v "$1" >/dev/null 2>&1; }
+exists_cmd() { command -v "$1" >/dev/null 2>&1; }
+
+path_exists() {
+  [ -e "$1" ] || [ -L "$1" ]
+}
 
 stop_disable_service() {
   local base="$1"
   local svc="${base}.service"
+  local u
+  local -a inst=()
 
   systemctl unmask "$svc" 2>/dev/null || true
   systemctl unmask "${base}@.service" 2>/dev/null || true
 
   systemctl stop "$svc" 2>/dev/null || true
-  mapfile -t _inst < <(systemctl list-units --all --type=service --no-legend \
-                        | awk '{print $1}' | grep -E "^${base}@.+\.service$" || true)
-  for u in "${_inst[@]}"; do systemctl stop "$u" 2>/dev/null || true; done
+
+  mapfile -t inst < <(
+    systemctl list-units --all --type=service --no-legend --plain 2>/dev/null \
+      | awk '{print $1}' \
+      | while IFS= read -r u; do
+          case "$u" in
+            "${base}"@*.service) printf '%s\n' "$u" ;;
+          esac
+        done
+  )
+
+  for u in "${inst[@]}"; do
+    systemctl stop "$u" 2>/dev/null || true
+  done
 
   systemctl disable "$svc" 2>/dev/null || true
   systemctl disable "${base}@.service" 2>/dev/null || true
+
+  for u in "${inst[@]}"; do
+    systemctl disable "$u" 2>/dev/null || true
+  done
 
   find /etc/systemd/system -maxdepth 2 -type l -name "${svc}" -delete 2>/dev/null || true
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
 
   systemctl reset-failed "$svc" 2>/dev/null || true
+  for u in "${inst[@]}"; do
+    systemctl reset-failed "$u" 2>/dev/null || true
+  done
 }
 
 remove_unit_artifacts() {
   local base="$1"
-  local patterns=(
+  local p
+  local -a exact_paths=(
     "/etc/systemd/system/${base}.service"
     "/etc/systemd/system/${base}.service.d"
     "/etc/systemd/system/${base}@.service"
@@ -44,10 +69,14 @@ remove_unit_artifacts() {
     "/usr/lib/systemd/system/${base}@.service"
   )
 
-  for p in "${patterns[@]}"; do
-    [ -e "$p" ] && rm -rf "$p" || true
+  for p in "${exact_paths[@]}"; do
+    if path_exists "$p"; then
+      rm -rf -- "$p"
+    fi
   done
 
+  find /etc/systemd/system -maxdepth 1 -type f -name "${base}@*.service" -delete 2>/dev/null || true
+  find /etc/systemd/system -maxdepth 1 -type d -name "${base}@*.service.d" -exec rm -rf -- {} + 2>/dev/null || true
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}.service" -delete 2>/dev/null || true
   find /etc/systemd/system -maxdepth 2 -type l -name "${base}@*.service" -delete 2>/dev/null || true
 
@@ -55,16 +84,28 @@ remove_unit_artifacts() {
   systemctl reset-failed 2>/dev/null || true
 }
 
-remove_paths(){ for p in "$@"; do [ -e "$p" ] && rm -rf "$p" || true; done; }
+remove_paths() {
+  local p
+  for p in "$@"; do
+    if path_exists "$p"; then
+      rm -rf -- "$p"
+    fi
+  done
+}
 
 remove_user_group() {
   local user="$1" group="${2:-$1}"
-  local home
+  local home=""
   home="$(getent passwd "$user" 2>/dev/null | cut -d: -f6 || true)"
+
   if id -u "$user" >/dev/null 2>&1; then
     userdel -r "$user" 2>/dev/null || true
   fi
-  [ -n "${home:-}" ] && [ -d "$home" ] && rm -rf "$home" || true
+
+  if [ -n "${home:-}" ] && [ -d "$home" ]; then
+    rm -rf -- "$home" || true
+  fi
+
   if getent group "$group" >/dev/null 2>&1; then
     groupdel "$group" 2>/dev/null || true
   fi
@@ -74,7 +115,8 @@ pause() { echo; read -rp "按回车返回主菜单..." _; }
 
 uninstall_caddy() {
   echo ">>> 卸载 Caddy / caddy-l4 ..."
-  for base in "caddy" "caddy-l4"; do
+  local base
+  for base in caddy caddy-l4; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
@@ -128,10 +170,12 @@ uninstall_singbox() {
 
 uninstall_tuic() {
   echo ">>> 卸载 TUIC / tuic-ng ..."
+  local base
   for base in tuic tuic-ng; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
+
   remove_paths \
     /usr/local/bin/tuic \
     /usr/local/bin/tuic-ng \
@@ -139,21 +183,31 @@ uninstall_tuic() {
     /etc/tuic-ng /var/lib/tuic-ng /var/log/tuic-ng \
     /etc/logrotate.d/tuic \
     /etc/logrotate.d/tuic-ng
+
   remove_user_group "tuic" || true
   remove_user_group "tuic-ng" "tuic-ng" || true
   echo "[OK] TUIC / tuic-ng 卸载完成。"
 }
 
 uninstall_juicity() {
-  echo ">>> 卸载 Juicity ..."
-  stop_disable_service "juicity"
-  remove_unit_artifacts "juicity"
+  echo ">>> 卸载 Juicity / juicity-rs ..."
+  local base
+  for base in juicity juicity-rs; do
+    stop_disable_service "$base"
+    remove_unit_artifacts "$base"
+  done
+
   remove_paths \
     /usr/local/bin/juicity \
+    /usr/local/bin/juicity-rs \
     /etc/juicity /var/lib/juicity /var/log/juicity \
-    /etc/logrotate.d/juicity
+    /etc/juicity-rs /var/lib/juicity-rs /var/log/juicity-rs \
+    /etc/logrotate.d/juicity \
+    /etc/logrotate.d/juicity-rs
+
   remove_user_group "juicity" || true
-  echo "[OK] Juicity 卸载完成。"
+  remove_user_group "juicity-rs" "juicity-rs" || true
+  echo "[OK] Juicity / juicity-rs 卸载完成。"
 }
 
 uninstall_shoes() {
@@ -206,7 +260,7 @@ uninstall_hysteria() {
 
 uninstall_anytls() {
   echo ">>> 卸载 AnyTLS / anytls-go / anytls-rs ..."
-
+  local base
   for base in anytls anytls-go anytls-rs; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
@@ -316,12 +370,17 @@ declare -A SEL=(
 
 toggle() {
   local key="$1"
-  if [ "${SEL[$key]:-0}" -eq 1 ]; then SEL[$key]=0; else SEL[$key]=1; fi
+  if [ "${SEL[$key]:-0}" -eq 1 ]; then
+    SEL[$key]=0
+  else
+    SEL[$key]=1
+  fi
 }
 
 run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
+
   for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel ssrust mihomo; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
@@ -344,6 +403,7 @@ run_selected() {
       echo
     fi
   done
+
   if [ "$any" -eq 0 ]; then
     echo "未选择任何组件（先输入编号勾选/取消勾选）。"
   else
@@ -352,6 +412,10 @@ run_selected() {
 }
 
 main_menu() {
+  local line
+  local -a tokens=()
+  local t
+
   while true; do
     clear
     cat <<MENU
@@ -365,7 +429,7 @@ main_menu() {
  2) [$([ "${SEL[xray]}"        -eq 1 ] && echo x || echo ' ')] 卸载 Xray
  3) [$([ "${SEL[singbox]}"     -eq 1 ] && echo x || echo ' ')] 卸载 sing-box
  4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC (含 tuic-ng)
- 5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity
+ 5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity (含 juicity-rs)
  6) [$([ "${SEL[shoes]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Shoes
  7) [$([ "${SEL[shadowquic]}"  -eq 1 ] && echo x || echo ' ')] 卸载 ShadowQUIC
  8) [$([ "${SEL[snell]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Snell
@@ -383,7 +447,7 @@ MENU
     line="${line:-}"
     [ -z "$line" ] && continue
 
-    tokens=($line)
+    read -r -a tokens <<< "$line"
 
     for t in "${tokens[@]}"; do
       case "$t" in
@@ -412,4 +476,6 @@ MENU
 
 need_root
 exists_cmd systemctl || { echo "需要 systemd 环境"; exit 1; }
+systemctl list-unit-files >/dev/null 2>&1 || { echo "需要可用的 systemd 环境"; exit 1; }
+
 main_menu
