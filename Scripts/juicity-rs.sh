@@ -46,10 +46,10 @@ find_release_tag_for_asset() {
 
   api="https://api.github.com/repos/${repo}/releases?per_page=50"
 
-  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '''
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
     map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
     | .[0].tag_name // empty
-  '''
+  '
 }
 
 install_release_asset() {
@@ -63,7 +63,7 @@ install_release_asset() {
   url="https://github.com/${repo}/releases/download/${tag}/${asset}"
 
   tmpd="$(mktemp -d)"
-  trap '''rm -rf "$tmpd"''' RETURN
+  trap 'rm -rf "$tmpd"' RETURN
 
   curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "$url"
   mkdir -p "$tmpd/unpack"
@@ -119,7 +119,6 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "ip_preference": "v4v6",
   "log_level": "info",
   "max_idle_secs": 30,
-  "keepalive_secs": 20,
   "tcp_connect_timeout_secs": 8,
   "tcp_connect_race_stagger_ms": 150,
   "dns_cache_ttl_secs": 60,
@@ -187,7 +186,7 @@ else
   systemctl enable --now "$APP_SERVICE_NAME"
 fi
 
-BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+BIN_VER="$($APP_BIN --version 2>/dev/null || true)"
 SHOW_UUID="$(jq -r '.users[0].uuid // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 
