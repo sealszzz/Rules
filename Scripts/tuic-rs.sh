@@ -106,7 +106,6 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   cat >"$APP_CONF_FILE" <<EOF
 {
   "listen": "[::]:443",
-  "zero_rtt_mode": "auth",
   "cert": "${CERT}",
   "key": "${KEY}",
   "users": [
@@ -115,38 +114,10 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "password": "${PASS}"
     }
   ],
-  "alpn": [
-    "h3"
-  ],
+  "zero_rtt_mode": "auth",
   "congestion_control": "bbr",
   "ip_preference": "v4v6",
-  "log_level": "info",
-  "max_idle_secs": 200,
-  "keepalive_secs": 20,
-  "tcp_connect_timeout_secs": 8,
-  "tcp_connect_race_stagger_ms": 150,
-  "dns_cache_ttl_secs": 60,
-  "auth_timeout_secs": 5,
-  "max_handshakes": 64,
-  "max_connections": 256,
-  "udp_frag_max_inflight": 128,
-  "udp_frag_max_buffered_bytes": 1048576,
-  "udp_frag_ttl_secs": 5,
-  "quic_socket_recv_buffer": 2097152,
-  "quic_socket_send_buffer": 2097152,
-  "relay_udp_socket_recv_buffer": 131072,
-  "relay_udp_socket_send_buffer": 131072,
-  "quic_datagram_receive_buffer": 131072,
-  "quic_datagram_send_buffer": 131072,
-  "quic_send_window": 2097152,
-  "quic_recv_window": 2097152,
-  "quic_stream_recv_window": 262144,
-  "quic_max_concurrent_bidi_streams": 1024,
-  "quic_max_concurrent_uni_streams": 1024,
-  "quic_initial_mtu": 1400,
-  "quic_min_mtu": 1200,
-  "max_udp_assocs_per_session": 16,
-  "quic_stateless_retry": true
+  "log_level": "info"
 }
 EOF
 
