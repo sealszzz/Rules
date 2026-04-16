@@ -106,15 +106,15 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   cat >"$APP_CONF_FILE" <<EOF
 {
   "listen": "[::]:443",
-  "zero_rtt_mode": "auth",
+  "cert": "${CERT}",
+  "key": "${KEY}",
   "users": [
     {
       "uuid": "${UUID}",
       "password": "${PASS}"
     }
   ],
-  "cert": "${CERT}",
-  "key": "${KEY}",
+  "zero_rtt_mode": "auth",
   "congestion_control": "bbr",
   "ip_preference": "v4v6",
   "log_level": "info"
