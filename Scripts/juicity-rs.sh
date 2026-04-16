@@ -117,32 +117,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "key": "${KEY}",
   "congestion_control": "bbr",
   "ip_preference": "v4v6",
-  "log_level": "info",
-  "max_idle_secs": 30,
-  "tcp_connect_timeout_secs": 8,
-  "tcp_connect_race_stagger_ms": 150,
-  "dns_cache_ttl_secs": 60,
-  "dns_query_timeout_ms": 1500,
-  "auth_timeout_secs": 10,
-  "max_handshakes": 64,
-  "max_connections": 256,
-  "udp_assoc_idle_secs": 240,
-  "udp_stream_read_timeout_secs": 10,
-  "udp_stream_write_timeout_secs": 10,
-  "quic_socket_recv_buffer": 4194304,
-  "quic_socket_send_buffer": 4194304,
-  "relay_udp_socket_recv_buffer": 4194304,
-  "relay_udp_socket_send_buffer": 4194304,
-  "quic_send_window": 16777216,
-  "quic_recv_window": 8388608,
-  "quic_stream_recv_window": 1048576,
-  "quic_max_concurrent_bidi_streams": 512,
-  "quic_max_concurrent_uni_streams": 512,
-  "quic_initial_mtu": 1400,
-  "quic_min_mtu": 1200,
-  "max_udp_assocs_per_session": 64,
-  "quic_stateless_retry": false,
-  "max_tcp_relays_per_session": 64
+  "log_level": "info"
 }
 EOF
 
