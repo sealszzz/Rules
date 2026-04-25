@@ -71,24 +71,25 @@ listeners:
           sni_hostnames: [none, any]
 
       - location: "[::1]:9001"
+        proxy_protocol: v2
         server_tls:
           sni_hostnames:
             - example.com
-        proxy_protocol: v2
 
       - location: "[::1]:9002"
+        proxy_protocol: v2
         server_tls:
           sni_hostnames:
             - www.example.com
-        proxy_protocol: v2
 
       - location: "[::1]:9999"
+        proxy_protocol: v2
         server_tls:
           sni_hostnames:
             - "*.example.com"
-        proxy_protocol: v2
 
       - location: "[::1]:9009"
+        proxy_protocol: off
 
   - address: "[::]:443"
     transport: udp
@@ -151,8 +152,12 @@ systemctl daemon-reload
 systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
 systemctl restart "$SERVICE_NAME"
 
+BIN_VER="$({ "$TOBARU_BIN" --version 2>/dev/null || true; } | head -n1)"
+[ -n "$BIN_VER" ] || BIN_VER="$TOBARU_TAG"
+
 echo
-echo "tobaru installed: $TOBARU_TAG"
-echo "Binary : $TOBARU_BIN"
-echo "Config  : $TOBARU_CONF"
+echo "app: tobaru"
+echo "tag: ${TOBARU_TAG:-unknown}"
+echo "bin: ${BIN_VER:-unknown}"
+echo "config: ${TOBARU_CONF}"
 systemctl --no-pager --full status "$SERVICE_NAME" || true
