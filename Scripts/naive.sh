@@ -119,8 +119,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
     "zero_rtt_mode": "auth"
   },
   "quic": {
-    "congestion_control": "bbr",
-    "max_idle_secs": 60
+    "congestion_control": "bbr"
   },
   "dns": {
     "upstreams": [
@@ -131,7 +130,6 @@ if [ ! -f "$APP_CONF_FILE" ]; then
     "query_timeout_ms": 5000
   },
   "relay_ipv6": false
-  }
 }
 EOF
 
