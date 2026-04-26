@@ -19,6 +19,7 @@ set -euo pipefail
 
 : "${ANYTLS_USER:=anytls}"
 : "${TRUSTTUNNEL_USER:=trusttunnel}"
+: "${MIERU_USER:=mieru}"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -162,12 +163,12 @@ dns:
     - system
 
 listeners:
-  - name: shadowsocks-in
+  - name: ss-in
     type: shadowsocks
     listen: "::"
     port: 3443
-    password: "${SS2022_PASSWORD}"
     cipher: 2022-blake3-aes-128-gcm
+    password: "${SS2022_PASSWORD}"
     udp: true
 
   - name: anytls-in
@@ -179,7 +180,7 @@ listeners:
     certificate: "${CERT}"
     private-key: "${KEY}"
 
-  - name: tuic-in
+  - name: tuicv5-in
     type: tuic
     listen: "::"
     port: 5443
@@ -211,7 +212,7 @@ listeners:
       server-names:
         - www.microsoft.com
 
-  - name: trusttunnel-in
+  - name: tt-in
     type: trusttunnel
     listen: "::"
     port: 7443
@@ -222,6 +223,14 @@ listeners:
     private-key: "${KEY}"
     network: ["tcp", "udp"]
     congestion-controller: bbr
+
+  - name: mieru-in
+    type: mieru
+    listen: "::"
+    port: 8443
+    transport: UDP
+    users:
+      "${MIERU_USER}": "${REUSE_PASS}"
 EOF
 
   chown root:"${MH_GROUP}" "${MH_CONF}"
