@@ -37,9 +37,9 @@ DOMAIN-SUFFIX,weixinbridge.com
 DOMAIN-KEYWORD,wechat
 DOMAIN-KEYWORD,weixin
 # Email
-DOMAIN,outlook.live.com
-DOMAIN-SUFFIX,hotmail.com
-DOMAIN-SUFFIX,outlook.com
+# DOMAIN,outlook.live.com
+# DOMAIN-SUFFIX,hotmail.com
+# DOMAIN-SUFFIX,outlook.com
 # Cloudflare
 DOMAIN-KEYWORD,cloudflare-cn
 DOMAIN-KEYWORD,cloudflarecn
