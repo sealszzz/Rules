@@ -44,7 +44,7 @@ find_release_tag_for_asset() {
   local prefix="$2"
   local api
 
-  api="https://api.github.com/repos/${repo}/releases?per_page=50"
+  api="https://api.github.com/repos/${repo}/releases?per_page=100"
 
   curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
     map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
@@ -52,15 +52,45 @@ find_release_tag_for_asset() {
   '
 }
 
+find_asset_by_tag() {
+  local repo="$1"
+  local tag="$2"
+  local prefix="$3"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
+}
+
 install_release_asset() {
   local repo="$1"
   local tag="$2"
   local base_name="$3"
   local bin_name="$4"
-  local asset url tmpd bin
+  local prefix asset_line asset_name url tmpd bin
 
-  asset="${base_name}-${ASSET_ARCH}-${tag}.tar.gz"
-  url="https://github.com/${repo}/releases/download/${tag}/${asset}"
+  prefix="${base_name}-${ASSET_ARCH}-"
+  asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
+
+  [ -n "$asset_line" ] || {
+    echo "FATAL: failed to find ${prefix}*.tar.gz in release tag ${tag}" >&2
+    exit 1
+  }
+
+  asset_name="${asset_line%%$'\t'*}"
+  url="${asset_line#*$'\t'}"
+
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
+
+  echo "tag: ${tag}"
+  echo "asset: ${asset_name}"
+  echo "download: ${url}"
 
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
@@ -78,6 +108,8 @@ install_release_asset() {
   [ -n "$bin" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
 
   install -m 0755 "$bin" "$APP_BIN"
+
+  rm -rf "$tmpd"
   trap - RETURN
 }
 
