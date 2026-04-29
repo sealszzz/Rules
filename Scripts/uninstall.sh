@@ -283,18 +283,6 @@ uninstall_tobaru() {
   echo "[OK] Tobaru 卸载完成。"
 }
 
-uninstall_trusttunnel() {
-  echo ">>> 卸载 TrustTunnel ..."
-  stop_disable_service "trusttunnel"
-  remove_unit_artifacts "trusttunnel"
-  remove_paths \
-    /usr/local/bin/trusttunnel \
-    /etc/trusttunnel /var/lib/trusttunnel /var/log/trusttunnel \
-    /etc/logrotate.d/trusttunnel
-  remove_user_group "trusttunnel" || true
-  echo "[OK] TrustTunnel 卸载完成。"
-}
-
 uninstall_ssrust() {
   echo ">>> 卸载 ssrust ..."
   stop_disable_service "ssrust"
@@ -320,7 +308,7 @@ uninstall_mihomo() {
 }
 
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / TrustTunnel / ssrust / mihomo"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / ssrust / mihomo"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -332,7 +320,6 @@ uninstall_all() {
   uninstall_hysteria
   uninstall_anytls
   uninstall_tobaru
-  uninstall_trusttunnel
   uninstall_ssrust
   uninstall_mihomo
   echo "[OK] 所有组件已卸载。"
@@ -350,7 +337,6 @@ declare -A SEL=(
   [hysteria]=0
   [anytls]=0
   [tobaru]=0
-  [trusttunnel]=0
   [ssrust]=0
   [mihomo]=0
 )
@@ -368,7 +354,7 @@ run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
 
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru trusttunnel ssrust mihomo; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru ssrust mihomo; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
@@ -383,7 +369,6 @@ run_selected() {
         hysteria)    uninstall_hysteria ;;
         anytls)      uninstall_anytls ;;
         tobaru)      uninstall_tobaru ;;
-        trusttunnel) uninstall_trusttunnel ;;
         ssrust)      uninstall_ssrust ;;
         mihomo)      uninstall_mihomo ;;
       esac
@@ -423,9 +408,8 @@ main_menu() {
  9) [$([ "${SEL[hysteria]}"    -eq 1 ] && echo x || echo ' ')] 卸载 Hysteria2
 10) [$([ "${SEL[anytls]}"      -eq 1 ] && echo x || echo ' ')] 卸载 AnyTLS
 11) [$([ "${SEL[tobaru]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
-12) [$([ "${SEL[trusttunnel]}" -eq 1 ] && echo x || echo ' ')] 卸载 TrustTunnel
-13) [$([ "${SEL[ssrust]}"      -eq 1 ] && echo x || echo ' ')] 卸载 ssrust
-14) [$([ "${SEL[mihomo]}"      -eq 1 ] && echo x || echo ' ')] 卸载 mihomo
+12) [$([ "${SEL[ssrust]}"      -eq 1 ] && echo x || echo ' ')] 卸载 ssrust
+13) [$([ "${SEL[mihomo]}"      -eq 1 ] && echo x || echo ' ')] 卸载 mihomo
 ==================================================
 MENU
 
@@ -449,9 +433,8 @@ MENU
         9)  toggle hysteria ;;
         10) toggle anytls ;;
         11) toggle tobaru ;;
-        12) toggle trusttunnel ;;
-        13) toggle ssrust ;;
-        14) toggle mihomo ;;
+        12) toggle ssrust ;;
+        13) toggle mihomo ;;
         00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
