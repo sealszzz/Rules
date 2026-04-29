@@ -169,45 +169,36 @@ uninstall_singbox() {
 }
 
 uninstall_tuic() {
-  echo ">>> 卸载 TUIC / tuic-rs ..."
+  echo ">>> 卸载 TUIC ..."
   local base
-  for base in tuic tuic-rs; do
+  for base in tuic; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
 
   remove_paths \
     /usr/local/bin/tuic \
-    /usr/local/bin/tuic-rs \
     /etc/tuic /var/lib/tuic /var/log/tuic \
-    /etc/tuic-rs /var/lib/tuic-rs /var/log/tuic-rs \
-    /etc/logrotate.d/tuic \
-    /etc/logrotate.d/tuic-rs
-
+    /etc/logrotate.d/tuic
   remove_user_group "tuic" || true
-  remove_user_group "tuic-rs" "tuic-rs" || true
-  echo "[OK] TUIC / tuic-rs 卸载完成。"
+  echo "[OK] TUIC 卸载完成。"
 }
 
 uninstall_juicity() {
-  echo ">>> 卸载 Juicity / juicity-rs ..."
+  echo ">>> 卸载 Juicity ..."
   local base
-  for base in juicity juicity-rs; do
+  for base in juicity; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
 
   remove_paths \
     /usr/local/bin/juicity \
-    /usr/local/bin/juicity-rs \
     /etc/juicity /var/lib/juicity /var/log/juicity \
-    /etc/juicity-rs /var/lib/juicity-rs /var/log/juicity-rs \
-    /etc/logrotate.d/juicity \
-    /etc/logrotate.d/juicity-rs
+    /etc/logrotate.d/juicity
 
   remove_user_group "juicity" || true
-  remove_user_group "juicity-rs" "juicity-rs" || true
-  echo "[OK] Juicity / juicity-rs 卸载完成。"
+  echo "[OK] Juicity 卸载完成。"
 }
 
 uninstall_shoes() {
@@ -259,9 +250,9 @@ uninstall_hysteria() {
 }
 
 uninstall_anytls() {
-  echo ">>> 卸载 AnyTLS / anytls-go / anytls-rs ..."
+  echo ">>> 卸载 AnyTLS / anytls-go ..."
   local base
-  for base in anytls anytls-go anytls-rs; do
+  for base in anytls anytls-go; do
     stop_disable_service "$base"
     remove_unit_artifacts "$base"
   done
@@ -269,19 +260,15 @@ uninstall_anytls() {
   remove_paths \
     /usr/local/bin/anytls \
     /usr/local/bin/anytls-go \
-    /usr/local/bin/anytls-rs \
     /etc/anytls /var/lib/anytls /var/log/anytls \
     /etc/anytls-go /var/lib/anytls-go /var/log/anytls-go \
-    /etc/anytls-rs /var/lib/anytls-rs /var/log/anytls-rs \
     /etc/logrotate.d/anytls \
-    /etc/logrotate.d/anytls-go \
-    /etc/logrotate.d/anytls-rs
+    /etc/logrotate.d/anytls-go
 
   remove_user_group "anytls" || true
   remove_user_group "anytls-go" "anytls-go" || true
-  remove_user_group "anytls-rs" "anytls-rs" || true
 
-  echo "[OK] AnyTLS / anytls-go / anytls-rs 卸载完成。"
+  echo "[OK] AnyTLS / anytls-go 卸载完成。"
 }
 
 uninstall_tobaru() {
@@ -428,8 +415,8 @@ main_menu() {
  1) [$([ "${SEL[caddy]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Caddy (含 caddy-l4)
  2) [$([ "${SEL[xray]}"        -eq 1 ] && echo x || echo ' ')] 卸载 Xray
  3) [$([ "${SEL[singbox]}"     -eq 1 ] && echo x || echo ' ')] 卸载 sing-box
- 4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC (含 tuic-rs)
- 5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity (含 juicity-rs)
+ 4) [$([ "${SEL[tuic]}"        -eq 1 ] && echo x || echo ' ')] 卸载 TUIC
+ 5) [$([ "${SEL[juicity]}"     -eq 1 ] && echo x || echo ' ')] 卸载 Juicity
  6) [$([ "${SEL[shoes]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Shoes
  7) [$([ "${SEL[shadowquic]}"  -eq 1 ] && echo x || echo ' ')] 卸载 ShadowQUIC
  8) [$([ "${SEL[snell]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Snell
