@@ -21,6 +21,8 @@ APP_BIN_NAME="anytls"
 
 export DEBIAN_FRONTEND=noninteractive
 
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
+
 apt-get update
 apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl jq
 
@@ -44,7 +46,7 @@ find_release_tag_for_asset() {
   local prefix="$2"
   local api
 
-  api="https://api.github.com/repos/${repo}/releases?per_page=50"
+  api="https://api.github.com/repos/${repo}/releases?per_page=100"
 
   curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
     map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
@@ -52,15 +54,45 @@ find_release_tag_for_asset() {
   '
 }
 
+find_asset_by_tag() {
+  local repo="$1"
+  local tag="$2"
+  local prefix="$3"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
+}
+
 install_release_asset() {
   local repo="$1"
   local tag="$2"
   local base_name="$3"
   local bin_name="$4"
-  local asset url tmpd bin
+  local prefix asset_line asset_name url tmpd bin
 
-  asset="${base_name}-${ASSET_ARCH}-${tag}.tar.gz"
-  url="https://github.com/${repo}/releases/download/${tag}/${asset}"
+  prefix="${base_name}-${ASSET_ARCH}-"
+  asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
+
+  [ -n "$asset_line" ] || {
+    echo "FATAL: failed to find ${prefix}*.tar.gz in release tag ${tag}" >&2
+    exit 1
+  }
+
+  asset_name="${asset_line%%$'\t'*}"
+  url="${asset_line#*$'\t'}"
+
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
+
+  echo "tag: ${tag}"
+  echo "asset: ${asset_name}"
+  echo "download: ${url}"
 
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
@@ -75,9 +107,11 @@ install_release_asset() {
     bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
   fi
 
-  [ -n "$bin" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
+  [ -n "${bin:-}" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
 
   install -m 0755 "$bin" "$APP_BIN"
+
+  rm -rf "$tmpd"
   trap - RETURN
 }
 
@@ -89,7 +123,10 @@ if [ -z "$ANYTLS_TAG" ]; then
   ANYTLS_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
-[ -n "$ANYTLS_TAG" ] || { echo "FATAL: failed to find an anytls release for ${ASSET_ARCH}" >&2; exit 1; }
+[ -n "$ANYTLS_TAG" ] || {
+  echo "FATAL: failed to find an anytls release for ${ASSET_ARCH}" >&2
+  exit 1
+}
 
 install_release_asset "$APP_REPO" "$ANYTLS_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
@@ -120,17 +157,26 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "8.8.8.8:53"
     ],
     "cache_ttl_secs": 60,
-    "query_timeout_ms": 5000
+      "query_timeout_ms": 5000
   },
   "tcp_keepalive_idle_secs": 30,
   "tcp_keepalive_interval_secs": 30
 }
 EOF
 
-  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$APP_CONF_FILE" >&2; exit 1; }
+  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
+    echo "FATAL: invalid json generated" >&2
+    cat "$APP_CONF_FILE" >&2
+    exit 1
+  }
+
   chown root:"$APP_GROUP" "$APP_CONF_FILE"
   chmod 640 "$APP_CONF_FILE"
 fi
+
+chown -R root:"$APP_GROUP" "$APP_CONF_DIR"
+chmod 750 "$APP_CONF_DIR"
+chmod 640 "$APP_CONF_FILE" || true
 
 if [ ! -f "$APP_SERVICE" ]; then
   cat >"$APP_SERVICE" <<EOF
@@ -157,10 +203,12 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
+
   chmod 644 "$APP_SERVICE"
 fi
 
 systemctl daemon-reload
+
 if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
   systemctl restart "$APP_SERVICE_NAME"
 else
@@ -168,14 +216,20 @@ else
 fi
 
 BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
+
+SHOW_USER="${USERNAME:-}"
 SHOW_PASS="${PASS:-}"
-if [ -z "$SHOW_PASS" ] && [ -f "$APP_CONF_FILE" ]; then
-  SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+
+if [ -f "$APP_CONF_FILE" ]; then
+  [ -n "$SHOW_USER" ] || SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_PASS" ] || SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 fi
 
+echo
 echo "app: anytls"
 echo "tag: ${ANYTLS_TAG:-unknown}"
 echo "bin: ${BIN_VER:-unknown}"
 echo "config: ${APP_CONF_FILE}"
-echo "username: ${USERNAME}"
+echo "username: ${SHOW_USER:-unknown}"
 echo "password: ${SHOW_PASS:-unknown}"
