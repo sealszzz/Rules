@@ -1,64 +1,128 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-: "${TOBARU_USER:=tobaru}"
-: "${TOBARU_GROUP:=tobaru}"
-: "${TOBARU_BIN:=/usr/local/bin/tobaru}"
-: "${TOBARU_CONF_DIR:=/etc/tobaru}"
-: "${TOBARU_CONF:=/etc/tobaru/tobaru.yml}"
-: "${TOBARU_SERVICE:=/etc/systemd/system/tobaru.service}"
-: "${TOBARU_REPO:=sealszzz/Rules}"
-: "${SERVICE_NAME:=tobaru}"
 : "${TOBARU_TAG:=}"
 
-export DEBIAN_FRONTEND=noninteractive
-[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root"; exit 1; }
+APP_USER="tobaru"
+APP_GROUP="tobaru"
+APP_STATE_DIR="/var/lib/tobaru"
+APP_CONF_DIR="/etc/tobaru"
+APP_CONF_FILE="${APP_CONF_DIR}/tobaru.yml"
+APP_BIN="/usr/local/bin/tobaru"
+APP_SERVICE_NAME="tobaru"
+APP_SERVICE="/etc/systemd/system/${APP_SERVICE_NAME}.service"
+APP_REPO="sealszzz/Rules"
+APP_ASSET_BASENAME="tobaru"
+APP_BIN_NAME="tobaru"
 
-apt-get update -qq
-apt-get install -y --no-install-recommends curl ca-certificates tar jq >/dev/null
+export DEBIAN_FRONTEND=noninteractive
+
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
+
+apt-get update
+apt-get install -y --no-install-recommends curl ca-certificates tar jq
+
+getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
+id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
+
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
+install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
-  amd64|x86_64) ASSET_ARCH="linux-amd64" ;;
+  amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
   arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
-  *) echo "FATAL: unsupported arch"; exit 1 ;;
+  *) echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2; exit 1 ;;
 esac
 
-if [ -z "$TOBARU_TAG" ]; then
-  API="https://api.github.com/repos/${TOBARU_REPO}/releases?per_page=50"
-  TOBARU_TAG="$(curl -fsSL "$API" | jq -r --arg asset "tobaru-${ASSET_ARCH}-" '
-    map(select(any(.assets[]?; (.name | startswith($asset) and endswith(".tar.gz")))))
+find_release_tag_for_asset() {
+  local repo="$1"
+  local prefix="$2"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases?per_page=100"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
     | .[0].tag_name // empty
-  ')"
+  '
+}
+
+find_asset_by_tag() {
+  local repo="$1"
+  local tag="$2"
+  local prefix="$3"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
+}
+
+install_release_asset() {
+  local repo="$1"
+  local tag="$2"
+  local base_name="$3"
+  local bin_name="$4"
+  local prefix asset_line asset_name url tmpd bin
+
+  prefix="${base_name}-${ASSET_ARCH}-"
+  asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
+
+  [ -n "$asset_line" ] || {
+    echo "FATAL: failed to find ${prefix}*.tar.gz in release tag ${tag}" >&2
+    exit 1
+  }
+
+  asset_name="${asset_line%%$'\t'*}"
+  url="${asset_line#*$'\t'}"
+
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
+
+  echo "tag: ${tag}"
+  echo "asset: ${asset_name}"
+  echo "download: ${url}"
+
+  tmpd="$(mktemp -d)"
+  trap 'rm -rf "$tmpd"' RETURN
+
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "$url"
+  mkdir -p "$tmpd/unpack"
+  tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
+
+  if [ -f "$tmpd/unpack/$bin_name" ]; then
+    bin="$tmpd/unpack/$bin_name"
+  else
+    bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
+  fi
+
+  [ -n "${bin:-}" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
+
+  install -m 0755 "$bin" "$APP_BIN"
+
+  rm -rf "$tmpd"
+  trap - RETURN
+}
+
+if [ -z "$TOBARU_TAG" ]; then
+  TOBARU_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
-[ -n "$TOBARU_TAG" ] || { echo "FATAL: failed to find a tobaru release for ${ASSET_ARCH}"; exit 1; }
+[ -n "$TOBARU_TAG" ] || {
+  echo "FATAL: failed to find a tobaru release for ${ASSET_ARCH}" >&2
+  exit 1
+}
 
-ASSET="tobaru-${ASSET_ARCH}-${TOBARU_TAG}.tar.gz"
-URL="https://github.com/${TOBARU_REPO}/releases/download/${TOBARU_TAG}/${ASSET}"
+install_release_asset "$APP_REPO" "$TOBARU_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
-TMP="$(mktemp -d)"
-trap 'rm -rf "$TMP"' EXIT
+command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
 
-echo "Downloading: $URL"
-curl -fL --retry 3 --retry-delay 1 -o "$TMP/$ASSET" "$URL"
-tar -xzf "$TMP/$ASSET" -C "$TMP"
-
-if [ -f "$TMP/tobaru" ]; then
-  FOUND_BIN="$TMP/tobaru"
-else
-  FOUND_BIN="$(find "$TMP" -maxdepth 3 -type f -name 'tobaru' | head -n1 || true)"
-fi
-[ -n "${FOUND_BIN:-}" ] || { echo "FATAL: missing tobaru binary in tar"; exit 1; }
-
-install -m 0755 "$FOUND_BIN" "$TOBARU_BIN"
-
-getent group "$TOBARU_GROUP" >/dev/null || groupadd --system "$TOBARU_GROUP"
-id -u "$TOBARU_USER" >/dev/null 2>&1 || useradd --system --no-create-home --gid "$TOBARU_GROUP" --shell /usr/sbin/nologin "$TOBARU_USER"
-
-install -d -o root -g "$TOBARU_GROUP" -m 0750 "$TOBARU_CONF_DIR"
-
-if [ ! -f "$TOBARU_CONF" ]; then
-cat >"$TOBARU_CONF" <<'EOF'
+if [ ! -f "$APP_CONF_FILE" ]; then
+  cat >"$APP_CONF_FILE" <<'EOF'
 logging:
   level: info
 
@@ -115,30 +179,37 @@ listeners:
 
       - location: "[::1]:9009"
 EOF
+
+  chown root:"$APP_GROUP" "$APP_CONF_FILE"
+  chmod 640 "$APP_CONF_FILE"
 fi
 
-chown -R root:"$TOBARU_GROUP" "$TOBARU_CONF_DIR"
-chmod 0750 "$TOBARU_CONF_DIR"
-chmod 0640 "$TOBARU_CONF" || true
+chown -R root:"$APP_GROUP" "$APP_CONF_DIR"
+chmod 750 "$APP_CONF_DIR"
+chmod 640 "$APP_CONF_FILE" || true
 
-cat >"$TOBARU_SERVICE" <<EOF
+if [ ! -f "$APP_SERVICE" ]; then
+  cat >"$APP_SERVICE" <<EOF
 [Unit]
 Description=tobaru TLS/QUIC SNI router
-After=network-online.target
+Documentation=https://github.com/${APP_REPO}/releases
+After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
-User=${TOBARU_USER}
-Group=${TOBARU_GROUP}
+User=${APP_USER}
+Group=${APP_GROUP}
 Type=simple
-ExecStart=${TOBARU_BIN} ${TOBARU_CONF}
+UMask=0077
+WorkingDirectory=${APP_STATE_DIR}
+ExecStart=${APP_BIN} ${APP_CONF_FILE}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
 LimitNOFILE=262144
 Restart=on-failure
-RestartSec=2s
-SyslogIdentifier=tobaru
+RestartSec=3s
+SyslogIdentifier=${APP_SERVICE_NAME}
 StandardOutput=journal
 StandardError=journal
 
@@ -146,18 +217,23 @@ StandardError=journal
 WantedBy=multi-user.target
 EOF
 
-chmod 0644 "$TOBARU_SERVICE"
+  chmod 644 "$APP_SERVICE"
+fi
 
 systemctl daemon-reload
-systemctl enable "$SERVICE_NAME" >/dev/null 2>&1 || true
-systemctl restart "$SERVICE_NAME"
 
-BIN_VER="$({ "$TOBARU_BIN" --version 2>/dev/null || true; } | head -n1)"
-[ -n "$BIN_VER" ] || BIN_VER="$TOBARU_TAG"
+if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
+  systemctl restart "$APP_SERVICE_NAME"
+else
+  systemctl enable --now "$APP_SERVICE_NAME"
+fi
+
+BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
 
 echo
 echo "app: tobaru"
 echo "tag: ${TOBARU_TAG:-unknown}"
 echo "bin: ${BIN_VER:-unknown}"
-echo "config: ${TOBARU_CONF}"
-systemctl --no-pager --full status "$SERVICE_NAME" || true
+echo "config: ${APP_CONF_FILE}"
+systemctl --no-pager --full status "$APP_SERVICE_NAME" || true
