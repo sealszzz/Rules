@@ -149,13 +149,11 @@ net.ipv4.tcp_mtu_probing = 1
 # ===== Conntrack / QUIC / UDP =====
 net.netfilter.nf_conntrack_max = 262144
 net.netfilter.nf_conntrack_udp_timeout = 30
-net.netfilter.nf_conntrack_udp_timeout_stream = 60
+net.netfilter.nf_conntrack_udp_timeout_stream = 120
 
 # ===== Socket Buffers =====
 net.core.rmem_max = 26214400
 net.core.wmem_max = 26214400
-net.core.rmem_default = 4194304
-net.core.wmem_default = 4194304
 EOF
 
   sysctl --system >/dev/null || true
