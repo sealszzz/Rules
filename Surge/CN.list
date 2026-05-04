@@ -7,8 +7,8 @@ DOMAIN,weather-map2.apple.com
 DOMAIN,weather-widget-events.apple.com
 DOMAIN,weather-analytics-events.apple.com
 # DOMAIN,cdn.apple-mapkit.com
-DOMAIN-SUFFIX,push.apple.com
-DOMAIN-SUFFIX,push-apple.com.akadns.net
+# DOMAIN-SUFFIX,push.apple.com
+# DOMAIN-SUFFIX,push-apple.com.akadns.net
 DOMAIN-SUFFIX,mailws.icloud.com
 DOMAIN-SUFFIX,mail.me.com
 DOMAIN-SUFFIX,apzones.com
