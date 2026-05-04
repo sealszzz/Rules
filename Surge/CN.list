@@ -1,18 +1,3 @@
-# Apple
-# DOMAIN,time.apple.com
-# DOMAIN,time.asia.apple.com
-DOMAIN,gspe19-cn-ssl.ls.apple.com
-DOMAIN,weather-data.apple.com
-DOMAIN,weather-map2.apple.com
-DOMAIN,weather-widget-events.apple.com
-DOMAIN,weather-analytics-events.apple.com
-# DOMAIN,cdn.apple-mapkit.com
-# DOMAIN-SUFFIX,push.apple.com
-# DOMAIN-SUFFIX,push-apple.com.akadns.net
-DOMAIN-SUFFIX,mailws.icloud.com
-DOMAIN-SUFFIX,mail.me.com
-DOMAIN-SUFFIX,apzones.com
-DOMAIN-SUFFIX,digicert.cn
 # DOMAIN-SUFFIX,swcdn.apple.com
 # DOMAIN-SUFFIX,cdn-apple.com
 # BitTorrent
