@@ -110,7 +110,6 @@ curl -fL --retry 3 --retry-delay 1 \
 
 log "Install binary -> ${MH_BIN}"
 
-# 避免 /usr/local/bin/mihomo 正在运行时直接覆盖触发 Text file busy
 gzip -dc "${TMP_DIR}/mihomo.gz" > "${TMP_DIR}/mihomo"
 chmod 0755 "${TMP_DIR}/mihomo"
 
