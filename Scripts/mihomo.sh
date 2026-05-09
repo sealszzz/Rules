@@ -7,7 +7,7 @@ set -euo pipefail
 : "${MH_CONF:=/etc/mihomo/config.yaml}"
 : "${MH_SERVICE:=/etc/systemd/system/mihomo.service}"
 : "${MH_REPO:=MetaCubeX/mihomo}"
-: "${MH_PRERELEASE:=1}"
+: "${MH_PRERELEASE:=0}"
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
@@ -15,7 +15,6 @@ set -euo pipefail
 : "${REUSE_PASS:=}"
 : "${REUSE_UUID:=}"
 : "${SS2022_PASSWORD:=}"
-: "${REALITY_SHORT_ID:=}"
 
 : "${ANYTLS_USER:=anytls}"
 : "${TRUSTTUNNEL_USER:=trusttunnel}"
@@ -55,7 +54,6 @@ get_latest_tag_302() {
 gen_hex16()  { openssl rand -hex 16; }
 gen_b64_16() { openssl rand -base64 16 | tr -d '\n'; }
 gen_uuid()   { command -v uuidgen >/dev/null 2>&1 && uuidgen || cat /proc/sys/kernel/random/uuid; }
-gen_sid8()   { openssl rand -hex 8; }
 
 ARCH="$(detect_arch)"
 TAG=""
@@ -111,7 +109,17 @@ curl -fL --retry 3 --retry-delay 1 \
   "${ASSET_URL}"
 
 log "Install binary -> ${MH_BIN}"
-gzip -dc "${TMP_DIR}/mihomo.gz" > "${MH_BIN}"
+
+# 避免 /usr/local/bin/mihomo 正在运行时直接覆盖触发 Text file busy
+gzip -dc "${TMP_DIR}/mihomo.gz" > "${TMP_DIR}/mihomo"
+chmod 0755 "${TMP_DIR}/mihomo"
+
+install -d -m 755 "$(dirname "${MH_BIN}")"
+
+systemctl stop mihomo >/dev/null 2>&1 || true
+
+install -m 0755 "${TMP_DIR}/mihomo" "${MH_BIN}.new"
+mv -f "${MH_BIN}.new" "${MH_BIN}"
 chmod 0755 "${MH_BIN}"
 
 getent group "${MH_GROUP}" >/dev/null || groupadd --system "${MH_GROUP}"
@@ -138,18 +146,6 @@ if [ ! -f "${MH_CONF}" ]; then
   [ -n "${REUSE_PASS}" ]       || REUSE_PASS="$(gen_hex16)"
   [ -n "${REUSE_UUID}" ]       || REUSE_UUID="$(gen_uuid)"
   [ -n "${SS2022_PASSWORD}" ]  || SS2022_PASSWORD="$(gen_b64_16)"
-  [ -n "${REALITY_SHORT_ID}" ] || REALITY_SHORT_ID="$(gen_sid8)"
-
-  REALITY_KEYPAIR="$("${MH_BIN}" generate reality-keypair 2>/dev/null)" || die "generate reality-keypair failed"
-  REALITY_PRIVATE_KEY="$(
-    printf '%s\n' "${REALITY_KEYPAIR}" | awk -F': ' '/PrivateKey/ {print $2; exit}'
-  )"
-  REALITY_PUBLIC_KEY="$(
-    printf '%s\n' "${REALITY_KEYPAIR}" | awk -F': ' '/PublicKey/ {print $2; exit}'
-  )"
-
-  [ -n "${REALITY_PRIVATE_KEY}" ] || die "reality private key empty"
-  [ -n "${REALITY_PUBLIC_KEY}" ]  || die "reality public key empty"
 
   cat > "${MH_CONF}" <<EOF
 log-level: warning
@@ -194,23 +190,6 @@ listeners:
     alpn:
       - h3
     max-udp-relay-packet-size: 1500
-
-  - name: vless-in
-    type: vless
-    listen: "::"
-    port: 6443
-    users:
-      - username: "vless"
-        uuid: "${REUSE_UUID}"
-        flow: xtls-rprx-vision
-    reality-config:
-      dest: www.microsoft.com:443
-      private-key: "${REALITY_PRIVATE_KEY}"
-      public-key: "${REALITY_PUBLIC_KEY}"
-      short-id:
-        - "${REALITY_SHORT_ID}"
-      server-names:
-        - www.microsoft.com
 
   - name: tt-in
     type: trusttunnel
