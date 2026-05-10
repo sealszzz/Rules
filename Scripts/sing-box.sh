@@ -7,7 +7,7 @@ set -euo pipefail
 : "${SB_CONF:=/etc/sing-box/config.json}"
 : "${SB_SERVICE:=/etc/systemd/system/sing-box.service}"
 : "${SB_REPO:=SagerNet/sing-box}"
-: "${SB_PRERELEASE:=0}"
+: "${SB_PRERELEASE:=1}"
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
@@ -141,7 +141,9 @@ if [ ! -f "${SB_CONF}" ]; then
         "tag": "system-dns",
         "type": "local"
       }
-    ]
+    ],
+    "final": "system-dns",
+    "strategy": "prefer_ipv4"
   },
   "inbounds": [
     {
@@ -149,7 +151,6 @@ if [ ! -f "${SB_CONF}" ]; then
       "tag": "naive-in",
       "listen": "::",
       "listen_port": 443,
-      //"network": "udp",
       "users": [
         {
           "username": "${NAIVE_USER}",
@@ -227,11 +228,7 @@ if [ ! -f "${SB_CONF}" ]; then
   "outbounds": [
     {
       "type": "direct",
-      "tag": "direct",
-      "domain_resolver": {
-        "server": "system-dns",
-        "strategy": "prefer_ipv4"
-      }
+      "tag": "direct"
     }
   ]
 }
