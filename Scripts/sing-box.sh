@@ -151,6 +151,7 @@ if [ ! -f "${SB_CONF}" ]; then
       "tag": "naive-in",
       "listen": "::",
       "listen_port": 443,
+      //"network": "udp",
       "users": [
         {
           "username": "${NAIVE_USER}",
