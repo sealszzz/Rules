@@ -219,6 +219,7 @@ if [ ! -f "${SB_CONF}" ]; then
         }
       ],
       "ignore_client_bandwidth": true,
+      "masquerade": "https://127.0.0.1:9999"
       "tls": {
         "enabled": true,
         "certificate_path": "${CERT}",
