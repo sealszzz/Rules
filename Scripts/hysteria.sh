@@ -137,9 +137,8 @@ tls:
   sniGuard: ${SNI_GUARD}
 
 auth:
-  type: userpass
-  userpass:
-    user1: ${AUTH_PASS}
+  type: password
+  password: ${AUTH_PASS}
 
 obfs:
   type: salamander
@@ -151,6 +150,11 @@ congestion:
   type: bbr
   bbrProfile: standard
 
+masquerade:
+  type: file
+  file:
+    dir: /var/www/html
+
 resolver:
   tcp:
     addr: 8.8.8.8:53
@@ -160,7 +164,7 @@ resolver:
     addr: 8.8.8.8:53
     addr: 1.1.1.1:53
     timeout: 4s
-    
+
 outbounds:
   - name: direct
     type: direct
