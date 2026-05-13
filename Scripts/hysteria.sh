@@ -137,29 +137,30 @@ tls:
   sniGuard: ${SNI_GUARD}
 
 auth:
-  type: password
-  password: ${AUTH_PASS}
+  type: userpass
+  userpass:
+    user1: ${AUTH_PASS}
 
 obfs:
   type: salamander
   salamander:
     password: ${OBFS_PASS}
 
-quic:
-  initStreamReceiveWindow: 8388608
-  maxStreamReceiveWindow: 8388608
-  initConnReceiveWindow: 20971520
-  maxConnReceiveWindow: 20971520
-  maxIdleTimeout: 30s
-  maxIncomingStreams: 1024
-  disablePathMTUDiscovery: false
-
 ignoreClientBandwidth: true
-speedTest: false
+congestion:
+  type: bbr
+  bbrProfile: standard
 
-disableUDP: false
-udpIdleTimeout: 60s
-
+resolver:
+  tcp:
+    addr: 8.8.8.8:53
+    addr: 1.1.1.1:53
+    timeout: 4s
+  udp:
+    addr: 8.8.8.8:53
+    addr: 1.1.1.1:53
+    timeout: 4s
+    
 outbounds:
   - name: direct
     type: direct
