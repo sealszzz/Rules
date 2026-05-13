@@ -155,16 +155,6 @@ masquerade:
   file:
     dir: /var/www/html
 
-resolver:
-  tcp:
-    addr: 8.8.8.8:53
-    addr: 1.1.1.1:53
-    timeout: 4s
-  udp:
-    addr: 8.8.8.8:53
-    addr: 1.1.1.1:53
-    timeout: 4s
-
 outbounds:
   - name: direct
     type: direct
