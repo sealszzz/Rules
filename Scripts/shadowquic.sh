@@ -2,9 +2,16 @@
 # shadowquic-min: no-API latest/download, glibc only (x86_64/aarch64), plain binary install
 set -euo pipefail
 
-: "${SQ_PORT:=443}"
+: "${SQ_PORT:=4443}"
+: "${SY_PORT:=5443}"
+
 : "${SQ_UPSTREAM_HOST:=www.debian.org}"
 : "${SQ_UPSTREAM_PORT:=443}"
+: "${SQ_SERVER_NAME:=${SQ_UPSTREAM_HOST}}"
+
+: "${CERT:=/etc/tls/cert.pem}"
+: "${KEY:=/etc/tls/key.pem}"
+
 : "${SQ_LOG_LEVEL:=warn}"           # trace | debug | info | warn | error
 : "${SQ_DNS_STRATEGY:=prefer-ipv4}" # prefer-ipv4 | prefer-ipv6 | ipv4-only | ipv6-only
 
@@ -58,12 +65,35 @@ inbound:
       password: "${SQ_GEN_PASS}"
   jls-upstream:
     addr: "${SQ_UPSTREAM_HOST}:${SQ_UPSTREAM_PORT}"
+  server-name: "${SQ_SERVER_NAME}"
   alpn: ["h3"]
   congestion-control: bbr
   zero-rtt: true
+  gso: true
+
+# SunnyQUIC example, disabled by default.
+# To use SunnyQUIC instead of ShadowQUIC, replace the active inbound block above
+# with this block, then restart shadowquic.
+#
+# inbound:
+#   type: sunnyquic
+#   bind-addr: "[::]:${SY_PORT}"
+#   users:
+#     - username: "${SQ_GEN_USER}"
+#       password: "${SQ_GEN_PASS}"
+#   cert-path: "${CERT}"
+#   key-path: "${KEY}"
+#   server-name: "${SQ_SERVER_NAME}"
+#   alpn: ["h3"]
+#   congestion-control: bbr
+#   zero-rtt: true
+#   gso: true
+#   max-path-num: 0
+
 outbound:
   type: direct
   dns-strategy: ${SQ_DNS_STRATEGY}
+
 log-level: "${SQ_LOG_LEVEL}"
 EOF
 
@@ -106,6 +136,11 @@ else
   systemctl enable --now "$SQ_SERVICE_NAME" || true
 fi
 
+echo
+echo "[*] ShadowQUIC config: ${SQ_CONF_FILE}"
+echo "[*] ShadowQUIC listen: udp/${SQ_PORT}"
+echo "[*] ShadowQUIC username: ${SQ_GEN_USER:-existing-config}"
+echo "[*] ShadowQUIC password: ${SQ_GEN_PASS:-existing-config}"
 echo
 echo "[*] ShadowQUIC version:"
 "$SQ_BIN" -V 2>/dev/null || "$SQ_BIN" --version 2>/dev/null || true
