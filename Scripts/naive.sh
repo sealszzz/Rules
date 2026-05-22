@@ -3,9 +3,11 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${NAIVE_USER:=}"
+: "${USERNAME:=naive}"
 : "${PASS:=}"
 : "${NAIVE_TAG:=}"
+: "${LISTEN:=[::]:443}"
+: "${FALLBACK:=127.0.0.1:9999}"
 
 APP_USER="naive"
 APP_GROUP="naive"
@@ -20,6 +22,8 @@ APP_ASSET_BASENAME="naive"
 APP_BIN_NAME="naive"
 
 export DEBIAN_FRONTEND=noninteractive
+
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
 
 apt-get update
 apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl jq
@@ -44,7 +48,7 @@ find_release_tag_for_asset() {
   local prefix="$2"
   local api
 
-  api="https://api.github.com/repos/${repo}/releases?per_page=50"
+  api="https://api.github.com/repos/${repo}/releases?per_page=100"
 
   curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
     map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
@@ -52,15 +56,45 @@ find_release_tag_for_asset() {
   '
 }
 
+find_asset_by_tag() {
+  local repo="$1"
+  local tag="$2"
+  local prefix="$3"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
+}
+
 install_release_asset() {
   local repo="$1"
   local tag="$2"
   local base_name="$3"
   local bin_name="$4"
-  local asset url tmpd bin
+  local prefix asset_line asset_name url tmpd bin
 
-  asset="${base_name}-${ASSET_ARCH}-${tag}.tar.gz"
-  url="https://github.com/${repo}/releases/download/${tag}/${asset}"
+  prefix="${base_name}-${ASSET_ARCH}-"
+  asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
+
+  [ -n "$asset_line" ] || {
+    echo "FATAL: failed to find ${prefix}*.tar.gz in release tag ${tag}" >&2
+    exit 1
+  }
+
+  asset_name="${asset_line%%$'\t'*}"
+  url="${asset_line#*$'\t'}"
+
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
+
+  echo "tag: ${tag}"
+  echo "asset: ${asset_name}"
+  echo "download: ${url}"
 
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
@@ -75,14 +109,12 @@ install_release_asset() {
     bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
   fi
 
-  [ -n "$bin" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
+  [ -n "${bin:-}" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
 
   install -m 0755 "$bin" "$APP_BIN"
-  trap - RETURN
-}
 
-gen_naive_user() {
-  echo "naive$(openssl rand -hex 3)"
+  rm -rf "$tmpd"
+  trap - RETURN
 }
 
 gen_pass() {
@@ -93,34 +125,36 @@ if [ -z "$NAIVE_TAG" ]; then
   NAIVE_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
-[ -n "$NAIVE_TAG" ] || { echo "FATAL: failed to find a naive release for ${ASSET_ARCH}" >&2; exit 1; }
+[ -n "$NAIVE_TAG" ] || {
+  echo "FATAL: failed to find a naive release for ${ASSET_ARCH}" >&2
+  exit 1
+}
 
 install_release_asset "$APP_REPO" "$NAIVE_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
 command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
 
 if [ ! -f "$APP_CONF_FILE" ]; then
-  [ -n "$NAIVE_USER" ] || NAIVE_USER="$(gen_naive_user)"
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
   cat >"$APP_CONF_FILE" <<EOF
 {
   "log_level": "info",
-  "listen": "[::]:443",
+  "listen": "${LISTEN}",
   "users": [
     {
-      "username": "${NAIVE_USER}",
+      "username": "${USERNAME}",
       "password": "${PASS}"
     }
   ],
-  "tls": {
-    "cert": "${CERT}",
-    "key": "${KEY}",
-    "zero_rtt_mode": "auth"
-  },
-  "quic": {
-    "congestion_control": "bbr"
-  },
+  "cert": "${CERT}",
+  "key": "${KEY}",
+  "accept_proxy_protocol": true,
+  "fallback": "${FALLBACK}",
+  "fallback_tls": true,
+  "fallback_proxy_protocol_v2": true,
+  "fallback_tls_skip_verify": true,
+  "relay_ipv6": false,
   "dns": {
     "upstreams": [
       "1.1.1.1:53",
@@ -129,19 +163,32 @@ if [ ! -f "$APP_CONF_FILE" ]; then
     "cache_ttl_secs": 60,
     "query_timeout_ms": 5000
   },
-  "relay_ipv6": false
+  "max_concurrent_streams": 128,
+  "connection_acquire_timeout_ms": 600,
+  "h2_handshake_timeout_ms": 800,
+  "tcp_keepalive_idle_secs": 30,
+  "tcp_keepalive_interval_secs": 30
 }
 EOF
 
-  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$APP_CONF_FILE" >&2; exit 1; }
+  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
+    echo "FATAL: invalid json generated" >&2
+    cat "$APP_CONF_FILE" >&2
+    exit 1
+  }
+
   chown root:"$APP_GROUP" "$APP_CONF_FILE"
   chmod 640 "$APP_CONF_FILE"
 fi
 
+chown -R root:"$APP_GROUP" "$APP_CONF_DIR"
+chmod 750 "$APP_CONF_DIR"
+chmod 640 "$APP_CONF_FILE" || true
+
 if [ ! -f "$APP_SERVICE" ]; then
   cat >"$APP_SERVICE" <<EOF
 [Unit]
-Description=Naive H3 Rust Server
+Description=Naive Rust Server
 Documentation=https://github.com/${APP_REPO}/releases
 After=network-online.target nss-lookup.target
 Wants=network-online.target
@@ -163,10 +210,12 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
+
   chmod 644 "$APP_SERVICE"
 fi
 
 systemctl daemon-reload
+
 if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
   systemctl restart "$APP_SERVICE_NAME"
 else
@@ -174,12 +223,26 @@ else
 fi
 
 BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
-SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
-SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
 
+SHOW_USER="${USERNAME:-}"
+SHOW_PASS="${PASS:-}"
+SHOW_LISTEN="${LISTEN:-}"
+SHOW_FALLBACK="${FALLBACK:-}"
+
+if [ -f "$APP_CONF_FILE" ]; then
+  [ -n "$SHOW_USER" ] || SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_PASS" ] || SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_LISTEN" ] || SHOW_LISTEN="$(jq -r '.listen // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_FALLBACK" ] || SHOW_FALLBACK="$(jq -r '.fallback // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+fi
+
+echo
 echo "app: naive"
 echo "tag: ${NAIVE_TAG:-unknown}"
 echo "bin: ${BIN_VER:-unknown}"
 echo "config: ${APP_CONF_FILE}"
+echo "listen: ${SHOW_LISTEN:-unknown}"
+echo "fallback: ${SHOW_FALLBACK:-unknown}"
 echo "username: ${SHOW_USER:-unknown}"
 echo "password: ${SHOW_PASS:-unknown}"
