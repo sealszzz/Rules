@@ -3,7 +3,7 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
-: "${USERNAME:=naive}"
+: "${USERNAME:=}"
 : "${PASS:=}"
 : "${NAIVE_TAG:=}"
 : "${LISTEN:=[::]:443}"
@@ -121,6 +121,10 @@ gen_pass() {
   openssl rand -hex 16
 }
 
+gen_user() {
+  printf 'naive%s\n' "$(openssl rand -hex 3)"
+}
+
 if [ -z "$NAIVE_TAG" ]; then
   NAIVE_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
@@ -135,9 +139,10 @@ install_release_asset "$APP_REPO" "$NAIVE_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_N
 command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
 
 if [ ! -f "$APP_CONF_FILE" ]; then
+  [ -n "$USERNAME" ] || USERNAME="$(gen_user)"
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
-  cat >"$APP_CONF_FILE" <<EOF_JSON
+  cat >"$APP_CONF_FILE" <<EOF_CONF
 {
   "log_level": "info",
   "listen": "${LISTEN}",
@@ -151,11 +156,22 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "key": "${KEY}",
   "fallback": "${FALLBACK}",
   "accept_proxy_protocol": true,
+  "relay_ipv6": false,
+  "dns": {
+    "upstreams": [
+      "1.1.1.1:53",
+      "8.8.8.8:53"
+    ],
+    "cache_ttl_secs": 120,
+    "query_timeout_ms": 1500
+  },
+  "tcp_keepalive_idle_secs": 60,
+  "tcp_keepalive_interval_secs": 30,
   "fallback_tls": true,
   "fallback_proxy_protocol_v2": true,
   "fallback_tls_skip_verify": true
 }
-EOF_JSON
+EOF_CONF
 
   jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
     echo "FATAL: invalid json generated" >&2
@@ -208,7 +224,7 @@ else
   systemctl enable --now "$APP_SERVICE_NAME"
 fi
 
-BIN_VER="$($APP_BIN --version 2>/dev/null || true)"
+BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
 BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
 
 SHOW_USER="${USERNAME:-}"
