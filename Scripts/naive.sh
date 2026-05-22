@@ -168,7 +168,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "tcp_keepalive_idle_secs": 60,
   "tcp_keepalive_interval_secs": 30,
   "fallback_tls": true,
-  "fallback_proxy_protocol_v2": true,
+  "fallback_proxy_protocol": true,
   "fallback_tls_skip_verify": true
 }
 EOF_CONF
