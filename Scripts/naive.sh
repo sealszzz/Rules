@@ -137,7 +137,7 @@ command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&
 if [ ! -f "$APP_CONF_FILE" ]; then
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
-  cat >"$APP_CONF_FILE" <<EOF
+  cat >"$APP_CONF_FILE" <<EOF_JSON
 {
   "log_level": "info",
   "listen": "${LISTEN}",
@@ -149,27 +149,13 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   ],
   "cert": "${CERT}",
   "key": "${KEY}",
-  "accept_proxy_protocol": true,
   "fallback": "${FALLBACK}",
+  "accept_proxy_protocol": true,
   "fallback_tls": true,
   "fallback_proxy_protocol_v2": true,
-  "fallback_tls_skip_verify": true,
-  "relay_ipv6": false,
-  "dns": {
-    "upstreams": [
-      "1.1.1.1:53",
-      "8.8.8.8:53"
-    ],
-    "cache_ttl_secs": 60,
-    "query_timeout_ms": 5000
-  },
-  "max_concurrent_streams": 128,
-  "connection_acquire_timeout_ms": 600,
-  "h2_handshake_timeout_ms": 800,
-  "tcp_keepalive_idle_secs": 30,
-  "tcp_keepalive_interval_secs": 30
+  "fallback_tls_skip_verify": true
 }
-EOF
+EOF_JSON
 
   jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
     echo "FATAL: invalid json generated" >&2
@@ -186,7 +172,7 @@ chmod 750 "$APP_CONF_DIR"
 chmod 640 "$APP_CONF_FILE" || true
 
 if [ ! -f "$APP_SERVICE" ]; then
-  cat >"$APP_SERVICE" <<EOF
+  cat >"$APP_SERVICE" <<EOF_SERVICE
 [Unit]
 Description=Naive Rust Server
 Documentation=https://github.com/${APP_REPO}/releases
@@ -209,7 +195,7 @@ RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
-EOF
+EOF_SERVICE
 
   chmod 644 "$APP_SERVICE"
 fi
@@ -222,7 +208,7 @@ else
   systemctl enable --now "$APP_SERVICE_NAME"
 fi
 
-BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+BIN_VER="$($APP_BIN --version 2>/dev/null || true)"
 BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
 
 SHOW_USER="${USERNAME:-}"
