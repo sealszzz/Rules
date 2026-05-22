@@ -156,8 +156,8 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "1.1.1.1:53",
       "8.8.8.8:53"
     ],
-    "cache_ttl_secs": 60,
-      "query_timeout_ms": 5000
+    "cache_ttl_secs": 120,
+      "query_timeout_ms":1500
   },
   "tcp_keepalive_idle_secs": 30,
   "tcp_keepalive_interval_secs": 30
