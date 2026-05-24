@@ -135,25 +135,24 @@ listeners:
           sni_hostnames: [none, any]
 
       - location: "[::1]:9001"
-        proxy_protocol: v2
+        proxy_protocol: on
         server_tls:
           sni_hostnames:
             - example.com
 
       - location: "[::1]:9002"
-        proxy_protocol: v2
+        proxy_protocol: on
         server_tls:
           sni_hostnames:
             - www.example.com
 
       - location: "[::1]:9999"
-        proxy_protocol: v2
+        proxy_protocol: on
         server_tls:
           sni_hostnames:
             - "*.example.com"
 
       - location: "[::1]:9009"
-        proxy_protocol: off
 
   - address: "[::]:443"
     transport: udp
