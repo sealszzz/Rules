@@ -17,7 +17,7 @@ SHOES_CONF_FILE="${SHOES_CONF_DIR}/config.yaml"
 SHOES_BIN="/usr/local/bin/shoes"
 SHOES_SERVICE_NAME="shoes"
 SHOES_SERVICE="/etc/systemd/system/${SHOES_SERVICE_NAME}.service"
-SHOES_REPO="sealszzz/shoes"
+SHOES_REPO="cfal/shoes"
 
 export DEBIAN_FRONTEND=noninteractive
 
@@ -55,9 +55,10 @@ install_shoes_release() {
   SHOES_TAG="${SHOES_TAG:-}"
   [ -n "$SHOES_TAG" ] || SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
   [ -n "$SHOES_TAG" ] || { echo "FATAL: cannot detect shoes tag" >&2; exit 1; }
+
   case "$(uname -m)" in
-    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu-${SHOES_TAG}.tar.gz"  ;;
-    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu-${SHOES_TAG}.tar.gz" ;;
+    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
+    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu.tar.gz" ;;
     *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
   esac
 
