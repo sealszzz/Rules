@@ -7,7 +7,7 @@ set -euo pipefail
 : "${PASS:=}"
 : "${NAIVE_TAG:=}"
 : "${LISTEN:=[::]:443}"
-: "${FALLBACK:=127.0.0.1:9999}"
+: "${FALLBACK:=[::1]:9999}"
 
 APP_USER="naive"
 APP_GROUP="naive"
@@ -152,11 +152,12 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "password": "${PASS}"
     }
   ],
-  "cert": "${CERT}",
-  "key": "${KEY}",
-  "fallback": "${FALLBACK}",
-  "accept_proxy_protocol": true,
-  "relay_ipv6": false,
+  "tls": {
+    "certificate": "${CERT}",
+    "private_key": "${KEY}",
+  },
+  "proxy_protocol": false,
+  "ipv6_relay": false,
   "dns": {
     "upstreams": [
       "1.1.1.1:53",
@@ -167,9 +168,12 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   },
   "tcp_keepalive_idle_secs": 60,
   "tcp_keepalive_interval_secs": 30,
-  "fallback_tls": true,
-  "fallback_proxy_protocol": true,
-  "fallback_tls_skip_verify": true
+  "fallback": {
+    "address": "${FALLBACK}",
+    "tls": true,
+    "proxy_protocol": true,
+    "tls_skip_verify": true
+  }
 }
 EOF_CONF
 
