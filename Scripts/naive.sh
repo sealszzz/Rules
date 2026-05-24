@@ -3,237 +3,205 @@ set -euo pipefail
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
+: "${USERNAME:=}"
 : "${PASS:=}"
-: "${UUID:=}"
-: "${SS_PASS:=}"
-: "${NAIVE_USER:=}"
-: "${NAIVE_WEBROOT:=/var/www/html}"
+: "${NAIVE_TAG:=}"
+: "${LISTEN:=[::]:443}"
+: "${FALLBACK:=127.0.0.1:9999}"
 
-SHOES_USER="shoes"
-SHOES_GROUP="shoes"
-SHOES_STATE_DIR="/var/lib/shoes"
-SHOES_CONF_DIR="/etc/shoes"
-SHOES_CONF_FILE="${SHOES_CONF_DIR}/config.yaml"
-SHOES_BIN="/usr/local/bin/shoes"
-SHOES_SERVICE_NAME="shoes"
-SHOES_SERVICE="/etc/systemd/system/${SHOES_SERVICE_NAME}.service"
-SHOES_REPO="cfal/shoes"
+APP_USER="naive"
+APP_GROUP="naive"
+APP_STATE_DIR="/var/lib/naive"
+APP_CONF_DIR="/etc/naive"
+APP_CONF_FILE="${APP_CONF_DIR}/config.json"
+APP_BIN="/usr/local/bin/naive"
+APP_SERVICE_NAME="naive"
+APP_SERVICE="/etc/systemd/system/${APP_SERVICE_NAME}.service"
+APP_REPO="sealszzz/Rules"
+APP_ASSET_BASENAME="naive"
+APP_BIN_NAME="naive"
 
 export DEBIAN_FRONTEND=noninteractive
 
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
+
 apt-get update
-apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils uuid-runtime openssl iproute2
+apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl jq
 
 [ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
-[ -r "$KEY"  ] || { echo "FATAL: missing $KEY"  >&2; exit 1; }
+[ -r "$KEY"  ] || { echo "FATAL: missing $KEY" >&2; exit 1; }
 
-getent group "$SHOES_GROUP" >/dev/null || groupadd --system "$SHOES_GROUP"
-id -u "$SHOES_USER" >/dev/null 2>&1 || useradd --system -g "$SHOES_GROUP" -M -d "$SHOES_STATE_DIR" -s /usr/sbin/nologin "$SHOES_USER"
+getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
+id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
 
-install -d -o "$SHOES_USER" -g "$SHOES_GROUP" -m 750 "$SHOES_STATE_DIR"
-install -d -o root -g "$SHOES_GROUP" -m 750 "$SHOES_CONF_DIR"
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
+install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 
-install -d -o root -g root -m 0755 "$NAIVE_WEBROOT"
-find "$NAIVE_WEBROOT" -mindepth 1 -maxdepth 1 -exec rm -rf {} +
-cat >"$NAIVE_WEBROOT/index.html" <<'EOF'
-<!doctype html>
-<meta charset="utf-8">
-<title>Welcome</title>
-<script>
-  location.replace("/");
-</script>
-EOF
+case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
+  amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
+  arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
+  *) echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2; exit 1 ;;
+esac
 
-get_shoes_tag() {
-  local u
-  u="$(curl -fsSIL -o /dev/null -w '%{url_effective}' "https://github.com/${SHOES_REPO}/releases/latest")" || return 1
-  printf '%s\n' "${u##*/}"
+find_release_tag_for_asset() {
+  local repo="$1"
+  local prefix="$2"
+  local api
+
+  api="https://api.github.com/repos/${repo}/releases?per_page=100"
+
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
+    | .[0].tag_name // empty
+  '
 }
 
-install_shoes_release() {
-  local ASSET BASE tmpd bin
-  SHOES_TAG="${SHOES_TAG:-}"
-  [ -n "$SHOES_TAG" ] || SHOES_TAG="$(get_shoes_tag 2>/dev/null || true)"
-  [ -n "$SHOES_TAG" ] || { echo "FATAL: cannot detect shoes tag" >&2; exit 1; }
+find_asset_by_tag() {
+  local repo="$1"
+  local tag="$2"
+  local prefix="$3"
+  local api
 
-  case "$(uname -m)" in
-    x86_64|amd64)  ASSET="shoes-x86_64-unknown-linux-gnu.tar.gz"  ;;
-    aarch64|arm64) ASSET="shoes-aarch64-unknown-linux-gnu.tar.gz" ;;
-    *) echo "unsupported arch: $(uname -m)" >&2; exit 1 ;;
-  esac
+  api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
 
-  BASE="https://github.com/${SHOES_REPO}/releases/download/${SHOES_TAG}"
-  tmpd="$(mktemp -d)"; trap 'rm -rf "$tmpd"' RETURN
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
+}
 
-  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "${BASE}/${ASSET}"
+install_release_asset() {
+  local repo="$1"
+  local tag="$2"
+  local base_name="$3"
+  local bin_name="$4"
+  local prefix asset_line asset_name url tmpd bin
+
+  prefix="${base_name}-${ASSET_ARCH}-"
+  asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
+
+  [ -n "$asset_line" ] || {
+    echo "FATAL: failed to find ${prefix}*.tar.gz in release tag ${tag}" >&2
+    exit 1
+  }
+
+  asset_name="${asset_line%%$'\t'*}"
+  url="${asset_line#*$'\t'}"
+
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
+
+  echo "tag: ${tag}"
+  echo "asset: ${asset_name}"
+  echo "download: ${url}"
+
+  tmpd="$(mktemp -d)"
+  trap 'rm -rf "$tmpd"' RETURN
+
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "$url"
   mkdir -p "$tmpd/unpack"
   tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
-  bin="$(find "$tmpd/unpack" -type f -name shoes -perm -u+x | head -n1 || true)"
-  [ -n "$bin" ] || { echo "FATAL: shoes binary not found" >&2; exit 1; }
+  if [ -f "$tmpd/unpack/$bin_name" ]; then
+    bin="$tmpd/unpack/$bin_name"
+  else
+    bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
+  fi
 
-  install -m 0755 "$bin" "$SHOES_BIN"
+  [ -n "${bin:-}" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
+
+  install -m 0755 "$bin" "$APP_BIN"
+
+  rm -rf "$tmpd"
   trap - RETURN
 }
 
-install_shoes_release
-
-command -v "$SHOES_BIN" >/dev/null 2>&1 || { echo "FATAL: ${SHOES_BIN} not found" >&2; exit 1; }
-
-gen_reality() {
-  local out pri pub sid
-  out="$("$SHOES_BIN" generate-reality-keypair 2>/dev/null || true)"
-  pri="$(awk -F': ' '/REALITY private key:/ {print $2; exit}' <<<"$out")"
-  pub="$(awk -F': ' '/REALITY public key:/  {print $2; exit}' <<<"$out")"
-  [ -n "${pri:-}" ] && [ -n "${pub:-}" ] || { echo "FATAL: reality keypair parse failed" >&2; echo "$out" >&2; exit 1; }
-  sid="$(openssl rand -hex 8)"
-  printf '%s\n%s\n%s\n' "$pri" "$pub" "$sid"
+gen_pass() {
+  openssl rand -hex 16
 }
 
-gen_ss2022_pass() {
-  local pw
-  pw="$("$SHOES_BIN" generate-shadowsocks-2022-password 2022-blake3-aes-128-gcm 2>/dev/null \
-    | awk -F': ' '/^Password:/ {print $2; exit}')"
-  [ -n "${pw:-}" ] || { echo "FATAL: SS2022 password gen failed" >&2; exit 1; }
-  printf '%s\n' "$pw"
+gen_user() {
+  printf 'naive%s\n' "$(openssl rand -hex 3)"
 }
 
-if [ ! -f "$SHOES_CONF_FILE" ]; then
-  [ -n "$PASS" ] || PASS="$(openssl rand -hex 16)"
-  [ -n "$UUID" ] || UUID="$(uuidgen)"
-  [ -n "$SS_PASS" ] || SS_PASS="$(gen_ss2022_pass)"
-  if [ -z "${NAIVE_USER}" ]; then
-    NAIVE_USER="naive$(openssl rand -hex 3)"
-  fi
-
-  mapfile -t R < <(gen_reality)
-  REALITY_PRI="${R[0]}"; REALITY_PUB="${R[1]}"; REALITY_SID="${R[2]}"
-
-  cat >"$SHOES_CONF_FILE" <<EOF
-- address: "[::]:9001"
-  protocol:
-    type: tls
-    tls_targets:
-      "www.cloudflare.com":
-        cert: "${CERT}"
-        key: "${KEY}"
-        protocol:
-          type: anytls
-          users:
-            - name: anytls
-              password: "${PASS}"
-          udp_enabled: true
-          fallback: "127.0.0.1:80"
-
-- address: "[::]:9002"
-  protocol:
-    type: tls
-    reality_targets:
-      "www.cloudflare.com":
-        private_key: "${REALITY_PRI}"
-        #public_key: "${REALITY_PUB}"
-        short_ids: ["${REALITY_SID}"]
-        dest: "localhost:9999"
-        vision: true
-        protocol:
-          type: vless
-          user_id: "${UUID}"
-          udp_enabled: true
-        fallback: "127.0.0.1:9999"
-
-- address: "[::]:9003"
-  protocol:
-    type: tls
-    tls_targets:
-      "www.cloudflare.com":
-        cert: "${CERT}"
-        key: "${KEY}"
-        alpn_protocols: ["h2", "http/1.1"]
-        protocol:
-          type: naiveproxy
-          users:
-            - username: "${NAIVE_USER}"
-              password: "${PASS}"
-          padding: true
-          udp_enabled: true
-          fallback: "${NAIVE_WEBROOT}"
-
-- address: "[::]:9004"
-  protocol:
-    type: tls
-    reality_targets:
-      "www.cloudflare.com":
-        private_key: "${REALITY_PRI}"
-        #public_key: "${REALITY_PUB}"
-        short_ids: ["${REALITY_SID}"]
-        dest: "localhost:9999"
-        protocol:
-          type: naiveproxy
-          users:
-            - username: "${NAIVE_USER}"
-              password: "${PASS}"
-          udp_enabled: true
-        fallback: "[::1]:9999"
-
-- address: "[::]:9007"
-  protocol:
-    type: shadowsocks
-    cipher: 2022-blake3-aes-128-gcm
-    password: "${SS_PASS}"
-    udp_enabled: true
-
-- address: "[::]:9009"
-  protocol:
-    type: snell
-    cipher: aes-128-gcm
-    password: "${PASS}"
-    udp_enabled: true
-
-- address: "[::]:9008"
-  transport: quic
-  quic_settings:
-    cert: "${CERT}"
-    key: "${KEY}"
-    alpn_protocols: [h3]
-  protocol:
-    type: tuic
-    uuid: "${UUID}"
-    password: "${PASS}"
-    zero_rtt_handshake: false
-    udp_enabled: true
-
-- address: "[::]:9009"
-  transport: quic
-  quic_settings:
-    cert: "${CERT}"
-    key: "${KEY}"
-    alpn_protocols: [h3]
-  protocol:
-    type: hysteria2
-    password: "${PASS}"
-    udp_enabled: true
-EOF
-
-  chown root:"$SHOES_GROUP" "$SHOES_CONF_FILE"
-  chmod 640 "$SHOES_CONF_FILE"
+if [ -z "$NAIVE_TAG" ]; then
+  NAIVE_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
-if [ ! -f "$SHOES_SERVICE" ]; then
-  cat >"$SHOES_SERVICE" <<EOF
+[ -n "$NAIVE_TAG" ] || {
+  echo "FATAL: failed to find a naive release for ${ASSET_ARCH}" >&2
+  exit 1
+}
+
+install_release_asset "$APP_REPO" "$NAIVE_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
+
+command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
+
+if [ ! -f "$APP_CONF_FILE" ]; then
+  [ -n "$USERNAME" ] || USERNAME="$(gen_user)"
+  [ -n "$PASS" ] || PASS="$(gen_pass)"
+
+  cat >"$APP_CONF_FILE" <<EOF_CONF
+{
+  "log_level": "info",
+  "listen": "${LISTEN}",
+  "users": [
+    {
+      "username": "${USERNAME}",
+      "password": "${PASS}"
+    }
+  ],
+  "cert": "${CERT}",
+  "key": "${KEY}",
+  "fallback": "${FALLBACK}",
+  "accept_proxy_protocol": true,
+  "relay_ipv6": false,
+  "dns": {
+    "upstreams": [
+      "1.1.1.1:53",
+      "8.8.8.8:53"
+    ],
+    "cache_ttl_secs": 120,
+    "query_timeout_ms": 1500
+  },
+  "tcp_keepalive_idle_secs": 60,
+  "tcp_keepalive_interval_secs": 30,
+  "fallback_tls": true,
+  "fallback_proxy_protocol": true,
+  "fallback_tls_skip_verify": true
+}
+EOF_CONF
+
+  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
+    echo "FATAL: invalid json generated" >&2
+    cat "$APP_CONF_FILE" >&2
+    exit 1
+  }
+
+  chown root:"$APP_GROUP" "$APP_CONF_FILE"
+  chmod 640 "$APP_CONF_FILE"
+fi
+
+chown -R root:"$APP_GROUP" "$APP_CONF_DIR"
+chmod 750 "$APP_CONF_DIR"
+chmod 640 "$APP_CONF_FILE" || true
+
+if [ ! -f "$APP_SERVICE" ]; then
+  cat >"$APP_SERVICE" <<EOF_SERVICE
 [Unit]
-Description=Shoes Server
-Documentation=https://github.com/cfal/shoes
+Description=Naive Rust Server
+Documentation=https://github.com/${APP_REPO}/releases
 After=network-online.target nss-lookup.target
 Wants=network-online.target
 
 [Service]
-User=${SHOES_USER}
-Group=${SHOES_GROUP}
+User=${APP_USER}
+Group=${APP_GROUP}
 Type=simple
 UMask=0077
-WorkingDirectory=${SHOES_STATE_DIR}
-ExecStart=${SHOES_BIN} ${SHOES_CONF_FILE}
-Environment="RUST_LOG=warn,shoes=info"
+WorkingDirectory=${APP_STATE_DIR}
+ExecStart=${APP_BIN} ${APP_CONF_FILE}
 AmbientCapabilities=CAP_NET_BIND_SERVICE
 CapabilityBoundingSet=CAP_NET_BIND_SERVICE
 NoNewPrivileges=true
@@ -243,17 +211,40 @@ RestartSec=3s
 
 [Install]
 WantedBy=multi-user.target
-EOF
-  chmod 644 "$SHOES_SERVICE"
+EOF_SERVICE
+
+  chmod 644 "$APP_SERVICE"
 fi
 
 systemctl daemon-reload
-if systemctl is-enabled --quiet "$SHOES_SERVICE_NAME"; then
-  systemctl restart "$SHOES_SERVICE_NAME"
+
+if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
+  systemctl restart "$APP_SERVICE_NAME"
 else
-  systemctl enable --now "$SHOES_SERVICE_NAME"
+  systemctl enable --now "$APP_SERVICE_NAME"
 fi
 
-BIN_VER="$("$SHOES_BIN" -V 2>/dev/null || "$SHOES_BIN" --version 2>/dev/null || true)"
-echo "shoes tag: ${SHOES_TAG:-unknown}"
-echo "shoes bin: ${BIN_VER:-unknown}"
+BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
+BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
+
+SHOW_USER="${USERNAME:-}"
+SHOW_PASS="${PASS:-}"
+SHOW_LISTEN="${LISTEN:-}"
+SHOW_FALLBACK="${FALLBACK:-}"
+
+if [ -f "$APP_CONF_FILE" ]; then
+  [ -n "$SHOW_USER" ] || SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_PASS" ] || SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_LISTEN" ] || SHOW_LISTEN="$(jq -r '.listen // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_FALLBACK" ] || SHOW_FALLBACK="$(jq -r '.fallback // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+fi
+
+echo
+echo "app: naive"
+echo "tag: ${NAIVE_TAG:-unknown}"
+echo "bin: ${BIN_VER:-unknown}"
+echo "config: ${APP_CONF_FILE}"
+echo "listen: ${SHOW_LISTEN:-unknown}"
+echo "fallback: ${SHOW_FALLBACK:-unknown}"
+echo "username: ${SHOW_USER:-unknown}"
+echo "password: ${SHOW_PASS:-unknown}"
