@@ -307,8 +307,20 @@ uninstall_mihomo() {
   echo "[OK] mihomo 卸载完成。"
 }
 
+uninstall_naive() {
+  echo ">>> 卸载 Naive ..."
+  stop_disable_service "naive"
+  remove_unit_artifacts "naive"
+  remove_paths \
+    /usr/local/bin/naive \
+    /etc/naive /var/lib/naive /var/log/naive \
+    /etc/logrotate.d/naive
+  remove_user_group "naive" "naive" || true
+  echo "[OK] Naive 卸载完成。"
+}
+
 uninstall_all() {
-  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / ssrust / mihomo"
+  echo ">>> 将卸载所有：Caddy / Xray / sing-box / TUIC / Juicity / Shoes / ShadowQUIC / Snell / Hysteria2 / AnyTLS / Tobaru / ssrust / mihomo / Naive"
   uninstall_caddy
   uninstall_xray
   uninstall_singbox
@@ -322,6 +334,7 @@ uninstall_all() {
   uninstall_tobaru
   uninstall_ssrust
   uninstall_mihomo
+  uninstall_naive
   echo "[OK] 所有组件已卸载。"
 }
 
@@ -339,6 +352,7 @@ declare -A SEL=(
   [tobaru]=0
   [ssrust]=0
   [mihomo]=0
+  [naive]=0
 )
 
 toggle() {
@@ -354,7 +368,7 @@ run_selected() {
   echo ">>> 开始卸载已勾选组件 ..."
   local any=0
 
-  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru ssrust mihomo; do
+  for k in caddy xray singbox tuic juicity shoes shadowquic snell hysteria anytls tobaru ssrust mihomo naive; do
     if [ "${SEL[$k]:-0}" -eq 1 ]; then
       any=1
       case "$k" in
@@ -371,6 +385,7 @@ run_selected() {
         tobaru)      uninstall_tobaru ;;
         ssrust)      uninstall_ssrust ;;
         mihomo)      uninstall_mihomo ;;
+        naive)       uninstall_naive ;;
       esac
       echo
     fi
@@ -410,6 +425,7 @@ main_menu() {
 11) [$([ "${SEL[tobaru]}"      -eq 1 ] && echo x || echo ' ')] 卸载 Tobaru
 12) [$([ "${SEL[ssrust]}"      -eq 1 ] && echo x || echo ' ')] 卸载 ssrust
 13) [$([ "${SEL[mihomo]}"      -eq 1 ] && echo x || echo ' ')] 卸载 mihomo
+14) [$([ "${SEL[naive]}"       -eq 1 ] && echo x || echo ' ')] 卸载 Naive
 ==================================================
 MENU
 
@@ -435,6 +451,7 @@ MENU
         11) toggle tobaru ;;
         12) toggle ssrust ;;
         13) toggle mihomo ;;
+        14) toggle naive ;;
         00) uninstall_all; pause ;;
         0)  run_selected; pause ;;
         q|Q|quit|exit) echo "Bye."; exit 0 ;;
