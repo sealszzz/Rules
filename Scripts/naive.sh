@@ -37,6 +37,9 @@ id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$AP
 install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
 install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 
+chgrp "$APP_GROUP" "$CERT" "$KEY"
+chmod 640 "$CERT" "$KEY"
+
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
   arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
@@ -65,10 +68,12 @@ find_asset_by_tag() {
   api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
 
   curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
-    .assets[]?
-    | select(.name | startswith($prefix) and endswith(".tar.gz"))
-    | "\(.name)\t\(.browser_download_url)"
-  ' | head -n1
+    first(
+      .assets[]?
+      | select(.name | startswith($prefix) and endswith(".tar.gz"))
+      | "\(.name)\t\(.browser_download_url)"
+    ) // empty
+  '
 }
 
 install_release_asset() {
@@ -154,7 +159,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   ],
   "tls": {
     "certificate": "${CERT}",
-    "private_key": "${KEY}",
+    "private_key": "${KEY}"
   },
   "proxy_protocol": false,
   "ipv6_relay": false,
@@ -231,16 +236,16 @@ fi
 BIN_VER="$("$APP_BIN" --version 2>/dev/null || true)"
 BIN_VER="$(printf '%s\n' "$BIN_VER" | head -n1)"
 
-SHOW_USER="${USERNAME:-}"
-SHOW_PASS="${PASS:-}"
-SHOW_LISTEN="${LISTEN:-}"
-SHOW_FALLBACK="${FALLBACK:-}"
+SHOW_USER=""
+SHOW_PASS=""
+SHOW_LISTEN=""
+SHOW_FALLBACK=""
 
 if [ -f "$APP_CONF_FILE" ]; then
-  [ -n "$SHOW_USER" ] || SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
-  [ -n "$SHOW_PASS" ] || SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
-  [ -n "$SHOW_LISTEN" ] || SHOW_LISTEN="$(jq -r '.listen // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
-  [ -n "$SHOW_FALLBACK" ] || SHOW_FALLBACK="$(jq -r '.fallback // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  SHOW_LISTEN="$(jq -r '.listen // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  SHOW_FALLBACK="$(jq -r '.fallback.address // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 fi
 
 echo
