@@ -150,7 +150,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "padding_scheme": "",
   "fallback": "[::1]:80",
   "proxy_protocol": false,
-  "relay_ipv6": false,
+  "ipv6_relay": false,
   "dns": {
     "upstreams": [
       "1.1.1.1:53",
