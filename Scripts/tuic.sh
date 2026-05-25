@@ -160,12 +160,14 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "1.1.1.1:53",
       "8.8.8.8:53"
     ],
-    "cache_ttl_secs": 60,
-    "query_timeout_ms": 5000
+    "cache_ttl_secs": 120,
+    "query_timeout_ms": 1500
   },
   "ipv6_relay": false,
   "quic": {
-    "congestion_control": "bbr"
+    "congestion_control": "bbr",
+    "max_idle_secs": 30,
+    "keep_alive_interval_secs": 10
   }
 }
 EOF
