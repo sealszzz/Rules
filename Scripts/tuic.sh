@@ -163,7 +163,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
     "cache_ttl_secs": 60,
     "query_timeout_ms": 5000
   },
-  "relay_ipv6": false,
+  "ipv6_relay": false,
   "quic": {
     "congestion_control": "bbr"
   }
