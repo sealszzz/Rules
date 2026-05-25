@@ -137,30 +137,40 @@ if [ ! -f "$APP_CONF_FILE" ]; then
 
   cat >"$APP_CONF_FILE" <<EOF
 {
-  "log_level": "info",
   "listen": "[::]:443",
+  "tls": {
+    "certificate": "${CERT}",
+    "private_key": "${KEY}"
+  },
   "users": [
     {
       "username": "${USERNAME}",
       "password": "${PASS}"
     }
   ],
-  "certificate": "${CERT}",
-  "private_key": "${KEY}",
-  "padding_scheme": "",
-  "fallback": "[::1]:80",
-  "proxy_protocol": false,
-  "ipv6_relay": false,
+  "log": {
+    "level": "info"
+  },
   "dns": {
     "upstreams": [
       "1.1.1.1:53",
       "8.8.8.8:53"
     ],
     "cache_ttl_secs": 120,
-      "query_timeout_ms":1500
+    "query_timeout_ms": 1500
   },
-  "tcp_keepalive_idle_secs": 30,
-  "tcp_keepalive_interval_secs": 30
+  "ipv6_relay": false,
+  "tcp": {
+    "keepalive_idle_secs": 60,
+    "keepalive_interval_secs": 30
+  },
+  "fallback": {
+    "target": "[::1]:80",
+    "proxy_protocol": false
+  },
+  "padding": {
+    "scheme": ""
+  }
 }
 EOF
 
