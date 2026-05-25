@@ -145,8 +145,8 @@ if [ ! -f "$APP_CONF_FILE" ]; then
       "password": "${PASS}"
     }
   ],
-  "cert": "${CERT}",
-  "key": "${KEY}",
+  "certificate": "${CERT}",
+  "private_key": "${KEY}",
   "padding_scheme": "",
   "fallback": "[::1]:80",
   "proxy_protocol": false,
