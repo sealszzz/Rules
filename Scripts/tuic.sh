@@ -139,8 +139,8 @@ if [ ! -f "$APP_CONF_FILE" ]; then
 {
   "listen": "[::]:443",
   "tls": {
-    "cert": "${CERT}",
-    "key": "${KEY}",
+    "certificate": "${CERT}",
+    "private_key": "${KEY}",
     "zero_rtt_mode": "auth",
     "alpn": [
       "h3"
