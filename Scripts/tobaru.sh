@@ -135,19 +135,19 @@ listeners:
           sni_hostnames: [none, any]
 
       - location: "[::1]:9001"
-        proxy_protocol: on
+        proxy_protocol: true
         server_tls:
           sni_hostnames:
             - example.com
 
       - location: "[::1]:9002"
-        proxy_protocol: on
+        proxy_protocol: true
         server_tls:
           sni_hostnames:
             - www.example.com
 
       - location: "[::1]:9999"
-        proxy_protocol: on
+        proxy_protocol: true
         server_tls:
           sni_hostnames:
             - "*.example.com"
