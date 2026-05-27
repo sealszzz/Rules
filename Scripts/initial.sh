@@ -75,61 +75,6 @@ sync_time_utc() {
   wait_for_chrony || echo "[ntp] continue without synchronization"
 }
 
-configure_ssh() {
-  command -v sshd >/dev/null 2>&1 || return 0
-  command -v systemctl >/dev/null 2>&1 || return 0
-
-  local file include_line added_include tmp_old
-  file=/etc/ssh/sshd_config.d/99-custom.conf
-  include_line='Include /etc/ssh/sshd_config.d/*.conf'
-  added_include=0
-  tmp_old=
-
-  install -d -m 0755 /etc/ssh/sshd_config.d
-
-  if [ -f "$file" ]; then
-    tmp_old="$(mktemp)"
-    cp -a "$file" "$tmp_old"
-  fi
-
-  cat >"$file" <<'EOF'
-Port 8888
-PubkeyAuthentication yes
-PasswordAuthentication no
-KbdInteractiveAuthentication no
-PermitRootLogin prohibit-password
-EOF
-
-  if [ -f /etc/ssh/sshd_config ] && ! grep -qxF "$include_line" /etc/ssh/sshd_config; then
-    printf '%s\n' "$include_line" >> /etc/ssh/sshd_config
-    added_include=1
-  fi
-
-  if sshd -t 2>/dev/null; then
-    systemctl reload ssh 2>/dev/null \
-      || systemctl reload sshd 2>/dev/null \
-      || systemctl restart ssh 2>/dev/null \
-      || systemctl restart sshd 2>/dev/null \
-      || true
-  else
-    if [ -n "$tmp_old" ] && [ -f "$tmp_old" ]; then
-      cp -a "$tmp_old" "$file"
-    else
-      rm -f "$file"
-    fi
-
-    if [ "$added_include" -eq 1 ] && [ -f /etc/ssh/sshd_config ]; then
-      sed -i '\|^Include /etc/ssh/sshd_config\.d/\*\.conf$|d' /etc/ssh/sshd_config
-    fi
-
-    rm -f "$tmp_old"
-    echo "[ssh] invalid config"
-    exit 1
-  fi
-
-  rm -f "$tmp_old"
-}
-
 apply_sysctl_tuning() {
   install -d -m 0755 /etc/sysctl.d
   modprobe nf_conntrack 2>/dev/null || true
