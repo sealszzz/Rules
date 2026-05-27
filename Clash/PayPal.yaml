@@ -1,0 +1,12 @@
+# Converted from Surge/PayPal.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # PayPal
+  - 'DOMAIN-SUFFIX,paypal.com'
+  - 'DOMAIN-SUFFIX,paypal.me'
+  - 'DOMAIN-SUFFIX,pypl.com'
+  - 'DOMAIN-SUFFIX,pypl.info'
+  - 'DOMAIN-SUFFIX,pypl.net'
+  - 'DOMAIN-SUFFIX,pypl.tv'
+  - 'DOMAIN-KEYWORD,paypal'
+  - 'DOMAIN-KEYWORD,pypl'

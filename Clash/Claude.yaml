@@ -1,0 +1,8 @@
+# Converted from Surge/Claude.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Claude
+  - 'DOMAIN-SUFFIX,claude.ai'
+  - 'DOMAIN-SUFFIX,anthropic.com'
+  - 'IP-CIDR,160.79.104.0/23,no-resolve'
+  - 'IP-CIDR6,2607:6bc0::/48,no-resolve'

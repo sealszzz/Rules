@@ -1,0 +1,27 @@
+# Converted from Surge/Disney+.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Disney+
+  - 'DOMAIN,assets.adobedtm.com'
+  - 'DOMAIN,crt.comodoca.com'
+  - 'DOMAIN,service.force.com'
+  - 'DOMAIN,cdn.registerdisney.go.com'
+  - 'DOMAIN,disney.demdex.net'
+  - 'DOMAIN,disney.my.sentry.io'
+  - 'DOMAIN,sdk.iad-03.braze.com'
+  - 'DOMAIN,hulu.my.salesforce-sites.com'
+  - 'DOMAIN-SUFFIX,salesforceliveagent.com'
+  - 'DOMAIN-SUFFIX,braze-images.com'
+  - 'DOMAIN-SUFFIX,adoceans.com'
+  - 'DOMAIN-SUFFIX,bamgrid.com'
+  - 'DOMAIN-SUFFIX,cws.conviva.com'
+  - 'DOMAIN-SUFFIX,demdex.net'
+  - 'DOMAIN-SUFFIX,disney.com'
+  - 'DOMAIN-SUFFIX,disneyplus.com'
+  - 'DOMAIN-SUFFIX,disney-plus.net'
+  - 'DOMAIN-SUFFIX,media.dssott.com'
+  - 'DOMAIN-SUFFIX,media.starott.com'
+  - 'DOMAIN-SUFFIX,thewaltdisneycompany.com'
+  - 'DOMAIN-SUFFIX,niceincontact.com'
+  - 'DOMAIN-KEYWORD,disney'
+  - 'DOMAIN-KEYWORD,hulu'

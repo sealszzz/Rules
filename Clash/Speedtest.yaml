@@ -1,0 +1,7 @@
+# Converted from Surge/Speedtest.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Speedtest
+  - 'DOMAIN-SUFFIX,speedtest.net'
+  - 'DOMAIN-SUFFIX,ooklaserver.net'
+  - 'DOMAIN-KEYWORD,speedtest'

@@ -1,0 +1,6 @@
+# Converted from Surge/Cloudflare.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Cloudflare
+  - 'DOMAIN-KEYWORD,cloudflare'
+  - 'DOMAIN-SUFFIX,warp.plus'

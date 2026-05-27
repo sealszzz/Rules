@@ -1,0 +1,73 @@
+# Converted from Surge/Global.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Apple APNs
+  - 'DOMAIN-SUFFIX,push.apple.com'
+  - 'DOMAIN-SUFFIX,akadns.net'
+  - 'DOMAIN-KEYWORD,apple.com.edgekey.net'
+
+  - 'IP-CIDR,17.249.0.0/16,no-resolve'
+  - 'IP-CIDR,17.252.0.0/16,no-resolve'
+  - 'IP-CIDR,17.57.144.0/22,no-resolve'
+  - 'IP-CIDR,17.188.128.0/18,no-resolve'
+  - 'IP-CIDR,17.188.20.0/23,no-resolve'
+
+  - 'IP-CIDR6,2620:149:a44::/48,no-resolve'
+  - 'IP-CIDR6,2403:300:a42::/48,no-resolve'
+  - 'IP-CIDR6,2403:300:a51::/48,no-resolve'
+  - 'IP-CIDR6,2a01:b740:a42::/48,no-resolve'
+
+  # DNS
+  - 'DOMAIN-SUFFIX,cloudflare-dns.com'
+  - 'IP-CIDR,1.1.1.1/32,no-resolve'
+  - 'IP-CIDR,1.0.0.1/32,no-resolve'
+  - 'IP-CIDR,8.8.8.8/32,no-resolve'
+  - 'IP-CIDR,8.8.4.4/32,no-resolve'
+  - 'DOMAIN-SUFFIX,dns.sb'
+  - 'DOMAIN-SUFFIX,doh.sb'
+  # TW
+  - 'DOMAIN-SUFFIX,tw'
+  - 'DOMAIN-SUFFIX,taipei'
+  # Grammarly
+  - 'DOMAIN-SUFFIX,grammarly.com'
+  - 'DOMAIN-SUFFIX,grammarly.io'
+  # Others
+  - 'DOMAIN-KEYWORD,amazon'
+  - 'DOMAIN-KEYWORD,yahoo'
+  - 'DOMAIN-KEYWORD,time'
+  - 'DOMAIN,sub-store.vercel.app'
+  - 'DOMAIN,ocsp.usertrust.com'
+  - 'DOMAIN,secure.globalsign.com'
+  - 'DOMAIN,app-analytics-services.com'
+  - 'DOMAIN,bgp.he.net'
+  - 'DOMAIN-SUFFIX,v2ex.com'
+  - 'DOMAIN-SUFFIX,pelmorex.com'
+  - 'DOMAIN-SUFFIX,theweathernetwork.com'
+  - 'DOMAIN-SUFFIX,alexametrics.com'
+  - 'DOMAIN-SUFFIX,inf.news'
+  - 'DOMAIN-SUFFIX,reddit.com'
+  - 'DOMAIN-SUFFIX,duyaoss.com'
+  - 'DOMAIN-SUFFIX,naver.com'
+  - 'DOMAIN,geolocation.onetrust.com'
+  - 'DOMAIN,cdn.cookielaw.org'
+  - 'DOMAIN,skadsdkless.appsflyer.com'
+  - 'DOMAIN-SUFFIX,wikimedia.org'
+  - 'DOMAIN-SUFFIX,wikipedia.org'
+  - 'DOMAIN-SUFFIX,linkedin.com'
+  - 'DOMAIN-SUFFIX,line.me'
+  - 'DOMAIN-SUFFIX,api-huacloud.dev'
+  - 'DOMAIN-SUFFIX,immconvert.com'
+  - 'DOMAIN-SUFFIX,nexconvert.com'
+  - 'DOMAIN-SUFFIX,dler.io'
+  # App
+  - 'DOMAIN-SUFFIX,app-analytics-services-att.com'
+  - 'DOMAIN-SUFFIX,adjust.com'
+  - 'DOMAIN-SUFFIX,appsflyer.com'
+  - 'DOMAIN-SUFFIX,appsflyersdk.com'
+  - 'DOMAIN-SUFFIX,branch.io'
+  # VeryReal
+  - 'DOMAIN-SUFFIX,roadtoredpacket.com'
+  - 'DOMAIN-SUFFIX,veryrealai.com'
+  - 'DOMAIN-SUFFIX,veryrealer.com'
+  - 'DOMAIN,mmx.uniapplab.com'
+  - 'DOMAIN,resource.sikulis.com'

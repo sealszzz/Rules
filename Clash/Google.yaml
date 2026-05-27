@@ -1,0 +1,38 @@
+# Converted from Surge/Google.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # YouTube 官方 / Google 视频相关
+  - 'DOMAIN-SUFFIX,googleapis.com'
+  - 'DOMAIN-SUFFIX,googlevideo.com'
+  - 'DOMAIN-SUFFIX,ytimg.com'
+  - 'DOMAIN-SUFFIX,ggpht.com'
+  - 'DOMAIN-SUFFIX,youtube.com'
+  - 'DOMAIN-SUFFIX,youtu.be'
+  - 'DOMAIN-SUFFIX,yt.be'
+  - 'DOMAIN-REGEX,^gvt.\.com$'
+  - 'DOMAIN-KEYWORD,youtube'
+
+  # Google 主产品域名
+  - 'DOMAIN,lens.l.google.com'
+  - 'DOMAIN,voice.telephony.goog'
+
+  # 常用 Google 服务域名
+  - 'DOMAIN-SUFFIX,gmail.com'
+  - 'DOMAIN-SUFFIX,g.cn'
+  - 'DOMAIN-SUFFIX,g.co'
+  - 'DOMAIN-SUFFIX,g.dev'
+  - 'DOMAIN-SUFFIX,g.page'
+  - 'DOMAIN-SUFFIX,goo.gl'
+  - 'DOMAIN-SUFFIX,goog'
+  - 'DOMAIN-SUFFIX,google'
+  - 'DOMAIN-SUFFIX,google.com'
+  - 'DOMAIN-SUFFIX,gstatic.com'
+  - 'DOMAIN-SUFFIX,gv.com'
+
+  # 泛匹配关键词（覆盖广泛 Google 服务）
+  - 'DOMAIN-KEYWORD,gmail'
+  - 'DOMAIN-KEYWORD,google'
+  - 'DOMAIN-KEYWORD,gstatic'
+  - 'DOMAIN-KEYWORD,recaptcha'
+  - 'DOMAIN-KEYWORD,appspot'
+  - 'DOMAIN-KEYWORD,blogspot'

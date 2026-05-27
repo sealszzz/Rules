@@ -1,0 +1,30 @@
+# Converted from Surge/Spotify.list
+# Format: clash-rs / Clash classical rule-provider
+payload:
+  # Spotify 主域
+  - 'DOMAIN-SUFFIX,spotify.com'
+
+  # Spotify 短链
+  - 'DOMAIN-SUFFIX,spoti.fi'
+
+  # Spotify CDN
+  - 'DOMAIN-SUFFIX,spotifycdn.com'
+  - 'DOMAIN-SUFFIX,spotifycdn.net'
+  - 'DOMAIN-SUFFIX,scdn.co'
+  - 'DOMAIN-SUFFIX,pscdn.co'
+
+  # Spotify 注册域名（备用）
+  - 'DOMAIN-SUFFIX,tospotify.com'
+
+  # 泛匹配关键词
+  - 'DOMAIN-KEYWORD,spotify'
+
+  # Anchor.fm （Spotify 收购的播客平台）
+  - 'DOMAIN-SUFFIX,anchor.fm'
+  - 'DOMAIN-SUFFIX,pdst.fm'
+  - 'DOMAIN-SUFFIX,pscrb.fm'
+  - 'DOMAIN-SUFFIX,chrt.fm'
+
+  # Megaphone 主域（Spotify 所有）
+  - 'DOMAIN-SUFFIX,megaphone.fm'
+  - 'DOMAIN-SUFFIX,megaphone.cloud'
