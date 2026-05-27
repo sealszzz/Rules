@@ -115,7 +115,6 @@ maybe_reboot() {
 main() {
   need_root
   sync_time_utc
-  configure_ssh
   apply_sysctl_tuning
   # maybe_reboot
 }
