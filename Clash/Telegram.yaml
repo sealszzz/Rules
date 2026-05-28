@@ -1,5 +1,3 @@
-# Converted from Surge/Telegram.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Telegram
   - 'IP-CIDR,5.28.192.0/18,no-resolve'

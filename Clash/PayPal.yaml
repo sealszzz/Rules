@@ -1,5 +1,3 @@
-# Converted from Surge/PayPal.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # PayPal
   - 'DOMAIN-SUFFIX,paypal.com'

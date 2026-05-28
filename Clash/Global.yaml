@@ -1,5 +1,3 @@
-# Converted from Surge/Global.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Apple APNs
   - 'DOMAIN-SUFFIX,push.apple.com'

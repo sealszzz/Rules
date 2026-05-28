@@ -1,5 +1,3 @@
-# Converted from Surge/Microsoft.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Bing
   - 'DOMAIN,cdn.jsdelivr.net'

@@ -1,5 +1,3 @@
-# Converted from Surge/Google.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # YouTube 官方 / Google 视频相关
   - 'DOMAIN-SUFFIX,googleapis.com'
@@ -9,7 +7,7 @@ payload:
   - 'DOMAIN-SUFFIX,youtube.com'
   - 'DOMAIN-SUFFIX,youtu.be'
   - 'DOMAIN-SUFFIX,yt.be'
-  - 'DOMAIN-REGEX,^gvt.\.com$'
+  - 'DOMAIN-WILDCARD,gvt?.com'
   - 'DOMAIN-KEYWORD,youtube'
 
   # Google 主产品域名

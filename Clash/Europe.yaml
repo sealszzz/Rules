@@ -1,5 +1,3 @@
-# Converted from Surge/Europe.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # BBC
   - 'DOMAIN,launches.appsflyer.com'

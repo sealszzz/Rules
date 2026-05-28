@@ -1,5 +1,3 @@
-# Converted from Surge/Apple.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Apple
   - 'IP-CIDR,17.0.0.0/8,no-resolve'
@@ -17,7 +15,7 @@ payload:
   - 'DOMAIN-SUFFIX,time-macos.apple.com'
 
   # 设备管理
-  - 'DOMAIN-REGEX,^.*\.push\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.push.apple.com'
   - 'DOMAIN-SUFFIX,deviceenrollment.apple.com'
   - 'DOMAIN-SUFFIX,deviceservices-external.apple.com'
   - 'DOMAIN-SUFFIX,gdmf.apple.com'
@@ -26,20 +24,20 @@ payload:
   - 'DOMAIN-SUFFIX,mdmenrollment.apple.com'
   - 'DOMAIN-SUFFIX,setup.icloud.com'
   - 'DOMAIN-SUFFIX,vpp.itunes.apple.com'
-  - 'DOMAIN-REGEX,^.*\.appattest\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.appattest.apple.com'
   - 'DOMAIN-SUFFIX,axm-servicediscovery.apple.com'
 
   # Apple 商务管理和 Apple 校园教务管理
-  - 'DOMAIN-REGEX,^.*\.business\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.school\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.business.apple.com'
+  - 'DOMAIN-WILDCARD,*.school.apple.com'
   - 'DOMAIN-SUFFIX,appleid.cdn-apple.com'
   - 'DOMAIN-SUFFIX,idmsa.apple.com'
-  - 'DOMAIN-REGEX,^.*\.itunes\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.mzstatic\.com$'
+  - 'DOMAIN-WILDCARD,*.itunes.apple.com'
+  - 'DOMAIN-WILDCARD,*.mzstatic.com'
   - 'DOMAIN-SUFFIX,api.ent.apple.com'
   - 'DOMAIN-SUFFIX,api.edu.apple.com'
   - 'DOMAIN-SUFFIX,statici.icloud.com'
-  - 'DOMAIN-REGEX,^.*\.vertexsmb\.com$'
+  - 'DOMAIN-WILDCARD,*.vertexsmb.com'
   - 'DOMAIN-SUFFIX,www.apple.com.cn'
   - 'DOMAIN-SUFFIX,upload.appleschoolcontent.com'
   - 'DOMAIN-SUFFIX,api-business.apple.com'
@@ -53,7 +51,7 @@ payload:
   - 'DOMAIN-SUFFIX,axm-adm-mdm.apple.com'
   - 'DOMAIN-SUFFIX,axm-adm-scep.apple.com'
   - 'DOMAIN-SUFFIX,axm-app.apple.com'
-  - 'DOMAIN-REGEX,^.*\.apple\-mapkit\.com$'
+  - 'DOMAIN-WILDCARD,*.apple-mapkit.com'
   - 'DOMAIN-SUFFIX,icons.axm-usercontent-apple.com'
 
   # “课堂”和“课业”
@@ -89,14 +87,14 @@ payload:
   - 'DOMAIN-SUFFIX,fcs-keys-pub-prod.cdn-apple.com'
 
   # App 和附加内容
-  - 'DOMAIN-REGEX,^.*\.itunes\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.apps\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.mzstatic\.com$'
+  - 'DOMAIN-WILDCARD,*.itunes.apple.com'
+  - 'DOMAIN-WILDCARD,*.apps.apple.com'
+  - 'DOMAIN-WILDCARD,*.mzstatic.com'
   - 'DOMAIN-SUFFIX,itunes.apple.com'
   - 'DOMAIN-SUFFIX,ppq.apple.com'
   - 'DOMAIN-SUFFIX,api.apple-cloudkit.com'
-  - 'DOMAIN-REGEX,^.*\.appattest\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.apps\-marketplace\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.appattest.apple.com'
+  - 'DOMAIN-WILDCARD,*.apps-marketplace.apple.com'
   - 'DOMAIN-SUFFIX,token.safebrowsing.apple'
   - 'DOMAIN-SUFFIX,audiocontentdownload.apple.com'
   - 'DOMAIN-SUFFIX,devimages-cdn.apple.com'
@@ -150,23 +148,23 @@ payload:
   - 'DOMAIN-SUFFIX,gsa.apple.com'
 
   # iCloud
-  - 'DOMAIN-REGEX,^.*\.apple\-cloudkit\.com$'
-  - 'DOMAIN-REGEX,^.*\.apple\-livephotoskit\.com$'
-  - 'DOMAIN-REGEX,^.*\.apzones\.com$'
-  - 'DOMAIN-REGEX,^.*\.cdn\-apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.gc\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.icloud\.com$'
-  - 'DOMAIN-REGEX,^.*\.icloud\.com\.cn$'
-  - 'DOMAIN-REGEX,^.*\.icloud\.apple\.com$'
-  - 'DOMAIN-REGEX,^.*\.icloud\-content\.com$'
-  - 'DOMAIN-REGEX,^.*\.iwork\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.apple-cloudkit.com'
+  - 'DOMAIN-WILDCARD,*.apple-livephotoskit.com'
+  - 'DOMAIN-WILDCARD,*.apzones.com'
+  - 'DOMAIN-WILDCARD,*.cdn-apple.com'
+  - 'DOMAIN-WILDCARD,*.gc.apple.com'
+  - 'DOMAIN-WILDCARD,*.icloud.com'
+  - 'DOMAIN-WILDCARD,*.icloud.com.cn'
+  - 'DOMAIN-WILDCARD,*.icloud.apple.com'
+  - 'DOMAIN-WILDCARD,*.icloud-content.com'
+  - 'DOMAIN-WILDCARD,*.iwork.apple.com'
   - 'DOMAIN-SUFFIX,mask.icloud.com'
   - 'DOMAIN-SUFFIX,mask-h2.icloud.com'
   - 'DOMAIN-SUFFIX,mask-api.icloud.com'
 
   # Apple Intelligence、Siri 和搜索
   - 'DOMAIN-SUFFIX,guzzoni.apple.com'
-  - 'DOMAIN-REGEX,^.*\.smoot\.apple\.com$'
+  - 'DOMAIN-WILDCARD,*.smoot.apple.com'
   - 'DOMAIN-SUFFIX,apple-relay.cloudflare.com'
   - 'DOMAIN-SUFFIX,apple-relay.fastly-edge.com'
   - 'DOMAIN-SUFFIX,cp4.cloudflare.com'

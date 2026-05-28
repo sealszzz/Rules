@@ -1,5 +1,3 @@
-# Converted from Surge/Spotify.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Spotify 主域
   - 'DOMAIN-SUFFIX,spotify.com'

@@ -1,5 +1,3 @@
-# Converted from Surge/HBOMax.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # HBO Max
   - 'DOMAIN-SUFFIX,brightline.tv'
@@ -9,7 +7,7 @@ payload:
   - 'DOMAIN-SUFFIX,hbomax.com'
   - 'DOMAIN-SUFFIX,warnermedia.com'
   - 'DOMAIN-SUFFIX,wbd.com'
-  - 'DOMAIN-REGEX,^.*\-launches\.appsflyersdk\.com$'
+  - 'DOMAIN-WILDCARD,*-launches.appsflyersdk.com'
   - 'DOMAIN,api3.branch.io'
   - 'DOMAIN,cdn.branch.io'
   - 'DOMAIN,api.apptentive.com'

@@ -1,5 +1,3 @@
-# Converted from Surge/LAN.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # LAN
   - 'IP-CIDR,10.0.0.0/8,no-resolve'

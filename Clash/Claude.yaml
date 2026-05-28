@@ -1,5 +1,3 @@
-# Converted from Surge/Claude.list
-# Format: clash-rs / Clash classical rule-provider
 payload:
   # Claude
   - 'DOMAIN-SUFFIX,claude.ai'
