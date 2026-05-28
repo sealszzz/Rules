@@ -8,6 +8,7 @@ set -euo pipefail
 : "${MH_SERVICE:=/etc/systemd/system/mihomo.service}"
 : "${MH_REPO:=MetaCubeX/mihomo}"
 : "${MH_PRERELEASE:=0}"
+: "${TAG:=}"
 
 : "${CERT:=/etc/tls/cert.pem}"
 : "${KEY:=/etc/tls/key.pem}"
@@ -56,10 +57,41 @@ gen_b64_16() { openssl rand -base64 16 | tr -d '\n'; }
 gen_uuid()   { command -v uuidgen >/dev/null 2>&1 && uuidgen || cat /proc/sys/kernel/random/uuid; }
 
 ARCH="$(detect_arch)"
-TAG=""
+ASSET_NAME=""
 ASSET_URL=""
+RELEASES_JSON=""
 
-if [ "${MH_PRERELEASE}" = "1" ]; then
+asset_name_for_stable() {
+  case "$1" in
+    amd64)
+      echo "mihomo-linux-amd64-v3-$2.gz"
+      ;;
+    arm64)
+      echo "mihomo-linux-arm64-$2.gz"
+      ;;
+    *)
+      die "unsupported arch: $1"
+      ;;
+  esac
+}
+
+asset_regex_for_prerelease() {
+  case "$1" in
+    amd64)
+      echo '^mihomo-linux-amd64-v3-.*\.gz$'
+      ;;
+    arm64)
+      echo '^mihomo-linux-arm64-.*\.gz$'
+      ;;
+    *)
+      die "unsupported arch: $1"
+      ;;
+  esac
+}
+
+if [ -n "${TAG}" ]; then
+  :
+elif [ "${MH_PRERELEASE}" = "1" ]; then
   RELEASES_JSON="$(
     curl -fsSL -H "Accept: application/vnd.github+json" \
       "https://api.github.com/repos/${MH_REPO}/releases?per_page=50"
@@ -70,34 +102,33 @@ if [ "${MH_PRERELEASE}" = "1" ]; then
       'map(select(.draft==false and .prerelease==true)) | .[0].tag_name // empty'
   )"
   [ -n "${TAG}" ] || die "no prerelease found (or API limited). Try: MH_PRERELEASE=0"
-
-  ASSET_URL="$(
-    echo "${RELEASES_JSON}" | jq -r --arg arch "${ARCH}" '
-      map(select(.draft==false and .prerelease==true))
-      | .[0].assets[]?
-      | select(.name | test("^mihomo-linux-" + $arch + ".*\\.gz$"))
-      | .browser_download_url
-    ' | head -n1
-  )"
-  [ -n "${ASSET_URL}" ] && [ "${ASSET_URL}" != "null" ] \
-    || die "asset not found in prerelease for arch=${ARCH}"
 else
   TAG="$(get_latest_tag_302)" || die "cannot resolve latest stable tag via 302"
+fi
 
-  RELEASE_JSON="$(
-    curl -fsSL -H "Accept: application/vnd.github+json" \
-      "https://api.github.com/repos/${MH_REPO}/releases/tags/${TAG}"
-  )" || die "GitHub API failed for tag ${TAG}"
+if [ "${MH_PRERELEASE}" = "1" ]; then
+  if [ -z "${RELEASES_JSON}" ]; then
+    RELEASES_JSON="$(
+      curl -fsSL -H "Accept: application/vnd.github+json" \
+        "https://api.github.com/repos/${MH_REPO}/releases/tags/${TAG}"
+    )" || die "GitHub API failed for tag ${TAG}"
+  fi
 
+  ASSET_RE="$(asset_regex_for_prerelease "${ARCH}")"
   ASSET_URL="$(
-    echo "${RELEASE_JSON}" | jq -r --arg arch "${ARCH}" '
-      .assets[]?
-      | select(.name | test("^mihomo-linux-" + $arch + ".*\\.gz$"))
+    echo "${RELEASES_JSON}" | jq -r --arg tag "${TAG}" --arg re "${ASSET_RE}" '
+      (if type == "array" then map(select(.tag_name == $tag))[0] else . end)
+      | .assets[]?
+      | select(.name | test($re))
+      | select((.name | test("-go[0-9]+-")) | not)
       | .browser_download_url
     ' | head -n1
   )"
   [ -n "${ASSET_URL}" ] && [ "${ASSET_URL}" != "null" ] \
-    || die "asset not found for tag=${TAG} arch=${ARCH}"
+    || die "preferred prerelease asset not found for tag=${TAG} arch=${ARCH}"
+else
+  ASSET_NAME="$(asset_name_for_stable "${ARCH}" "${TAG}")"
+  ASSET_URL="https://github.com/${MH_REPO}/releases/download/${TAG}/${ASSET_NAME}"
 fi
 
 TMP_DIR="$(mktemp -d /tmp/mihomo.XXXXXX)"
