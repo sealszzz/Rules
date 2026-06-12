@@ -28,7 +28,8 @@ apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils ope
 [ -r "$KEY"  ] || { echo "FATAL: missing $KEY" >&2; exit 1; }
 
 getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
-id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
+id -u "$APP_USER" >/dev/null 2>&1 || \
+  useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
 
 install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
 install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
@@ -36,7 +37,10 @@ install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
   amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
   arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
-  *) echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2; exit 1 ;;
+  *)
+    echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2
+    exit 1
+    ;;
 esac
 
 find_release_tag_for_asset() {
@@ -125,7 +129,10 @@ if [ -z "$TUIC_TAG" ]; then
   TUIC_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
-[ -n "$TUIC_TAG" ] || { echo "FATAL: failed to find a tuic release for ${ASSET_ARCH}" >&2; exit 1; }
+[ -n "$TUIC_TAG" ] || {
+  echo "FATAL: failed to find a tuic release for ${ASSET_ARCH}" >&2
+  exit 1
+}
 
 install_release_asset "$APP_REPO" "$TUIC_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
@@ -172,13 +179,17 @@ if [ ! -f "$APP_CONF_FILE" ]; then
 }
 EOF
 
-  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || { echo "FATAL: invalid json generated" >&2; cat "$APP_CONF_FILE" >&2; exit 1; }
+  jq empty "$APP_CONF_FILE" >/dev/null 2>&1 || {
+    echo "FATAL: invalid json generated" >&2
+    cat "$APP_CONF_FILE" >&2
+    exit 1
+  }
+
   chown root:"$APP_GROUP" "$APP_CONF_FILE"
   chmod 640 "$APP_CONF_FILE"
 fi
 
-if [ ! -f "$APP_SERVICE" ]; then
-  cat >"$APP_SERVICE" <<EOF
+cat >"$APP_SERVICE" <<EOF
 [Unit]
 Description=TUIC Rust Server
 Documentation=https://github.com/${APP_REPO}/releases
@@ -202,10 +213,11 @@ RestartSec=3s
 [Install]
 WantedBy=multi-user.target
 EOF
-  chmod 644 "$APP_SERVICE"
-fi
+
+chmod 644 "$APP_SERVICE"
 
 systemctl daemon-reload
+
 if systemctl is-enabled --quiet "$APP_SERVICE_NAME"; then
   systemctl restart "$APP_SERVICE_NAME"
 else
@@ -220,5 +232,6 @@ echo "app: tuic"
 echo "tag: ${TUIC_TAG:-unknown}"
 echo "bin: ${BIN_VER:-unknown}"
 echo "config: ${APP_CONF_FILE}"
+echo "service: ${APP_SERVICE}"
 echo "uuid: ${SHOW_UUID:-unknown}"
 echo "password: ${SHOW_PASS:-unknown}"
