@@ -5,7 +5,7 @@ set -euo pipefail
 : "${KEY:=/etc/tls/key.pem}"
 : "${UUID:=}"
 : "${PASS:=}"
-: "${TUIC_TAG:=}"
+: "${TUIC_TAG:=v0.2.8}"
 
 APP_USER="tuic"
 APP_GROUP="tuic"
@@ -148,7 +148,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "tls": {
     "certificate": "${CERT}",
     "private_key": "${KEY}",
-    "zero_rtt_mode": "auth",
+    "zero_rtt": "true",
     "alpn": [
       "h3"
     ]
