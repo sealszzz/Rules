@@ -148,7 +148,7 @@ if [ ! -f "$APP_CONF_FILE" ]; then
   "tls": {
     "certificate": "${CERT}",
     "private_key": "${KEY}",
-    "zero_rtt": "true",
+    "zero_rtt": true,
     "alpn": [
       "h3"
     ]
