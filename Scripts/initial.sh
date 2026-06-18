@@ -99,6 +99,8 @@ net.netfilter.nf_conntrack_udp_timeout_stream = 120
 # ===== Socket Buffers =====
 net.core.rmem_max = 26214400
 net.core.wmem_max = 26214400
+net.core.rmem_default = 8388608
+net.core.wmem_default = 8388608
 EOF
 
   sysctl --system >/dev/null || true
