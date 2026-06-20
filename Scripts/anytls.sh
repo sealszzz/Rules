@@ -159,14 +159,14 @@ if [ ! -f "$APP_CONF_FILE" ]; then
     "cache_ttl_secs": 120,
     "query_timeout_ms": 1500
   },
+  "proxy_protocol": true,
   "ipv6_relay": false,
   "tcp": {
     "keepalive_idle_secs": 60,
     "keepalive_interval_secs": 30
   },
   "fallback": {
-    "target": "[::1]:80",
-    "proxy_protocol": false
+    "target": "[::1]:80"
   },
   "padding": {
     "scheme": ""
