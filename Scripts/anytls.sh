@@ -21,65 +21,24 @@ APP_BIN_NAME="anytls"
 
 export DEBIAN_FRONTEND=noninteractive
 
-[ "$(id -u)" -eq 0 ] || {
-  echo "FATAL: run as root" >&2
-  exit 1
-}
+[ "$(id -u)" -eq 0 ] || { echo "FATAL: run as root" >&2; exit 1; }
 
 apt-get update
-apt-get install -y --no-install-recommends \
-  curl \
-  ca-certificates \
-  tar \
-  xz-utils \
-  openssl \
-  jq
+apt-get install -y --no-install-recommends curl ca-certificates tar xz-utils openssl jq
 
-[ -r "$CERT" ] || {
-  echo "FATAL: missing $CERT" >&2
-  exit 1
-}
+[ -r "$CERT" ] || { echo "FATAL: missing $CERT" >&2; exit 1; }
+[ -r "$KEY"  ] || { echo "FATAL: missing $KEY" >&2; exit 1; }
 
-[ -r "$KEY" ] || {
-  echo "FATAL: missing $KEY" >&2
-  exit 1
-}
+getent group "$APP_GROUP" >/dev/null || groupadd --system "$APP_GROUP"
+id -u "$APP_USER" >/dev/null 2>&1 || useradd --system -g "$APP_GROUP" -M -d "$APP_STATE_DIR" -s /usr/sbin/nologin "$APP_USER"
 
-getent group "$APP_GROUP" >/dev/null ||
-  groupadd --system "$APP_GROUP"
-
-id -u "$APP_USER" >/dev/null 2>&1 ||
-  useradd \
-    --system \
-    -g "$APP_GROUP" \
-    -M \
-    -d "$APP_STATE_DIR" \
-    -s /usr/sbin/nologin \
-    "$APP_USER"
-
-install -d \
-  -o "$APP_USER" \
-  -g "$APP_GROUP" \
-  -m 750 \
-  "$APP_STATE_DIR"
-
-install -d \
-  -o root \
-  -g "$APP_GROUP" \
-  -m 750 \
-  "$APP_CONF_DIR"
+install -d -o "$APP_USER" -g "$APP_GROUP" -m 750 "$APP_STATE_DIR"
+install -d -o root -g "$APP_GROUP" -m 750 "$APP_CONF_DIR"
 
 case "$(dpkg --print-architecture 2>/dev/null || uname -m)" in
-  amd64|x86_64)
-    ASSET_ARCH="linux-amd64"
-    ;;
-  arm64|aarch64)
-    ASSET_ARCH="linux-arm64"
-    ;;
-  *)
-    echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2
-    exit 1
-    ;;
+  amd64|x86_64)  ASSET_ARCH="linux-amd64" ;;
+  arm64|aarch64) ASSET_ARCH="linux-arm64" ;;
+  *) echo "FATAL: unsupported arch: $(dpkg --print-architecture 2>/dev/null || uname -m)" >&2; exit 1 ;;
 esac
 
 find_release_tag_for_asset() {
@@ -89,18 +48,10 @@ find_release_tag_for_asset() {
 
   api="https://api.github.com/repos/${repo}/releases?per_page=100"
 
-  curl -fsSL "$api" |
-    jq -r --arg prefix "$prefix" '
-      map(
-        select(
-          any(
-            .assets[]?;
-            (.name | startswith($prefix) and endswith(".tar.gz"))
-          )
-        )
-      )
-      | .[0].tag_name // empty
-    '
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    map(select(any(.assets[]?; (.name | startswith($prefix) and endswith(".tar.gz")))))
+    | .[0].tag_name // empty
+  '
 }
 
 find_asset_by_tag() {
@@ -111,13 +62,11 @@ find_asset_by_tag() {
 
   api="https://api.github.com/repos/${repo}/releases/tags/${tag}"
 
-  curl -fsSL "$api" |
-    jq -r --arg prefix "$prefix" '
-      .assets[]?
-      | select(.name | startswith($prefix) and endswith(".tar.gz"))
-      | "\(.name)\t\(.browser_download_url)"
-    ' |
-    head -n1
+  curl -fsSL "$api" | jq -r --arg prefix "$prefix" '
+    .assets[]?
+    | select(.name | startswith($prefix) and endswith(".tar.gz"))
+    | "\(.name)\t\(.browser_download_url)"
+  ' | head -n1
 }
 
 install_release_asset() {
@@ -125,12 +74,7 @@ install_release_asset() {
   local tag="$2"
   local base_name="$3"
   local bin_name="$4"
-  local prefix
-  local asset_line
-  local asset_name
-  local url
-  local tmpd
-  local bin
+  local prefix asset_line asset_name url tmpd bin
 
   prefix="${base_name}-${ASSET_ARCH}-"
   asset_line="$(find_asset_by_tag "$repo" "$tag" "$prefix")"
@@ -143,15 +87,8 @@ install_release_asset() {
   asset_name="${asset_line%%$'\t'*}"
   url="${asset_line#*$'\t'}"
 
-  [ -n "$asset_name" ] || {
-    echo "FATAL: empty asset name" >&2
-    exit 1
-  }
-
-  [ -n "$url" ] || {
-    echo "FATAL: empty download url" >&2
-    exit 1
-  }
+  [ -n "$asset_name" ] || { echo "FATAL: empty asset name" >&2; exit 1; }
+  [ -n "$url" ] || { echo "FATAL: empty download url" >&2; exit 1; }
 
   echo "tag: ${tag}"
   echo "asset: ${asset_name}"
@@ -160,33 +97,17 @@ install_release_asset() {
   tmpd="$(mktemp -d)"
   trap 'rm -rf "$tmpd"' RETURN
 
-  curl \
-    -fL \
-    --retry 3 \
-    --retry-delay 1 \
-    -o "$tmpd/pkg.tgz" \
-    "$url"
-
+  curl -fL --retry 3 --retry-delay 1 -o "$tmpd/pkg.tgz" "$url"
   mkdir -p "$tmpd/unpack"
   tar -xzf "$tmpd/pkg.tgz" -C "$tmpd/unpack"
 
   if [ -f "$tmpd/unpack/$bin_name" ]; then
     bin="$tmpd/unpack/$bin_name"
   else
-    bin="$(
-      find "$tmpd/unpack" \
-        -maxdepth 3 \
-        -type f \
-        -name "$bin_name" |
-        head -n1 ||
-        true
-    )"
+    bin="$(find "$tmpd/unpack" -maxdepth 3 -type f -name "$bin_name" | head -n1 || true)"
   fi
 
-  [ -n "${bin:-}" ] || {
-    echo "FATAL: ${bin_name} binary not found" >&2
-    exit 1
-  }
+  [ -n "${bin:-}" ] || { echo "FATAL: ${bin_name} binary not found" >&2; exit 1; }
 
   install -m 0755 "$bin" "$APP_BIN"
 
@@ -199,11 +120,7 @@ gen_pass() {
 }
 
 if [ -z "$ANYTLS_TAG" ]; then
-  ANYTLS_TAG="$(
-    find_release_tag_for_asset \
-      "$APP_REPO" \
-      "${APP_ASSET_BASENAME}-${ASSET_ARCH}-"
-  )"
+  ANYTLS_TAG="$(find_release_tag_for_asset "$APP_REPO" "${APP_ASSET_BASENAME}-${ASSET_ARCH}-")"
 fi
 
 [ -n "$ANYTLS_TAG" ] || {
@@ -211,19 +128,10 @@ fi
   exit 1
 }
 
-install_release_asset \
-  "$APP_REPO" \
-  "$ANYTLS_TAG" \
-  "$APP_ASSET_BASENAME" \
-  "$APP_BIN_NAME"
+install_release_asset "$APP_REPO" "$ANYTLS_TAG" "$APP_ASSET_BASENAME" "$APP_BIN_NAME"
 
-command -v "$APP_BIN" >/dev/null 2>&1 || {
-  echo "FATAL: ${APP_BIN} not found" >&2
-  exit 1
-}
+command -v "$APP_BIN" >/dev/null 2>&1 || { echo "FATAL: ${APP_BIN} not found" >&2; exit 1; }
 
-# 配置文件只在首次安装时生成。
-# 再次运行脚本不会覆盖已有配置。
 if [ ! -f "$APP_CONF_FILE" ]; then
   [ -n "$PASS" ] || PASS="$(gen_pass)"
 
@@ -322,19 +230,8 @@ SHOW_USER="${USERNAME:-}"
 SHOW_PASS="${PASS:-}"
 
 if [ -f "$APP_CONF_FILE" ]; then
-  [ -n "$SHOW_USER" ] ||
-    SHOW_USER="$(
-      jq -r '.users[0].username // empty' \
-        "$APP_CONF_FILE" 2>/dev/null ||
-        true
-    )"
-
-  [ -n "$SHOW_PASS" ] ||
-    SHOW_PASS="$(
-      jq -r '.users[0].password // empty' \
-        "$APP_CONF_FILE" 2>/dev/null ||
-        true
-    )"
+  [ -n "$SHOW_USER" ] || SHOW_USER="$(jq -r '.users[0].username // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
+  [ -n "$SHOW_PASS" ] || SHOW_PASS="$(jq -r '.users[0].password // empty' "$APP_CONF_FILE" 2>/dev/null || true)"
 fi
 
 echo
