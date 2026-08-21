@@ -106,7 +106,7 @@ prompt_target_ip() {
 write_normal_conf() {
   local ssh_port="$1"
 
-  cat >"$NFT_CONF" <<EOF
+  cat >"$NFT_CONF" <<EOF2
 flush ruleset
 
 table inet filter {
@@ -149,7 +149,7 @@ table inet filter {
     iif lo accept
 
     ip protocol icmp accept
-    ip6 nexthdr ipv6-icmp accept
+    meta l4proto ipv6-icmp accept
 
     meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
       ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
@@ -168,14 +168,14 @@ table inet filter {
     type filter hook output priority filter; policy accept;
   }
 }
-EOF
+EOF2
 }
 
 write_forward_conf() {
   local ssh_port="$1"
   local target_ip="$2"
 
-  cat >"$NFT_CONF" <<EOF
+  cat >"$NFT_CONF" <<EOF2
 flush ruleset
 
 table ip nat {
@@ -232,7 +232,7 @@ table inet filter {
     iif lo accept
 
     ip protocol icmp accept
-    ip6 nexthdr ipv6-icmp accept
+    meta l4proto ipv6-icmp accept
 
     meta nfproto ipv4 tcp flags syn tcp dport != @tcp_allow ct state new \
       ip saddr != 0.0.0.0 add @blacklist4 { ip saddr timeout 7d } counter drop
@@ -255,7 +255,7 @@ table inet filter {
     type filter hook output priority filter; policy accept;
   }
 }
-EOF
+EOF2
 }
 
 apply_normal_rules() {
@@ -293,6 +293,36 @@ apply_forward_rules() {
   echo "[OK] 已切换到 443 转发模式。"
   echo "SSH 端口: $ssh_port"
   echo "转发目标: $target_ip:443"
+}
+
+clear_blacklist() {
+  if ! exists_cmd nft; then
+    echo "nft 未安装。"
+    return 0
+  fi
+
+  if ! nft list table inet filter >/dev/null 2>&1; then
+    echo "当前不存在 inet filter 表，无黑名单可清空。"
+    return 0
+  fi
+
+  local cleared=0
+
+  if nft list set inet filter blacklist4 >/dev/null 2>&1; then
+    nft flush set inet filter blacklist4
+    echo "[OK] 已清空 IPv4 黑名单。"
+    cleared=1
+  fi
+
+  if nft list set inet filter blacklist6 >/dev/null 2>&1; then
+    nft flush set inet filter blacklist6
+    echo "[OK] 已清空 IPv6 黑名单。"
+    cleared=1
+  fi
+
+  if [ "$cleared" -eq 0 ]; then
+    echo "当前未找到 blacklist4 / blacklist6。"
+  fi
 }
 
 current_mode() {
@@ -346,6 +376,7 @@ SSH 端口: $(get_ssh_port)
  2) 切换转发模式（输入目标 IPv4）
  3) 查看当前规则
  4) 查看当前状态
+ 5) 清空黑名单
  0) 退出
 ======================================================
 MENU
@@ -368,6 +399,10 @@ MENU
         ;;
       4)
         show_status
+        pause
+        ;;
+      5)
+        clear_blacklist
         pause
         ;;
       0|q|Q|quit|exit)
