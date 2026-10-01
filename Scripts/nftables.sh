@@ -32,7 +32,7 @@ get_ssh_port() {
 
   local g
   g="$(awk '/^[Pp][Oo][Rr][Tt][[:space:]]+[0-9]+/{print $2; exit}' /etc/ssh/sshd_config 2>/dev/null)" || true
-  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 8888
+  [[ "$g" =~ ^[0-9]+$ ]] && echo "$g" || echo 22
 }
 
 pause() {
@@ -74,6 +74,14 @@ get_current_target_ip() {
   if [ -f "$NFT_CONF" ]; then
     awk '/dnat to /{sub(/:443.*/, "", $NF); print $NF; exit}' "$NFT_CONF" 2>/dev/null || true
   fi
+}
+
+has_tcp_forward() {
+  [ -f "$NFT_CONF" ] && grep -Eq '^[[:space:]]*tcp dport 443 dnat to ' "$NFT_CONF"
+}
+
+has_udp_forward() {
+  [ -f "$NFT_CONF" ] && grep -Eq '^[[:space:]]*udp dport 443 dnat to ' "$NFT_CONF"
 }
 
 prompt_target_ip() {
@@ -174,6 +182,33 @@ EOF2
 write_forward_conf() {
   local ssh_port="$1"
   local target_ip="$2"
+  local forward_mode="$3"
+  local prerouting_rules postrouting_rules forward_rules
+
+  case "$forward_mode" in
+    both)
+      prerouting_rules="    tcp dport 443 dnat to ${target_ip}:443
+    udp dport 443 dnat to ${target_ip}:443"
+      postrouting_rules="    ip daddr ${target_ip} tcp dport 443 masquerade
+    ip daddr ${target_ip} udp dport 443 masquerade"
+      forward_rules="    ip daddr ${target_ip} tcp dport 443 accept
+    ip daddr ${target_ip} udp dport 443 accept"
+      ;;
+    tcp)
+      prerouting_rules="    tcp dport 443 dnat to ${target_ip}:443"
+      postrouting_rules="    ip daddr ${target_ip} tcp dport 443 masquerade"
+      forward_rules="    ip daddr ${target_ip} tcp dport 443 accept"
+      ;;
+    udp)
+      prerouting_rules="    udp dport 443 dnat to ${target_ip}:443"
+      postrouting_rules="    ip daddr ${target_ip} udp dport 443 masquerade"
+      forward_rules="    ip daddr ${target_ip} udp dport 443 accept"
+      ;;
+    *)
+      echo "无效转发模式: $forward_mode" >&2
+      return 1
+      ;;
+  esac
 
   cat >"$NFT_CONF" <<EOF2
 flush ruleset
@@ -181,14 +216,12 @@ flush ruleset
 table ip nat {
   chain prerouting {
     type nat hook prerouting priority dstnat; policy accept;
-    tcp dport 443 dnat to ${target_ip}:443
-    udp dport 443 dnat to ${target_ip}:443
+${prerouting_rules}
   }
 
   chain postrouting {
     type nat hook postrouting priority srcnat; policy accept;
-    ip daddr ${target_ip} tcp dport 443 masquerade
-    ip daddr ${target_ip} udp dport 443 masquerade
+${postrouting_rules}
   }
 }
 
@@ -212,13 +245,7 @@ table inet filter {
   set tcp_allow {
     type inet_service
     flags interval
-    elements = { 80, 443, ${ssh_port} }
-  }
-
-  set udp_allow {
-    type inet_service
-    flags interval
-    elements = { 443 }
+    elements = { ${ssh_port} }
   }
 
   chain input {
@@ -240,15 +267,13 @@ table inet filter {
       ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
 
     tcp dport @tcp_allow accept
-    udp dport @udp_allow accept
   }
 
   chain forward {
     type filter hook forward priority filter; policy drop;
 
     ct state { established, related } accept
-    ip daddr ${target_ip} tcp dport 443 accept
-    ip daddr ${target_ip} udp dport 443 accept
+${forward_rules}
   }
 
   chain output {
@@ -273,15 +298,33 @@ apply_normal_rules() {
 
   echo "[OK] 已应用正常模式。"
   echo "SSH 端口: $ssh_port"
+  echo "本机开放: TCP 80/443、UDP 443、SSH"
 }
 
 apply_forward_rules() {
-  local ssh_port target_ip
+  local forward_mode="$1"
+  local ssh_port target_ip mode_text
   ssh_port="$(get_ssh_port)"
+
+  if [ "$ssh_port" = "443" ]; then
+    echo "[ERROR] 当前 SSH 端口为 443，启用 443 DNAT 会导致 IPv4 SSH 被转发，已取消。"
+    return 0
+  fi
+
+  case "$forward_mode" in
+    both) mode_text="TCP + UDP" ;;
+    tcp)  mode_text="仅 TCP" ;;
+    udp)  mode_text="仅 UDP" ;;
+    *)
+      echo "无效转发模式: $forward_mode"
+      return 0
+      ;;
+  esac
+
   target_ip="$(prompt_target_ip)"
 
   install_nftables_pkg
-  write_forward_conf "$ssh_port" "$target_ip"
+  write_forward_conf "$ssh_port" "$target_ip" "$forward_mode"
   nft -c -f "$NFT_CONF"
   nft -f "$NFT_CONF"
 
@@ -290,9 +333,11 @@ apply_forward_rules() {
   sysctl -w net.ipv4.ip_forward=1 >/dev/null
   systemctl enable --now nftables >/dev/null 2>&1 || true
 
-  echo "[OK] 已切换到 443 转发模式。"
+  echo "[OK] 已切换到 443 转发模式（${mode_text}）。"
   echo "SSH 端口: $ssh_port"
   echo "转发目标: $target_ip:443"
+  echo "本机入站: 仅 SSH（另保留 ICMP/ICMPv6 基础流量）"
+  echo "IPv6 443: 不转发、不开放"
 }
 
 clear_blacklist() {
@@ -326,8 +371,17 @@ clear_blacklist() {
 }
 
 current_mode() {
-  if [ -f "$NFT_CONF" ] && grep -q 'dnat to ' "$NFT_CONF"; then
-    echo "443 转发模式"
+  local tcp=0 udp=0
+
+  has_tcp_forward && tcp=1 || true
+  has_udp_forward && udp=1 || true
+
+  if [ "$tcp" -eq 1 ] && [ "$udp" -eq 1 ]; then
+    echo "443 TCP+UDP 转发模式"
+  elif [ "$tcp" -eq 1 ]; then
+    echo "443 TCP 转发模式"
+  elif [ "$udp" -eq 1 ]; then
+    echo "443 UDP 转发模式"
   elif [ -f "$NFT_CONF" ]; then
     echo "正常模式"
   else
@@ -336,18 +390,31 @@ current_mode() {
 }
 
 show_status() {
-  local ssh_port target_ip
+  local ssh_port target_ip saved_ip tcp_status="不转发" udp_status="不转发"
   ssh_port="$(get_ssh_port)"
   target_ip="$(get_current_target_ip)"
+  saved_ip="$(get_saved_target_ip)"
+
+  has_tcp_forward && tcp_status="转发" || true
+  has_udp_forward && udp_status="转发" || true
 
   echo "============== 当前状态 =============="
   echo "模式: $(current_mode)"
   echo "SSH 端口: $ssh_port"
+
   if [ -n "$target_ip" ]; then
     echo "当前转发目标: ${target_ip}:443"
+    echo "TCP 443: $tcp_status"
+    echo "UDP 443: $udp_status"
+    echo "IPv6 443: 不转发、不开放"
+    echo "本机入站: 仅 SSH（另保留 ICMP/ICMPv6）"
   else
     echo "当前转发目标: 未设置"
+    if [ -n "$saved_ip" ]; then
+      echo "上次转发目标: ${saved_ip}:443"
+    fi
   fi
+
   echo "nftables: $(systemctl is-enabled nftables 2>/dev/null || echo unknown) / $(systemctl is-active nftables 2>/dev/null || echo inactive)"
   echo "ip_forward: $(sysctl -n net.ipv4.ip_forward 2>/dev/null || echo unknown)"
   echo "配置文件: $NFT_CONF"
@@ -372,11 +439,13 @@ main_menu() {
 当前模式: $(current_mode)
 SSH 端口: $(get_ssh_port)
 
- 1) 应用正常模式
- 2) 切换转发模式（输入目标 IPv4）
- 3) 查看当前规则
- 4) 查看当前状态
- 5) 清空黑名单
+ 1) 正常模式（本机 TCP 80/443 + UDP 443 + SSH）
+ 2) 转发 TCP + UDP 443
+ 3) 仅转发 TCP 443
+ 4) 仅转发 UDP 443
+ 5) 查看当前规则
+ 6) 查看当前状态
+ 7) 清空黑名单
  0) 退出
 ======================================================
 MENU
@@ -390,18 +459,26 @@ MENU
         pause
         ;;
       2)
-        apply_forward_rules
+        apply_forward_rules both
         pause
         ;;
       3)
-        show_rules
+        apply_forward_rules tcp
         pause
         ;;
       4)
-        show_status
+        apply_forward_rules udp
         pause
         ;;
       5)
+        show_rules
+        pause
+        ;;
+      6)
+        show_status
+        pause
+        ;;
+      7)
         clear_blacklist
         pause
         ;;
