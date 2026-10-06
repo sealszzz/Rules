@@ -184,6 +184,7 @@ write_forward_conf() {
   local target_ip="$2"
   local forward_mode="$3"
   local prerouting_rules postrouting_rules forward_rules
+  local tcp_allow_elements udp_accept_rule
 
   case "$forward_mode" in
     both)
@@ -193,16 +194,22 @@ write_forward_conf() {
     ip daddr ${target_ip} udp dport 443 masquerade"
       forward_rules="    ip daddr ${target_ip} tcp dport 443 accept
     ip daddr ${target_ip} udp dport 443 accept"
+      tcp_allow_elements="80, ${ssh_port}"
+      udp_accept_rule=""
       ;;
     tcp)
       prerouting_rules="    tcp dport 443 dnat to ${target_ip}:443"
       postrouting_rules="    ip daddr ${target_ip} tcp dport 443 masquerade"
       forward_rules="    ip daddr ${target_ip} tcp dport 443 accept"
+      tcp_allow_elements="80, ${ssh_port}"
+      udp_accept_rule="    udp dport 443 accept"
       ;;
     udp)
       prerouting_rules="    udp dport 443 dnat to ${target_ip}:443"
       postrouting_rules="    ip daddr ${target_ip} udp dport 443 masquerade"
       forward_rules="    ip daddr ${target_ip} udp dport 443 accept"
+      tcp_allow_elements="80, 443, ${ssh_port}"
+      udp_accept_rule=""
       ;;
     *)
       echo "无效转发模式: $forward_mode" >&2
@@ -245,7 +252,7 @@ table inet filter {
   set tcp_allow {
     type inet_service
     flags interval
-    elements = { ${ssh_port} }
+    elements = { ${tcp_allow_elements} }
   }
 
   chain input {
@@ -267,6 +274,7 @@ table inet filter {
       ip6 saddr != :: add @blacklist6 { ip6 saddr timeout 7d } counter drop
 
     tcp dport @tcp_allow accept
+${udp_accept_rule}
   }
 
   chain forward {
@@ -336,8 +344,17 @@ apply_forward_rules() {
   echo "[OK] 已切换到 443 转发模式（${mode_text}）。"
   echo "SSH 端口: $ssh_port"
   echo "转发目标: $target_ip:443"
-  echo "本机入站: 仅 SSH（另保留 ICMP/ICMPv6 基础流量）"
-  echo "IPv6 443: 不转发、不开放"
+  case "$forward_mode" in
+    both)
+      echo "本机保持: TCP 80 + SSH；TCP/UDP 443 转发"
+      ;;
+    tcp)
+      echo "本机保持: TCP 80 + SSH + UDP 443；仅 TCP 443 转发"
+      ;;
+    udp)
+      echo "本机保持: TCP 80/443 + SSH；仅 UDP 443 转发"
+      ;;
+  esac
 }
 
 clear_blacklist() {
@@ -390,7 +407,7 @@ current_mode() {
 }
 
 show_status() {
-  local ssh_port target_ip saved_ip tcp_status="不转发" udp_status="不转发"
+  local ssh_port target_ip saved_ip tcp_status="本机" udp_status="本机"
   ssh_port="$(get_ssh_port)"
   target_ip="$(get_current_target_ip)"
   saved_ip="$(get_saved_target_ip)"
@@ -406,8 +423,9 @@ show_status() {
     echo "当前转发目标: ${target_ip}:443"
     echo "TCP 443: $tcp_status"
     echo "UDP 443: $udp_status"
-    echo "IPv6 443: 不转发、不开放"
-    echo "本机入站: 仅 SSH（另保留 ICMP/ICMPv6）"
+    echo "TCP 80: 本机"
+    echo "SSH: 本机"
+    echo "IPv6: 被转发的 443 协议不在本机开放；未转发的协议保持本机开放"
   else
     echo "当前转发目标: 未设置"
     if [ -n "$saved_ip" ]; then
