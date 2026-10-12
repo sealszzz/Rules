@@ -1,7 +1,7 @@
 # Apple APNs
 DOMAIN-SUFFIX,push.apple.com
-DOMAIN-SUFFIX,akadns.net
-DOMAIN-KEYWORD,apple.com.edgekey.net
+DOMAIN-SUFFIX,push-apple.com.akadns.net
+DOMAIN-SUFFIX,courier-push-apple.com.akadns.net
 
 IP-CIDR,17.249.0.0/16,no-resolve
 IP-CIDR,17.252.0.0/16,no-resolve
